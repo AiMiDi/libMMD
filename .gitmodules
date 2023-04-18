@@ -1,6 +1,3 @@
 [submodule "libMMD/dependency/libiconv"]
 	path = libMMD/dependency/libiconv
 	url = https://github.com/AiMiDi/libiconv_cmake.git
-[submodule "libMMD/dependency/eigen"]
-	path = libMMD/dependency/eigen
-	url = https://gitlab.com/libeigen/eigen.git
