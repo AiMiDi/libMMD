@@ -12,4 +12,8 @@ if (USE_SHARED_LIB)
     add_definitions(-DLIBMMD_SHARED_BUILD)
 endif()
 
+if (NOT DEFINED CMAKE_DEBUG_POSTFIX)
+  set(CMAKE_DEBUG_POSTFIX "_Debug")
+endif()
+
 add_subdirectory ("libMMD")

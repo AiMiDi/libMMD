@@ -53,5 +53,7 @@ namespace libmmd
 		return static_cast<T>(src);
 	}
 
-	static_assert(sizeof(Vector4d32) == 16);
+	static_assert(sizeof Vector2d32 == 8, "Vector2d32 size is not 8");
+	static_assert(sizeof Vector32 == 12, "Vector32 size is not 12");
+	static_assert(sizeof Vector4d32 == 16, "Vector4d32 size is not 16");
 }

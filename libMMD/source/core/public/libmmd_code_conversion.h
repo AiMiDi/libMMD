@@ -47,22 +47,5 @@ namespace libmmd
 	private:
 		code_converter() = default;
 		~code_converter() = default;
-
-		class iconv_converter
-		{
-			libiconv_t conv_;
-		public:
-			iconv_converter(const char* to_code, const char* from_code) :
-				conv_(libiconv_open(to_code, from_code)) {}
-			~iconv_converter()
-			{
-				libiconv_close(conv_);
-			}
-			size_t convert(const char** in_buf, size_t* in_bytes_left, char** out_buf, size_t* out_bytes_left) const
-			{
-				return libiconv(conv_, in_buf, in_bytes_left, out_buf, out_bytes_left);
-			}
-
-		};
 	};
 }

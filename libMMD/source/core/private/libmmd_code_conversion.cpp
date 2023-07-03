@@ -9,28 +9,55 @@ Description:	Character coding conversion util
 **************************************************************************/
 
 #include "libmmd_code_conversion.h"
+#include "libiconv/iconv.h"
 
 namespace libmmd
 {
+	class iconv_converter
+	{
+		libiconv_t conv_;
+	public:
+		iconv_converter(const char* to_code, const char* from_code) :
+			conv_(libiconv_open(to_code, from_code)) {}
+		~iconv_converter()
+		{
+			libiconv_close(conv_);
+		}
+		iconv_converter(const iconv_converter&) = delete;
+		void operator =(const iconv_converter&) = delete;
+		iconv_converter(iconv_converter&&) = delete;
+		void operator=(iconv_converter&&) = delete;
+
+		size_t convert(const char** in_buf, size_t* in_bytes_left, char** out_buf, size_t* out_bytes_left) const
+		{
+			return libiconv(conv_, in_buf, in_bytes_left, out_buf, out_bytes_left);
+		}
+	};
+
 	std::string code_converter::utf8_to_shift_jis(const std::u8string& input_string)
 	{
 		size_t input_length = input_string.length();
 		std::string output_string(input_length, '\0');
 		const iconv_converter shift_jis_to_u8_converter("SHIFT_JIS", "UTF-8");
-	RETRY:
-		size_t output_length = output_string.size();
-		char* output_buffer = output_string.data();
-		auto input_buffer = reinterpret_cast<const char*>(input_string.data());
-		if (shift_jis_to_u8_converter.convert(&input_buffer, &input_length, &output_buffer, &output_length) == static_cast<size_t>(-1))
+		std::function<void(const iconv_converter&)> do_convert = 
+			[&output_string, &input_string, &input_length, &do_convert](const iconv_converter& converter)
 		{
-			if (errno == E2BIG)
+			size_t output_length = output_string.size();
+			char* output_buffer = output_string.data();
+			auto input_buffer = reinterpret_cast<const char*>(input_string.data());
+			if (converter.convert(&input_buffer, &input_length, &output_buffer, &output_length) == static_cast<size_t>(-1))
 			{
-				output_string.resize(output_length * 2, '\0');
-				goto RETRY;
+				if (errno == E2BIG)
+				{
+					output_string.resize(output_length * 2, '\0');
+					// retry
+					do_convert(converter);
+				}
+				return;
 			}
-			return output_string;
-		}
-		output_string.resize(output_length, '\0');
+			output_string.resize(output_length, '\0');
+		};
+		do_convert(shift_jis_to_u8_converter);
 		return output_string;
 	}
 
@@ -38,25 +65,29 @@ namespace libmmd
 	{
 		std::u8string output_string{};
 		size_t input_length = input_string.length();
-		std::vector<char> buffer_vector;
+		std::vector buffer_vector(input_length, '\0');
 		const iconv_converter u8_to_shift_jis_converter("UTF-8", "SHIFT_JIS");
-	RETRY:
-		size_t buffer_length = buffer_vector.size();
-		char* output_men = buffer_vector.data();
-		char* output_buffer = output_men;
-		const char* input_buffer = input_string.data();
-		if (u8_to_shift_jis_converter.convert(&input_buffer, &input_length, &output_buffer, &buffer_length) == static_cast<size_t>(-1))
+		std::function<void(const iconv_converter&)> do_convert = 
+			[&buffer_vector, &input_string, &input_length, &output_string, &do_convert](const iconv_converter& converter)
 		{
-			if(errno == E2BIG)
+			size_t buffer_length = buffer_vector.size();
+			char* output_men = buffer_vector.data();
+			char* output_buffer = output_men;
+			const char* input_buffer = input_string.data();
+			if (converter.convert(&input_buffer, &input_length, &output_buffer, &buffer_length) == static_cast<size_t>(-1))
 			{
-				buffer_vector.resize(buffer_length * 2, '\0');
-				goto RETRY;
+				if (errno == E2BIG)
+				{
+					buffer_vector.resize(buffer_length * 2, '\0');
+					// retry
+					do_convert(converter);
+				}
+				return;
 			}
-			return output_string;
-		}
-		const size_t convected_size = buffer_vector.size() - buffer_length;
-		output_string.assign(reinterpret_cast<const char8_t*>(output_men), convected_size);
-		memset(output_men, 0, convected_size);
+			const size_t convected_size = buffer_vector.size() - buffer_length;
+			output_string.assign(reinterpret_cast<const char8_t*>(output_men), convected_size);
+		};
+		do_convert(u8_to_shift_jis_converter);
 		return output_string;
 	}
 
@@ -95,7 +126,7 @@ namespace libmmd
 					const uint32_t char3 = input_string_ptr[++i];
 					const uint32_t char4 = input_string_ptr[++i];
 					// 计算UNICODE代码点值(第一个字节取低3bit，其余取6bit)
-					if (uint32_t code_point = (char1 & 0x07U) << 18 | (char2 & 0x3FU) << 12 | (char3 & 0x3FU) << 6 | char4 & 0x3FU; code_point >= 0x10000)
+					if (uint32_t code_point = (char1 & 0x07U) << 18 | (char2 & 0x3FU) << 12 | (char3 & 0x3FU) << 6 | (char4 & 0x3FU); code_point >= 0x10000)
 					{
 						// 在UTF-16中 U+10000 到 U+10FFFF 用两个16bit单元表示, 代理项对.
 						// 1、将代码点减去0x10000(得到长度为20bit的值)
@@ -103,7 +134,7 @@ namespace libmmd
 						// 3、low  代理项 是将那20bit中的低10bit加上0xDC00(110111 00 00000000)
 						code_point -= 0x10000;
 						output_string.push_back(static_cast<char16_t>(code_point >> 10 | 0xD800U));
-						output_string.push_back(static_cast<char16_t>(code_point & 0x03FFU | 0xDC00U));
+						output_string.push_back(static_cast<char16_t>((code_point & 0x03FFU) | 0xDC00U));
 					}
 					else
 					{
@@ -118,7 +149,7 @@ namespace libmmd
 					const uint32_t char2 = input_string_ptr[++i];
 					const uint32_t char3 = input_string_ptr[++i];
 					// 计算UNICODE代码点值(第一个字节取低4bit，其余取6bit)
-					const uint32_t code_point = (char1 & 0x0FU) << 12 | (char2 & 0x3FU) << 6 | char3 & 0x3FU;
+					const uint32_t code_point = (char1 & 0x0FU) << 12 | (char2 & 0x3FU) << 6 | (char3 & 0x3FU);
 					output_string.push_back(static_cast<char16_t>(code_point));
 				}
 				break;
@@ -172,8 +203,8 @@ namespace libmmd
 			// 2 字节能表示部分
 			else if (u16_char >= 0x0080 && u16_char <= 0x07FF) {
 				// * U-00000080 - U-000007FF:  110xxxxx 10xxxxxx
-				output_string.push_back(static_cast<char8_t>(u16_char >> 6 & 0x1F | 0xC0));
-				output_string.push_back(static_cast<char8_t>(u16_char & 0x3F | 0x80));
+				output_string.push_back(static_cast<char8_t>(((u16_char >> 6) & 0x1F) | 0xC0));
+				output_string.push_back(static_cast<char8_t>((u16_char & 0x3F) | 0x80));
 			}
 			// 代理项对部分(4字节表示)
 			else if (u16_char >= 0xD800 && u16_char <= 0xDBFF) {
@@ -190,18 +221,18 @@ namespace libmmd
 				code_point += 0x10000;
 				// 转为4字节UTF8编码表示
 				output_string.push_back(static_cast<char8_t>(code_point >> 18 | 0xF0));
-				output_string.push_back(static_cast<char8_t>(code_point >> 12 & 0x3F | 0x80));
-				output_string.push_back(static_cast<char8_t>(code_point >> 06 & 0x3F | 0x80));
-				output_string.push_back(static_cast<char8_t>(code_point & 0x3F | 0x80));
+				output_string.push_back(static_cast<char8_t>(((code_point >> 12) & 0x3F) | 0x80));
+				output_string.push_back(static_cast<char8_t>(((code_point >> 06) & 0x3F) | 0x80));
+				output_string.push_back(static_cast<char8_t>((code_point & 0x3F) | 0x80));
 				continue;
 			}
 			// 3 字节表示部分
 			else
 			{
 				// * U-0000E000 - U-0000FFFF:  1110xxxx 10xxxxxx 10xxxxxx
-				output_string.push_back(static_cast<char8_t>(u16_char >> 12 & 0x0F | 0xE0));
-				output_string.push_back(static_cast<char8_t>(u16_char >> 6 & 0x3F | 0x80));
-				output_string.push_back(static_cast<char8_t>(u16_char & 0x3F | 0x80));
+				output_string.push_back(static_cast<char8_t>(((u16_char >> 12) & 0x0F) | 0xE0));
+				output_string.push_back(static_cast<char8_t>(((u16_char >> 6) & 0x3F) | 0x80));
+				output_string.push_back(static_cast<char8_t>((u16_char & 0x3F) | 0x80));
 			}
 		}
 		return output_string;
