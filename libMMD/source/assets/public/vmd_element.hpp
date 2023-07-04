@@ -9,7 +9,7 @@ Description:	vmd element base class.
 **************************************************************************/
 #pragma once
 
-#include "file_element_array.hpp"
+#include "file_element.hpp"
 
 namespace libmmd
 {
