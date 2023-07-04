@@ -75,46 +75,25 @@ namespace libmmd
 		* \brief Destructor function
 		*/
 		~pmx_model_description() = default;
-		float get_model_version() const
-		{
-			return model_version_;
-		}
-		void set_model_version(float version)
-		{
-			model_version_ = version;
-		}
-		const std::u8string& get_model_name_local() const
-		{
-			return  model_name_local_;
-		}
-		void set_model_name_local(const std::u8string& name)
-		{
-			model_name_local_ = name;
-		}
-		const std::u8string& get_model_name_universal() const
-		{
-			return  model_name_universal_;
-		}
-		void set_model_name_universal(const std::u8string& name)
-		{
-			model_name_universal_ = name;
-		}
-		const std::u8string& get_comments_local() const
-		{
-			return  comments_local_;
-		}
-		void set_comments_local(const std::u8string& comments)
-		{
-			comments_local_ = comments;
-		}
-		const std::u8string& get_comments_universal() const
-		{
-			return  comments_universal_;
-		}
-		void set_comments_universal(const std::u8string& comments)
-		{
-			comments_universal_ = comments;
-		}
+
+		float get_model_version() const;
+		void set_model_version(float version);
+
+		const std::u8string& get_model_name_local() const;
+		void set_model_name_local(const std::u8string& name);
+
+		const std::u8string& get_model_name_universal() const;
+		void set_model_name_universal(const std::u8string& name);
+
+		const std::u8string& get_comments_local() const;
+		void set_comments_local(const std::u8string& comments);
+
+		const std::u8string& get_comments_universal() const;
+		void set_comments_universal(const std::u8string& comments);
+
+		int8_t get_additional_vec4_count() const;
+		void set_additional_vec4_count(int8_t count);
+
 		void reset_reader();
 		/**
 		 * \brief Read PMX model info data from a pmx file

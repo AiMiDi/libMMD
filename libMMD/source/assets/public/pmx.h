@@ -10,7 +10,7 @@ Description:	pmx file data
 
 #pragma once
 
-#include "pmx_model_info.h"
+#include "pmx_model_description.h"
 #include "pmx_vertex.h"
 #include "pmx_surface.h"
 #include "pmx_texture.h"
@@ -20,7 +20,7 @@ Description:	pmx file data
 #include "pmx_display.h"
 #include "pmx_rigid_body.h"
 #include "pmx_joint.h"
-#include "pmx_element_array.hpp"
+#include "pmx_element.hpp"
 
 namespace libmmd
 {

@@ -1,17 +1,77 @@
 ﻿/**************************************************************************
 
-Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
+Copyright:Copyright(c) 2023-present, Aimidi & libmmd contributors.
 Author:			Aimidi
-Date:			2022/8/14
-File:			pmx_model_info.cpp
-Description:	pmx model information data
+Date:			2023/7/5
+File:			pmx_model_description.cpp
+Description:	pmx model description data
 
 **************************************************************************/
 
-#include "pmx_model_info.h"
+#include "pmx_model_description.h"
 
 namespace libmmd
 {
+	inline float pmx_model_description::get_model_version() const
+	{
+		return model_version_;
+	}
+
+	inline void pmx_model_description::set_model_version(float version)
+	{
+		model_version_ = version;
+	}
+
+	inline const std::u8string& pmx_model_description::get_model_name_local() const
+	{
+		return  model_name_local_;
+	}
+
+	inline void pmx_model_description::set_model_name_local(const std::u8string& name)
+	{
+		model_name_local_ = name;
+	}
+
+	inline const std::u8string& pmx_model_description::get_model_name_universal() const
+	{
+		return  model_name_universal_;
+	}
+
+	inline void pmx_model_description::set_model_name_universal(const std::u8string& name)
+	{
+		model_name_universal_ = name;
+	}
+
+	inline const std::u8string& pmx_model_description::get_comments_local() const
+	{
+		return  comments_local_;
+	}
+
+	inline void pmx_model_description::set_comments_local(const std::u8string& comments)
+	{
+		comments_local_ = comments;
+	}
+
+	inline const std::u8string& pmx_model_description::get_comments_universal() const
+	{
+		return  comments_universal_;
+	}
+
+	inline void pmx_model_description::set_comments_universal(const std::u8string& comments)
+	{
+		comments_universal_ = comments;
+	}
+
+	inline int8_t pmx_model_description::get_additional_vec4_count() const
+	{
+		return additional_vec4_count_;
+	}
+
+	inline void pmx_model_description::set_additional_vec4_count(int8_t count)
+	{
+		additional_vec4_count_ = count;
+	}
+
 	void pmx_model_description::reset_reader()
 	{
 		read_text.set_text_encoding(text_encoding_);

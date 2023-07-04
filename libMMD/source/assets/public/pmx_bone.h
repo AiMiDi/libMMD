@@ -10,8 +10,8 @@ Description:	pmx bone data
 
 #pragma once
 
-#include "pmx_element_array.hpp"
-#include "pmx_model_info.h"
+#include "pmx_element.hpp"
+#include "pmx_model_description.h"
 
 namespace libmmd
 {

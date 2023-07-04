@@ -10,8 +10,8 @@ Description:	pmx rigid body data
 
 #pragma once
 
-#include "pmx_element_array.hpp"
-#include "pmx_model_info.h"
+#include "pmx_element.hpp"
+#include "pmx_model_description.h"
 
 namespace libmmd
 {
@@ -35,7 +35,7 @@ namespace libmmd
 		bool	G15 : 1 = false;
 	};
 
-	static_assert(sizeof pmx_rigid_body_non_collision_group == 2);
+	static_assert(sizeof pmx_rigid_body_non_collision_group_data == 2);
 
 	class pmx_rigid_body_non_collision_group_impl final : public pmx_rigid_body_non_collision_group, file_element_impl
 	{

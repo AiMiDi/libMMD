@@ -9,8 +9,8 @@ Description:	pmx element base class.
 **************************************************************************/
 #pragma once
 
-#include "file_element_array.hpp"
-#include "pmx_model_info.h"
+#include "file_element.hpp"
+#include "pmx_model_description.h"
 
 namespace libmmd
 {

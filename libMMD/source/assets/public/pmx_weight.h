@@ -10,8 +10,7 @@ Description:	pmx weight data
 
 #pragma once
 
-#include "pmx_model.h"
-#include "pmx_model_info.h"
+#include "pmx_model_description.h"
 
 namespace libmmd
 {

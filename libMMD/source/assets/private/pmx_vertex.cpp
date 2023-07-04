@@ -9,6 +9,7 @@ Description:	pmx vertex data
 **************************************************************************/
 
 #include "pmx_vertex.h"
+#include "pmx_weight.h"
 
 namespace libmmd
 {
@@ -76,7 +77,7 @@ namespace libmmd
 			return false;
 		if (!file.read_elements(uv_))
 			return false;
-		if (!file.seek(16LL * model_description_->GetData()->additional_vec4_count))
+		if (!file.seek(16LL * model_description_->get_additional_vec4_count()))
 			return false;
 		if (!file.read_elements(&skinning_type_))
 			return false;

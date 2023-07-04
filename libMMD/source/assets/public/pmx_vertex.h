@@ -10,9 +10,8 @@ Description:	pmx vertex data
 
 #pragma once
 
-#include "pmx_element_array.hpp"
-#include "pmx_model_info.h"
-#include "pmx_weight.h"
+#include "pmx_model_description.h"
+#include "pmx_element.hpp"
 
 namespace libmmd
 {
