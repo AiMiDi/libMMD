@@ -12,161 +12,159 @@ Description:	MMD style animation interpolator
 
 namespace libmmd
 {
-	VMDInterpolator::VMDInterpolator(const UChar ax, const UChar ay, const UChar bx, const UChar by) :
-		m_ax(ax), m_ay(ay), m_bx(bx), m_by(by)
+	vmd_interpolator_impl::vmd_interpolator_impl(uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
 	{
-		m_isLinear = m_ax == m_ay && m_bx == m_by;
+		ax_ = ax;
+		ay_ = ay;
+		bx_ = bx;
+		by_ = by;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	VMDInterpolator::VMDInterpolator(VMDInterpolator&& src) noexcept
+	inline bool vmd_interpolator_impl::operator==(const vmd_interpolator_impl& other) const
 	{
-		memmove_s(this, sizeof VMDInterpolator, &src, sizeof VMDInterpolator);
+		return ax_ == other.ax_ && ay_ == other.ay_ && bx_ == other.bx_ && by_ == other.by_;
 	}
 
-	VMDInterpolator& VMDInterpolator::operator=(VMDInterpolator&& src) noexcept
+	inline uint8_t vmd_interpolator_impl::get_ax() const
 	{
-		if (&src == this)
-		{
-			return *this;
-		}
-		memmove_s(this, sizeof VMDInterpolator, &src, sizeof VMDInterpolator);
-		return *this;
+		return ax_;
 	}
 
-	bool VMDInterpolator::operator==(const VMDInterpolator& other) const
+	inline void vmd_interpolator_impl::set_ax(uint8_t value)
 	{
-		return m_ax == other.m_ax && m_ay == other.m_ay && m_bx == other.m_bx && m_by == other.m_by;
+		ax_ = value;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	Float64 VMDInterpolator::get_value_right() const
+	inline uint8_t vmd_interpolator_impl::get_ay() const
 	{
-		return static_cast<Float64>(m_ay) / 127.0;
+		return ay_;
 	}
 
-	Float64 VMDInterpolator::get_value_left() const
+	inline void vmd_interpolator_impl::set_ay(uint8_t value)
 	{
-		return static_cast<Float64>(m_by - 127) / 127.0;
+		ay_ = value;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	Vector2d64 VMDInterpolator::get_tangent_right() const
+	inline uint8_t vmd_interpolator_impl::get_bx() const
 	{
-		return Vector2d64{ static_cast<Float64>(m_ax), static_cast<Float64>(m_ay) };
+		return bx_;
 	}
 
-	Vector2d64 VMDInterpolator::get_tangent_left() const
+	inline void vmd_interpolator_impl::set_bx(uint8_t value)
 	{
-		return Vector2d64{ static_cast<Float64>(m_bx - 127), static_cast<Float64>(m_by - 127) };
+		bx_ = value;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	void VMDInterpolator::set(const UChar& ax, const UChar& ay, const UChar& bx, const UChar& by)
+	inline uint8_t vmd_interpolator_impl::get_by() const
 	{
-		m_ax = ax;
-		m_ay = ay;
-		m_bx = bx;
-		m_by = by;
-		m_isLinear = m_ax == m_ay && m_bx == m_by;
+		return by_;
 	}
 
-	void VMDInterpolator::set(const VMDInterpolator& interpolator)
+	inline void vmd_interpolator_impl::set_by(uint8_t value)
 	{
-		m_ax = interpolator.m_ax;
-		m_ay = interpolator.m_ay;
-		m_bx = interpolator.m_bx;
-		m_by = interpolator.m_by;
-		m_isLinear = m_ax == m_ay && m_bx == m_by;
+		by_ = value;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	void VMDInterpolator::reset()
+	inline bool vmd_interpolator_impl::is_linear() const
 	{
-		set();
+		return is_linear_;
 	}
 
-	bool VMDInterpolator::is_linear() const
+	inline void vmd_interpolator_impl::set_linear()
 	{
-		return m_isLinear;
+		ax_ = 20U;
+		ay_ = 20U;
+		bx_ = 107U;
+		by_ = 107U;
+		is_linear_ = true;
 	}
 
-	bool VMDBoneInterpolator::read(const file& file)
+	bool vmd_bone_interpolator_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(m_ax))
+		if (!file.read_elements(ax_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(m_ay))
+		if (!file.read_elements(ay_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(m_bx))
+		if (!file.read_elements(bx_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(m_by))
+		if (!file.read_elements(by_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		m_isLinear = m_ax == m_ay && m_bx == m_by;
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 		return true;
 	}
 
-	bool VMDBoneInterpolator::write(const file& file) const
+	bool vmd_bone_interpolator_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(m_ax))
+		if (!file.write_elements(ax_))
 			return false;
-		if (!file.write_elements(m_ax))
+		if (!file.write_elements(ax_))
 			return false;
-		if (!file.write_elements(m_ax))
+		if (!file.write_elements(ax_))
 			return false;
-		if (!file.write_elements(m_ax))
+		if (!file.write_elements(ax_))
 			return false;
-		if (!file.write_elements(m_ay))
+		if (!file.write_elements(ay_))
 			return false;
-		if (!file.write_elements(m_ay))
+		if (!file.write_elements(ay_))
 			return false;
-		if (!file.write_elements(m_ay))
+		if (!file.write_elements(ay_))
 			return false;
-		if (!file.write_elements(m_ay))
+		if (!file.write_elements(ay_))
 			return false;
-		if (!file.write_elements(m_bx))
+		if (!file.write_elements(bx_))
 			return false;
-		if (!file.write_elements(m_bx))
+		if (!file.write_elements(bx_))
 			return false;
-		if (!file.write_elements(m_bx))
+		if (!file.write_elements(bx_))
 			return false;
-		if (!file.write_elements(m_bx))
+		if (!file.write_elements(bx_))
 			return false;
-		if (!file.write_elements(m_by))
+		if (!file.write_elements(by_))
 			return false;
-		if (!file.write_elements(m_by))
+		if (!file.write_elements(by_))
 			return false;
-		if (!file.write_elements(m_by))
+		if (!file.write_elements(by_))
 			return false;
-		if (!file.write_elements(m_by))
+		if (!file.write_elements(by_))
 			return false;
 		return true;
 	}
 
-	bool VMDCameraInterpolator::read(const file& file)
+	bool vmd_camera_interpolator_impl::read_from_file(const file& file)
 	{
 		UInt32 tmp = 0;
 		if (!file.read_elements(tmp))
 			return false;
-		this->m_ax = static_cast<UChar>(((tmp & 0xFF) ^ 0x80) - 0x80);
-		this->m_bx = static_cast<UChar>(((tmp & 0xFF00) >> 8 ^ 0x80) - 0x80);
-		this->m_ay = static_cast<UChar>(((tmp & 0xFF0000) >> 16 ^ 0x80) - 0x80);
-		this->m_by = static_cast<UChar>(((tmp & 0xFF000000) >> 24 ^ 0x80) - 0x80);
-		m_isLinear = m_ax == m_ay && m_bx == m_by;
+		this->ax_ = static_cast<UChar>(((tmp & 0xFF) ^ 0x80) - 0x80);
+		this->bx_ = static_cast<UChar>(((tmp & 0xFF00) >> 8 ^ 0x80) - 0x80);
+		this->ay_ = static_cast<UChar>(((tmp & 0xFF0000) >> 16 ^ 0x80) - 0x80);
+		this->by_ = static_cast<UChar>(((tmp & 0xFF000000) >> 24 ^ 0x80) - 0x80);
+		is_linear_ = ax_ == ay_ && bx_ == by_;
 		return true;
 	}
 
-	bool VMDCameraInterpolator::write(const file& file) const
+	bool vmd_camera_interpolator_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(m_ax))
+		if (!file.write_elements(ax_))
 			return false;
-		if (!file.write_elements(m_bx))
+		if (!file.write_elements(bx_))
 			return false;
-		if (!file.write_elements(m_ay))
+		if (!file.write_elements(ay_))
 			return false;
-		if (!file.write_elements(m_by))
+		if (!file.write_elements(by_))
 			return false;
 		return true;
 	}

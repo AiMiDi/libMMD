@@ -12,12 +12,32 @@ Description:	MMD style expression animation
 
 namespace libmmd
 {
-	bool VMDMorphAnimation::read_from_file(const file& file)
+	inline std::string vmd_morph_key_frame_impl::get_morph_name() const
+	{
+		return std::string{morph_name_.begin(), morph_name_.end()};
+	}
+
+	inline void vmd_morph_key_frame_impl::set_morph_name(const std::string& name)
+	{
+		morph_name_ = std::u8string{ name.begin(), name.end() };
+	}
+
+	inline float vmd_morph_key_frame_impl::get_weight() const
+	{
+		return weight_;
+	}
+
+	inline void vmd_morph_key_frame_impl::set_weight(float weight)
+	{
+		weight_ = weight;
+	}
+
+	bool vmd_morph_key_frame_impl::read_from_file(const file& file)
 	{
 		Char morph_name[15] = { '\0' };
 		if (!file.read_elements(morph_name, 15LLU))
 			return false;
-		if (!file.read_elements(frame_num_))
+		if (!file.read_elements(frame_at_))
 			return false;
 		if (!file.read_elements(weight_))
 			return false;
@@ -25,13 +45,13 @@ namespace libmmd
 		return true;
 	}
 
-	bool VMDMorphAnimation::write_to_file(const file& file) const
+	bool vmd_morph_key_frame_impl::write_to_file(const file& file) const
 	{
 		std::string morph_name = code_converter::utf8_to_shift_jis(morph_name_);
 		morph_name.resize(15, '\0');
 		if (!file.write_elements(morph_name.c_str(), 15LLU))
 			return false;
-		if (!file.write_elements(frame_num_))
+		if (!file.write_elements(frame_at_))
 			return false;
 		if (!file.write_elements(weight_))
 			return false;

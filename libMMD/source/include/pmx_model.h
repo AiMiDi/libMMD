@@ -9,6 +9,7 @@ Description:	pmx data interface
 **************************************************************************/
 #pragma once
 
+#include <vector>
 #include <string>
 #include <array>
 
@@ -23,10 +24,15 @@ namespace libmmd
         virtual ~pmx_element_array() = default;
 
         virtual int32_t size() const = 0;
-        // getter
+
         virtual const pmx_element_type& operator[](int32_t index) const = 0;
-        // setter
         virtual pmx_element_type& operator[](int32_t index) = 0;
+
+        virtual typename std::vector<pmx_element_type>::iterator begin() = 0;
+        virtual typename std::vector<pmx_element_type>::iterator end() = 0;
+        virtual typename std::vector<pmx_element_type>::const_iterator begin() const = 0;
+        virtual typename std::vector<pmx_element_type>::const_iterator end() const = 0;
+
         virtual pmx_element_type& add() = 0;
         virtual bool remove(int32_t index, uint32_t count = 1) = 0;
     };

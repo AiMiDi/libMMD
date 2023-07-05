@@ -54,13 +54,13 @@ namespace libmmd
 		[[nodiscard]] virtual bool write_to_file(const file& file) const = 0;
 	};
 
+	template<class Base, class Derived>
+	// Base is not same Derived and Base is base of Derived
+	concept is_base_of_and_not_same = !std::is_same_v<Base, Derived>&& std::is_base_of_v<Base, Derived>;
+
 	template<typename T>
 	// T must have read_from_file() and write_to_file()
-	concept is_file_element = requires(T t, file& file)
-	{
-		t.read_from_file(file);
-		t.write_to_file(file);
-	};
+	concept is_file_element = is_base_of_and_not_same<file_element_impl, T>;
 
 	template<typename T, typename... Args> requires is_file_element<T>
 	class file_element_array final
@@ -156,22 +156,22 @@ namespace libmmd
 			return true;
 		}
 
-		typename std::vector<file_element_type>::iterator begin()
+		auto begin()
 		{
 			return data_.begin();
 		}
 
-		typename std::vector<file_element_type>::iterator end()
+		auto end()
 		{
 			return data_.end();
 		}
 
-		typename std::vector<file_element_type>::const_iterator begin() const
+		auto begin() const
 		{
 			return data_.begin();
 		}
 
-		typename std::vector<file_element_type>::const_iterator end() const
+		auto end() const
 		{
 			return data_.end();
 		}

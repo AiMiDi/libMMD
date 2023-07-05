@@ -47,12 +47,8 @@ namespace libmmd
 		pmx_element_impl& operator =(pmx_element_impl&&) noexcept = default;
 	};
 
-	template<class Base, class Derived>
-	// Base is not same Derived and Base is base of Derived
-	concept is_base_of_and_not_same = !std::is_same_v<Base, Derived> && std::is_base_of_v<Base, Derived>;
-
 	template<class T>
-	// ImplementationClass must have constructor function ImplementationClass(const pmx_model_description*)
+	// Class must base of and not same pmx_element_impl.
 	concept is_pmx_element = is_base_of_and_not_same<pmx_element_impl, T>;
 
 	template <class InterfaceClass, class ImplementationClass>
@@ -127,6 +123,22 @@ namespace libmmd
 		void clear()
 		{
 			array_.clear();
+		}
+		typename std::vector<InterfaceClass>::iterator begin() override
+		{
+			return array_.begin();
+		}
+		typename std::vector<InterfaceClass>::iterator end() override
+		{
+			return array_.end();
+		}
+		typename std::vector<InterfaceClass>::const_iterator begin() const override
+		{
+			return array_.begin();
+		}
+		typename std::vector<InterfaceClass>::const_iterator end() const override
+		{
+			return array_.end();
 		}
 		/**
 		 * \brief Read from a pmx file

@@ -10,6 +10,7 @@ Description:	pmx data interface
 
 #pragma once
 
+#include <vector>
 #include <string>
 #include <array>
 
@@ -30,6 +31,11 @@ namespace libmmd
 
 		virtual vmd_element_type& add() = 0;
 		virtual bool remove(int32_t index, uint32_t count = 1) = 0;
+		
+		virtual typename std::vector<vmd_element_type>::iterator begin() = 0;
+		virtual typename std::vector<vmd_element_type>::iterator end() = 0;
+		virtual typename std::vector<vmd_element_type>::const_iterator begin() const = 0;
+		virtual typename std::vector<vmd_element_type>::const_iterator end() const = 0;
 
 		virtual void sort() = 0;
 	};
@@ -52,6 +58,7 @@ namespace libmmd
 		virtual void set_by(uint8_t value) = 0;
 
 		virtual bool is_linear() const = 0;
+		virtual void set_linear() = 0;
 	};
 
 	class vmd_key_frame
@@ -63,7 +70,7 @@ namespace libmmd
 		virtual void set_frame_at(uint32_t frame_at) = 0;
 	};
 
-	class vmd_bone_key_frame : public vmd_key_frame
+	class vmd_bone_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_bone_key_frame() override = default;
@@ -90,7 +97,7 @@ namespace libmmd
 		virtual vmd_interpolator& mutable_rotation_interpolator() = 0;
 	};
 
-	class vmd_morph_key_frame : public vmd_key_frame
+	class vmd_morph_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_morph_key_frame() override = default;
@@ -102,7 +109,7 @@ namespace libmmd
 		virtual void set_weight(float weight) = 0;
 	};
 
-	class vmd_camera_key_frame : public vmd_key_frame
+	class vmd_camera_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_camera_key_frame() override = default;
@@ -141,7 +148,7 @@ namespace libmmd
 		virtual vmd_interpolator& mutable_view_angle_interpolator() = 0;
 	};
 
-	class vmd_light_key_frame : public vmd_key_frame
+	class vmd_light_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_light_key_frame() override = default;
@@ -153,7 +160,7 @@ namespace libmmd
 		virtual void set_position(const std::array<float, 3>& position) = 0;
 	};
 
-	class vmd_shadow_key_frame : public vmd_key_frame
+	class vmd_shadow_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_shadow_key_frame() override = default;
@@ -184,7 +191,7 @@ namespace libmmd
 		virtual void set_IK_enable(bool value) = 0;
 	};
 
-	class vmd_model_controller_key_frame : public vmd_key_frame
+	class vmd_model_controller_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_model_controller_key_frame() override = default;

@@ -9,141 +9,87 @@ Description:	MMD style animation interpolator
 **************************************************************************/
 #pragma once
 
+#include "file_element.hpp"
+
 namespace libmmd
 {
 	/**
 	 * \brief MMD style animation interpolator
 	 */
-	class VMDInterpolator
+	class vmd_interpolator_impl : public vmd_interpolator, file_element_impl
 	{
 	protected:
-		UChar m_ax = 20U;
-		UChar m_ay = 20U;
-		UChar m_bx = 107U;
-		UChar m_by = 107U;
-		bool  m_isLinear = true;
+		uint8_t ax_ = 20U;
+		uint8_t ay_ = 20U;
+		uint8_t bx_ = 107U;
+		uint8_t by_ = 107U;
+		bool  is_linear_ = true;
 	public:
 		/**
 		 * \brief  Constructor function
 		 */
-		explicit VMDInterpolator(UChar ax = 20U, UChar ay = 20U, UChar bx = 107U, UChar by = 107U);
+		explicit vmd_interpolator_impl(uint8_t ax = 20U, uint8_t ay = 20U, uint8_t bx = 107U, uint8_t by = 107U);
+		/**
+		 * \brief Destructor function
+		 */
+		~vmd_interpolator_impl() override = default;
 		/**
 		 * \brief Copy constructor
 		 */
-		VMDInterpolator(const VMDInterpolator&) noexcept = default;
+		vmd_interpolator_impl(const vmd_interpolator_impl&) noexcept = default;
 		/**
 		 * \brief Move constructor
 		 */
-		VMDInterpolator(VMDInterpolator&&) noexcept;
+		vmd_interpolator_impl(vmd_interpolator_impl&&) noexcept = default;
 		/**
 		* \brief Copy operator=
 		* \return Result reference
 		*/
-		VMDInterpolator& operator =(const VMDInterpolator&) = default;
+		vmd_interpolator_impl& operator =(const vmd_interpolator_impl&) = default;
 		/**
 		 * \brief Move operator=
 		 * \return Result reference
 		 */
-		VMDInterpolator& operator =(VMDInterpolator&&) noexcept;
+		vmd_interpolator_impl& operator =(vmd_interpolator_impl&&) noexcept = default;
 
-		bool operator==(const VMDInterpolator& other) const;
-		/**
-		* \brief Destructor function
-		*/
-		virtual ~VMDInterpolator() = default;
-		/**
-		 * \brief Get interpolator's C4D style tangent's value of right
-		 * \return C4D style tangent's value of right
-		 */
-		[[nodiscard]] Float64 get_value_right() const;
-		/**
-		 * \brief Get interpolator's C4D style tangent's value of left
-		 * \return C4D style tangent's value of left
-		 */
-		[[nodiscard]] Float64 get_value_left() const;
-		/**
-		 * \brief Set interpolator by C4D SplineData
-		 * \return C4D style tangent of right
-		 */
-		[[nodiscard]] Vector2d64 get_tangent_right() const;
-		/**
-		 * \brief Set interpolator by C4D SplineData
-		* \return C4D style tangent of left
-		*/
-		[[nodiscard]] Vector2d64 get_tangent_left() const;
-		/**
-		* \brief Set interpolator by 4 UChar
-		*/
-		void set(const UChar& ax = 20U, const UChar& ay = 20U, const UChar& bx = 107U, const UChar& by = 107U);
-		/**
-		* \brief Set interpolator by other interpolator
-		*/
-		void set(const VMDInterpolator& interpolator);
-		/**
-		* \brief Reset interpolator
-		*/
-		void reset();
-		/**
-		 * \brief Is the interpolator is linear
-		 * \return TRUE is linear, other is FALSE
-		 */
-		[[nodiscard]] bool is_linear() const;
-		/**
-		 * \brief Read from a vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
-		 */
-		virtual bool read(const file& file) = 0;
-		/**
-		 * \brief Write to vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
-		 */
-		virtual bool write(const file& file) const = 0;
+		bool operator==(const vmd_interpolator_impl& other) const;
 
-		friend struct std::hash<VMDInterpolator>;
+		uint8_t get_ax() const override;
+		void set_ax(uint8_t value) override;
+
+		uint8_t get_ay() const override;
+		void set_ay(uint8_t value) override;
+
+		uint8_t get_bx() const override;
+		void set_bx(uint8_t value) override;
+
+		uint8_t get_by() const override;
+		void set_by(uint8_t value) override;
+
+		bool is_linear() const override;
+		void set_linear() override;
 	};
 
-	class VMDBoneInterpolator final : public VMDInterpolator
+	class vmd_bone_interpolator_impl final : public vmd_interpolator_impl
 	{
 	public:
-		/**
-		* \brief Read from a vmd file
-		* \param file vmd file
-		* \return Successful TRUE, other FALSE.
-		*/
-		bool read(const file& file) override;
-		/**
-		* \brief Write to vmd file
-		* \param file vmd file
-		* \return Successful TRUE, other FALSE.
-		*/
-		bool write(const file& file) const override;
+		bool read_from_file(const file& file) override;
+		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 
-	class VMDCameraInterpolator final : public VMDInterpolator
+	class vmd_camera_interpolator_impl final : public vmd_interpolator_impl
 	{
 	public:
-		/**
-		* \brief Read from a vmd file
-		* \param file vmd file
-		* \return Successful TRUE, other FALSE.
-		*/
-		bool read(const file& file) override;
-		/**
-		* \brief Write to vmd file
-		* \param file vmd file
-		* \return Successful TRUE, other FALSE.
-		*/
-		bool write(const file& file) const override;
+		bool read_from_file(const file& file) override;
+		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 }
 
 template<>
-struct std::hash<libmmd::VMDInterpolator>
+struct std::hash<libmmd::vmd_interpolator_impl>
 {
-	size_t operator()(const libmmd::VMDInterpolator& rhs) const noexcept
+	size_t operator()(const libmmd::vmd_interpolator_impl& rhs) const noexcept
 	{
-		return std::hash<int>()(rhs.m_ax) ^ std::hash<int>()(rhs.m_ay) ^ std::hash<int>()(rhs.m_bx) ^ std::hash<int>()(rhs.m_by) << 1;
+		return std::hash<int>()(rhs.get_ax()) ^ std::hash<int>()(rhs.get_ay()) ^ std::hash<int>()(rhs.get_bx()) ^ std::hash<int>()(rhs.get_by()) << 1;
 	}
 };
