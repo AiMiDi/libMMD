@@ -12,24 +12,44 @@ Description:	MMD style lighting animation
 
 namespace libmmd
 {
-	bool VMDLightAnimation::read_from_file(const file& file)
+	inline const std::array<float, 3>& vmd_light_key_frame_impl::get_color() const
 	{
-		if (!file.read_elements(frame_num_))
+		return color_;
+	}
+
+	inline void vmd_light_key_frame_impl::set_color(const std::array<float, 3>& color)
+	{
+		color_ = color;
+	}
+
+	inline const std::array<float, 3>& vmd_light_key_frame_impl::get_position() const
+	{
+		return position_;
+	}
+
+	inline void vmd_light_key_frame_impl::set_position(const std::array<float, 3>& position)
+	{
+		position_ = position;
+	}
+
+	bool vmd_light_key_frame_impl::read_from_file(const file& file)
+	{
+		if (!file.read_elements(frame_at_))
 			return false;
-		if (!file.read_elements(light_color_))
+		if (!file.read_elements(color_))
 			return false;
-		if (!file.read_elements(light_position_))
+		if (!file.read_elements(position_))
 			return false;
 		return true;
 	}
 
-	bool VMDLightAnimation::write_to_file(const file& file) const
+	bool vmd_light_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_num_))
+		if (!file.write_elements(frame_at_))
 			return false;
-		if (!file.write_elements(light_color_))
+		if (!file.write_elements(color_))
 			return false;
-		if (!file.write_elements(light_position_))
+		if (!file.write_elements(position_))
 			return false;
 		return true;
 	}

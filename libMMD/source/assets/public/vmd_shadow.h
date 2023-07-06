@@ -14,41 +14,47 @@ Description:	MMD style shadow animation
 
 namespace libmmd
 {
-	class VMDShadow final : public vmd_element
+	class vmd_shadow_key_frame_impl : public vmd_shadow_key_frame, public vmd_key_frame_impl
 	{
 		// 0:Off 1:mode1 2:mode2
-		UChar	shadow_type_{};
+		shadow_type	shadow_type_{};
 		// Distance
 		Float32 distance_{};
-
-		CMT_DEFAULT_COPY_BODY(VMDShadow)
-		CMT_DEFAULT_MOVE_BODY(VMDShadow)
 	public:
 		/**
 		 * \brief Constructor function
-		 * \param shadow_type 0:Off 1:mode1 2:mode2
-		 * \param distance Shadow distance
 		 */
-		explicit VMDShadow(
-			const UChar& shadow_type = {}, 
-			const Float32& distance = {}) :
-			shadow_type_(shadow_type),
-			distance_(distance) {}
+		vmd_shadow_key_frame_impl() = default;
 		/**
 		 * \brief Destructor function
 		 */
-		~VMDShadow() override = default;
+		~vmd_shadow_key_frame_impl() override = default;
 		/**
-		 * \brief Read from a vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
+		 * \brief Copy constructor
 		 */
+		vmd_shadow_key_frame_impl(const vmd_shadow_key_frame_impl&) noexcept = default;
+		/**
+		 * \brief Move constructor
+		 */
+		vmd_shadow_key_frame_impl(vmd_shadow_key_frame_impl&&) noexcept = default;
+		/**
+		* \brief Copy operator=
+		* \return Result reference
+		*/
+		vmd_shadow_key_frame_impl& operator =(const vmd_shadow_key_frame_impl&) = default;
+		/**
+		 * \brief Move operator=
+		 * \return Result reference
+		 */
+		vmd_shadow_key_frame_impl& operator =(vmd_shadow_key_frame_impl&&) noexcept = default;
+
+		shadow_type get_shadow_type() const override;
+		void set_shadow_type(const shadow_type type) override;
+
+		float get_distance() const override;
+		void set_distance(float distance) override;
+
 		bool read_from_file(const file& file) override;
-		/**
-		 * \brief Write to vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
-		 */
-		bool write_to_file(const file& file) const override;
+		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 }

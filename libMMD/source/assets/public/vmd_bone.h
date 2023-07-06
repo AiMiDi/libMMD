@@ -32,6 +32,33 @@ namespace libmmd
 		// Rotation action interpolation
 		vmd_bone_interpolator_impl interpolator_rotation_{};
 	public:
+		/**
+		 * \brief Constructor function
+		 */
+		vmd_bone_key_frame_impl() = default;
+		/**
+		 * \brief Destructor function
+		 */
+		~vmd_bone_key_frame_impl() override = default;
+		/**
+		 * \brief Copy constructor
+		 */
+		vmd_bone_key_frame_impl(const vmd_bone_key_frame_impl&) noexcept = default;
+		/**
+		 * \brief Move constructor
+		 */
+		vmd_bone_key_frame_impl(vmd_bone_key_frame_impl&&) noexcept = default; 
+		/**
+		* \brief Copy operator=
+		* \return Result reference
+		*/
+		vmd_bone_key_frame_impl& operator =(const vmd_bone_key_frame_impl&) = default;
+		/**
+		 * \brief Move operator=
+		 * \return Result reference
+		 */
+		vmd_bone_key_frame_impl& operator =(vmd_bone_key_frame_impl&&) noexcept = default;
+
 		[[nodiscard]] std::string get_bone_name() const override;
 		void set_bone_name(const std::string& name) override;
 

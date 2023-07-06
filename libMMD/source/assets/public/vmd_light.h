@@ -14,41 +14,48 @@ Description:	MMD style lighting animation
 
 namespace libmmd
 {
-	class VMDLightAnimation final : public vmd_element
+	class vmd_light_key_frame_impl final : public vmd_light_key_frame, public vmd_key_frame_impl
 	{
 		// Light color
-		Vector32	light_color_{};
+		Vector32	color_{};
 		// location
-		Vector32	light_position_{};
-
-		CMT_DEFAULT_COPY_BODY(VMDLightAnimation)
-		CMT_DEFAULT_MOVE_BODY(VMDLightAnimation)
+		Vector32	position_{};
 	public:
 		/**
 		 * \brief Constructor function
-		 * \param light_color Light color
-		 * \param light_position Location
 		 */
-		explicit VMDLightAnimation(
-			const Vector32& light_color = {}, 
-			const Vector32& light_position = {}) :
-			light_color_(light_color),
-			light_position_(light_position) {}
+		vmd_light_key_frame_impl() = default;
 		/**
 		 * \brief Destructor function
 		 */
-		~VMDLightAnimation() override = default;
+		~vmd_light_key_frame_impl() override = default;
 		/**
-		 * \brief Read from a vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
+		 * \brief Copy constructor
 		 */
+		vmd_light_key_frame_impl(const vmd_light_key_frame_impl&) noexcept = default;
+		/**
+		 * \brief Move constructor
+		 */
+		vmd_light_key_frame_impl(vmd_light_key_frame_impl&&) noexcept = default;
+		/**
+		* \brief Copy operator=
+		* \return Result reference
+		*/
+		vmd_light_key_frame_impl& operator =(const vmd_light_key_frame_impl&) = default;
+		/**
+		 * \brief Move operator=
+		 * \return Result reference
+		 */
+		vmd_light_key_frame_impl& operator =(vmd_light_key_frame_impl&&) noexcept = default;
+
+		const std::array<float, 3>& get_color() const override;
+
+		void set_color(const std::array<float, 3>& color) override;
+
+		const std::array<float, 3>& get_position() const override;
+
+		void set_position(const std::array<float, 3>& position) override;
 		bool read_from_file(const file& file) override;
-		/**
-		 * \brief Write to vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
-		 */
-		bool write_to_file(const file& file) const override;
+		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 }
