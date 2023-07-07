@@ -11,43 +11,51 @@ Description:	MMD style model information animation
 #pragma once
 
 #include "vmd_element.hpp"
-#include "vmd_Ik_controller.h"
+#include "vmd_IK_controller_impl.h"
 
 namespace libmmd
 {
-	class VMDModelController final : public vmd_element
+	class vmd_model_controller_key_frame_impl final : public vmd_model_controller_key_frame, public vmd_key_frame_impl
 	{
-	public:
-		typedef file_element_array<VMDIkController> VMDIkControllerArray;
-	private:
 		// Is model show
-		bool				 show_;
+		bool				 model_show_;
 		// IKs enable information
-		VMDIkControllerArray IK_controller_animation_{};
-
-		CMT_DEFAULT_COPY_BODY(VMDModelController)
-		CMT_DEFAULT_MOVE_BODY(VMDModelController)
+		vmd_element_array_impl<vmd_IK_controller, vmd_IK_controller_impl> IK_controller_array{};
 	public:
 		/**
-		 * \brief  Constructor function
-		 * \param show Is model show
+		 * \brief Constructor function
 		 */
-		explicit VMDModelController(const bool& show = true) : show_(show) {}
+		vmd_model_controller_key_frame_impl() = default;
 		/**
 		 * \brief Destructor function
 		 */
-		~VMDModelController() override = default;
+		~vmd_model_controller_key_frame_impl() override = default;
 		/**
-		 * \brief Read from a vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
+		 * \brief Copy constructor
 		 */
+		vmd_model_controller_key_frame_impl(const vmd_model_controller_key_frame_impl&) noexcept = default;
+		/**
+		 * \brief Move constructor
+		 */
+		vmd_model_controller_key_frame_impl(vmd_model_controller_key_frame_impl&&) noexcept = default;
+		/**
+		* \brief Copy operator=
+		* \return Result reference
+		*/
+		vmd_model_controller_key_frame_impl& operator =(const vmd_model_controller_key_frame_impl&) = default;
+		/**
+		 * \brief Move operator=
+		 * \return Result reference
+		 */
+		vmd_model_controller_key_frame_impl& operator =(vmd_model_controller_key_frame_impl&&) noexcept = default;
+		bool is_mode_show() const override;
+
+		void set_mode_show(bool value) override;
+
+		const vmd_IK_controller_array& get_vmd_IK_controller_array() override;
+
+		vmd_IK_controller_array& mutable_vmd_IK_controller_array() override;
 		bool read_from_file(const file& file) override;
-		/**
-		 * \brief Write to vmd file
-		 * \param file vmd file
-		 * \return Successful TRUE, other FALSE.
-		 */
-		bool write_to_file(const file& file) const override;
+		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 }

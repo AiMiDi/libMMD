@@ -217,6 +217,9 @@ namespace libmmd
 		using vmd_shadow_key_frame_array = vmd_element_array<vmd_shadow_key_frame>;
 		using vmd_model_controller_key_frame_array = vmd_element_array<vmd_model_controller_key_frame>;
 
+		virtual std::string get_model_name() const = 0;
+		virtual void set_model_name(const std::string& name) = 0;
+
 		virtual const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() = 0;
 		virtual vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() = 0;
 

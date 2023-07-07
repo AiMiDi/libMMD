@@ -13,65 +13,62 @@ Description:	vmd file data
 #include "vmd_bone.h"
 #include "vmd_camera.h"
 #include "vmd_light.h"
-#include "vmd_model_controller.h"
 #include "vmd_morph.h"
 #include "vmd_shadow.h"
+#include "vmd_model_controller.h"
+#include "vmd_element.hpp"
 
 namespace libmmd
 {
-	struct VMDData
+	class vmd_animation_impl : public vmd_animation
 	{
 		std::u8string model_name;
-		vmd_element_array<VMDBoneAnimation> motion_frames{};
-		vmd_element_array<VMDMorphAnimation> morph_frames{};
-		vmd_element_array<VMDCameraAnimation> camera_frames{};
-		vmd_element_array<VMDLightAnimation> light_frames{};
-		vmd_element_array<VMDShadow> shadow_frames{};
-		vmd_element_array<VMDModelController> model_frames{};
-
-		explicit VMDData(std::u8string model_name) : model_name(std::move(model_name)) {}
-	};
-
-	class VMD
-	{
-		GENERATE_MMD_CLASS_BODY(VMD, VMDData)
+		vmd_element_array_impl<vmd_bone_key_frame, vmd_bone_key_frame_impl> motion_frames{};
+		vmd_element_array_impl<vmd_morph_key_frame, vmd_morph_key_frame_impl> morph_frames{};
+		vmd_element_array_impl<vmd_camera_key_frame, vmd_camera_key_frame_impl> camera_frames{};
+		vmd_element_array_impl<vmd_light_key_frame, vmd_light_key_frame_impl> light_frames{};
+		vmd_element_array_impl<vmd_shadow_key_frame, vmd_shadow_key_frame_impl> shadow_frames{};
+		vmd_element_array_impl<vmd_model_controller_key_frame, vmd_model_controller_key_frame_impl> model_frames{};
 	public:
 		/**
-		 * \brief  Constructor function
+		 * \brief Constructor function
 		 */
-		explicit VMD(const std::u8string& model_name = {}, bool is_camera = false);
+		vmd_animation_impl() = default;
 		/**
 		 * \brief Destructor function
 		 */
-		~VMD() = default;
+		~vmd_animation_impl() override = default;
 		/**
-		 * \brief Read from a vmd file
-		 * \param path Optionally, passing in an empty file name allows the user to choose otherwise use the passed file name.
-		 * \return Successful TRUE, other FALSE.
+		 * \brief Copy constructor
 		 */
-		bool load_from_file(const path& path);
+		vmd_animation_impl(const vmd_animation_impl&) noexcept = default;
 		/**
-		 * \brief Write to vmd file
-		 * \param path Optionally, passing in an empty file name allows the user to choose otherwise use the passed file name.
-		 * \return Successful TRUE, other FALSE.
+		 * \brief Move constructor
 		 */
-		bool save_to_file(path& path) const;
+		vmd_animation_impl(vmd_animation_impl&&) noexcept = default;
 		/**
-		 * \brief Check it is VMD Camera
-		 * \return Is a VMD Camera TRUE, other FALSE.
+		* \brief Copy operator=
+		* \return Result reference
+		*/
+		vmd_animation_impl& operator =(const vmd_animation_impl&) = default;
+		/**
+		 * \brief Move operator=
+		 * \return Result reference
 		 */
-		[[nodiscard]] bool IsCamera() const
-		{
-			return is_camera_;
-		}
-
-		// カメラ・照明 
-		static const std::u8string& GetDefaultCameraName()
-		{
-			static std::u8string camera_name = u8"カメラ・照明";
-			return camera_name;
-		}
-	private:
-		bool is_camera_ = false;
+		vmd_animation_impl& operator =(vmd_animation_impl&&) noexcept = default;
+		std::string get_model_name() const override;
+		void set_model_name(const std::string& name) override;
+		const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() override;
+		vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() override;
+		const vmd_morph_key_frame_array& get_vmd_morph_key_frame_array() override;
+		vmd_morph_key_frame_array& mutable_vmd_morph_key_frame_array() override;
+		const vmd_camera_key_frame_array& get_vmd_camera_key_frame_array() override;
+		vmd_camera_key_frame_array& mutable_vmd_camera_key_frame_array() override;
+		const vmd_light_key_frame_array& get_vmd_light_key_frame_array() override;
+		vmd_light_key_frame_array& mutable_vmd_light_key_frame_array() override;
+		const vmd_shadow_key_frame_array& get_vmd_shadow_key_frame_array() override;
+		vmd_shadow_key_frame_array& mutable_vmd_shadow_key_frame_array() override;
+		const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() override;
+		vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() override;
 	};
 }

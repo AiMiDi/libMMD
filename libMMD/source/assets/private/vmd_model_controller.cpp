@@ -12,26 +12,48 @@ Description:	MMD style model information animation
 
 namespace libmmd
 {
-	bool VMDModelController::read_from_file(const file& file)
+	bool vmd_model_controller_key_frame_impl::is_mode_show() const
 	{
-		if (!file.read_elements(frame_num_))
+		return model_show_;
+	}
+
+	void vmd_model_controller_key_frame_impl::set_mode_show(bool value)
+	{
+		model_show_ = value;
+	}
+
+	const vmd_model_controller_key_frame::vmd_IK_controller_array& vmd_model_controller_key_frame_impl::
+	get_vmd_IK_controller_array()
+	{
+		return IK_controller_array;
+	}
+
+	vmd_model_controller_key_frame::vmd_IK_controller_array& vmd_model_controller_key_frame_impl::
+	mutable_vmd_IK_controller_array()
+	{
+		return IK_controller_array;
+	}
+
+	bool vmd_model_controller_key_frame_impl::read_from_file(const file& file)
+	{
+		if (!file.read_elements(frame_at_))
 			return false;
-		if (!file.read_elements(show_))
+		if (!file.read_elements(model_show_))
 			return false;
-		UInt32 ik_info_number = 0;
-		if (!file.read_elements(ik_info_number))
+		UInt32 IK_controller_number = 0;
+		if (!file.read_elements(IK_controller_number))
 			return false;
-		IK_controller_animation_.read_from_file(file);
+		IK_controller_array.read_from_file(file);
 		return true;
 	}
 
-	bool VMDModelController::write_to_file(const file& file) const
+	bool vmd_model_controller_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_num_))
+		if (!file.write_elements(frame_at_))
 			return false;
-		if (!file.write_elements(show_))
+		if (!file.write_elements(model_show_))
 			return false;
-		if (!IK_controller_animation_.write_to_file(file))
+		if (!IK_controller_array.write_to_file(file))
 			return false;
 		return true;
 	}

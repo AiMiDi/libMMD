@@ -14,7 +14,7 @@ Description:	MMD style shadow animation
 
 namespace libmmd
 {
-	class vmd_shadow_key_frame_impl : public vmd_shadow_key_frame, public vmd_key_frame_impl
+	class vmd_shadow_key_frame_impl final : public vmd_shadow_key_frame, public vmd_key_frame_impl
 	{
 		// 0:Off 1:mode1 2:mode2
 		shadow_type	shadow_type_{};
