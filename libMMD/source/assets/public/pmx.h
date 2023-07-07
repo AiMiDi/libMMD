@@ -75,67 +75,51 @@ namespace libmmd
 		pmx_model_impl& operator =(pmx_model_impl&&) noexcept = default;
 
 		[[nodiscard]] pmx_version get_version() const override;
-
 		void set_version(pmx_version version) override;
 
 		[[nodiscard]] std::string get_model_name_local() const override;
-
 		void set_model_name_local(const std::string& name) override;
 
 		[[nodiscard]] std::string get_model_name_universal() const override;
-
 		void set_model_name_universal(const std::string& name) override;
 
 		[[nodiscard]] std::string get_comments_local() const override;
-
 		void set_comments_local(const std::string& comments) override;
 
 		[[nodiscard]] std::string get_comments_universal() const override;
-
 		void set_comments_universal(const std::string& comments) override;
 
 		const pmx_vertex_array& get_pmx_vertex_array() override;
-
 		pmx_vertex_array& mutable_pmx_vertex_array() override;
 
 		const pmx_surface_array& get_pmx_surface_array() override;
-
 		pmx_surface_array& mutable_pmx_surface_array() override;
 
 		const pmx_texture_array& get_pmx_texture_array() override;
-
 		pmx_texture_array& mutable_pmx_texture_array() override;
 
 		const pmx_material_array& get_pmx_material_array() override;
-
 		pmx_material_array& mutable_pmx_material_array() override;
 
 		const pmx_bone_array& get_pmx_bone_array() override;
-
 		pmx_bone_array& mutable_pmx_bone_array() override;
 
 		const pmx_morph_array& get_pmx_morph_array() override;
-
 		pmx_morph_array& mutable_pmx_morph_array() override;
 
 		const pmx_display_frame_array& get_pmx_display_frame_array() override;
-
 		pmx_display_frame_array& mutable_pmx_display_frame_array() override;
 
 		const pmx_rigid_body_array& get_pmx_rigid_body_array() override;
-
 		pmx_rigid_body_array& mutable_pmx_rigid_body_array() override;
 
 		const pmx_joint_array& get_pmx_joint_array() override;
-
 		pmx_joint_array& mutable_pmx_joint_array() override;
 
 		bool read_from_file(const std::string& file_name) override;
-
 		[[nodiscard]] bool write_to_file(const std::string& file_name) const override;
 
 		bool read_from_file(const std::wstring& file_name) override;
-
 		[[nodiscard]] bool write_to_file(const std::wstring& file_name) const override;
 
 	private:

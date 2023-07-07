@@ -12,10 +12,7 @@ Description:	vmd file data
 
 namespace libmmd
 {
-	VMD::VMD(const std::u8string& model_name, const bool is_camera) :
-		m_data(std::make_unique<data_type>(is_camera ? GetDefaultCameraName() : model_name)), is_camera_(is_camera) {}
-
-	bool VMD::load_from_file(const path& path)
+	bool vmd_animation_impl::read_from_file_impl(const path& path)
 	{
 		file file;
 		if (!path.check_suffix("vmd"))
@@ -32,9 +29,9 @@ namespace libmmd
 		{
 			if (!file.read_elements(VMD_model_name, 20))
 				return false;
-			m_data->model_name = code_converter::shift_jis_to_utf8(VMD_model_name);
+			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
 			// カメラ照明
-			if (m_data->model_name.compare(0, 6, GetDefaultCameraName()) == 0)
+			if(model_name_.compare(0, 6, GetDefaultCameraName()) == 0)
 			{
 				is_camera_ = true;
 			}
@@ -46,8 +43,8 @@ namespace libmmd
 		{
 			if (!file.read_elements(VMD_model_name, 10LLU))
 				return false;
-			m_data->model_name = code_converter::shift_jis_to_utf8(VMD_model_name);
-			if (m_data->model_name.compare(0, 6, GetDefaultCameraName()) == 0)
+			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
+			if (model_name_.compare(0, 6, GetDefaultCameraName()) == 0)
 			{
 				is_camera_ = true;
 			}
@@ -75,7 +72,7 @@ namespace libmmd
 		return true;
 	}
 
-	bool VMD::save_to_file(path& path) const
+	bool vmd_animation_impl::save_to_file(path& path) const
 	{
 		file file;
 		if (!path.check_suffix("vmd"))
@@ -99,8 +96,80 @@ namespace libmmd
 			return false;
 		if (!m_data->shadow_frames.write_to_file(file))
 			return false;
-		if (!m_data->model_frames.write_to_file(file))
+		if (!model_controller_frames_.write_to_file(file))
 			return false;
 		return true;
+	}
+
+	std::string vmd_animation_impl::get_model_name() const
+	{
+		return std::string{model_name_.begin(), model_name_.end()};
+	}
+
+	void vmd_animation_impl::set_model_name(const std::string& name)
+	{
+		model_name_ = std::u8string{ name.begin(), name.end() };
+	}
+
+	const vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::get_vmd_bone_key_frame_array()
+	{
+		return bone_frames_;
+	}
+
+	vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::mutable_vmd_bone_key_frame_array()
+	{
+		return bone_frames_;
+	}
+
+	const vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::get_vmd_morph_key_frame_array()
+	{
+		return morph_frames_;
+	}
+
+	vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::mutable_vmd_morph_key_frame_array()
+	{
+		return morph_frames_;
+	}
+
+	const vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::get_vmd_camera_key_frame_array()
+	{
+		return camera_frames_;
+	}
+
+	vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::mutable_vmd_camera_key_frame_array()
+	{
+		return camera_frames_;
+	}
+
+	const vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::get_vmd_light_key_frame_array()
+	{
+		return light_frames_;
+	}
+
+	vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::mutable_vmd_light_key_frame_array()
+	{
+		return light_frames_;
+	}
+
+	const vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::get_vmd_shadow_key_frame_array()
+	{
+		return shadow_frames_;
+	}
+
+	vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::mutable_vmd_shadow_key_frame_array()
+	{
+		return shadow_frames_;
+	}
+
+	const vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
+	get_vmd_model_controller_key_frame_array()
+	{
+		return model_controller_frames_;
+	}
+
+	vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
+	mutable_vmd_model_controller_key_frame_array()
+	{
+		return model_controller_frames_;
 	}
 }

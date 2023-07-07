@@ -20,15 +20,16 @@ Description:	vmd file data
 
 namespace libmmd
 {
-	class vmd_animation_impl : public vmd_animation
+	class vmd_animation_impl final : public vmd_animation
 	{
-		std::u8string model_name;
-		vmd_element_array_impl<vmd_bone_key_frame, vmd_bone_key_frame_impl> motion_frames{};
-		vmd_element_array_impl<vmd_morph_key_frame, vmd_morph_key_frame_impl> morph_frames{};
-		vmd_element_array_impl<vmd_camera_key_frame, vmd_camera_key_frame_impl> camera_frames{};
-		vmd_element_array_impl<vmd_light_key_frame, vmd_light_key_frame_impl> light_frames{};
-		vmd_element_array_impl<vmd_shadow_key_frame, vmd_shadow_key_frame_impl> shadow_frames{};
-		vmd_element_array_impl<vmd_model_controller_key_frame, vmd_model_controller_key_frame_impl> model_frames{};
+		std::u8string model_name_;
+		bool is_camera_;
+		vmd_element_array_impl<vmd_bone_key_frame, vmd_bone_key_frame_impl> bone_frames_{};
+		vmd_element_array_impl<vmd_morph_key_frame, vmd_morph_key_frame_impl> morph_frames_{};
+		vmd_element_array_impl<vmd_camera_key_frame, vmd_camera_key_frame_impl> camera_frames_{};
+		vmd_element_array_impl<vmd_light_key_frame, vmd_light_key_frame_impl> light_frames_{};
+		vmd_element_array_impl<vmd_shadow_key_frame, vmd_shadow_key_frame_impl> shadow_frames_{};
+		vmd_element_array_impl<vmd_model_controller_key_frame, vmd_model_controller_key_frame_impl> model_controller_frames_{};
 	public:
 		/**
 		 * \brief Constructor function
@@ -56,19 +57,36 @@ namespace libmmd
 		 * \return Result reference
 		 */
 		vmd_animation_impl& operator =(vmd_animation_impl&&) noexcept = default;
+
 		std::string get_model_name() const override;
 		void set_model_name(const std::string& name) override;
+
 		const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() override;
 		vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() override;
+
 		const vmd_morph_key_frame_array& get_vmd_morph_key_frame_array() override;
 		vmd_morph_key_frame_array& mutable_vmd_morph_key_frame_array() override;
+
 		const vmd_camera_key_frame_array& get_vmd_camera_key_frame_array() override;
 		vmd_camera_key_frame_array& mutable_vmd_camera_key_frame_array() override;
+
 		const vmd_light_key_frame_array& get_vmd_light_key_frame_array() override;
 		vmd_light_key_frame_array& mutable_vmd_light_key_frame_array() override;
+
 		const vmd_shadow_key_frame_array& get_vmd_shadow_key_frame_array() override;
 		vmd_shadow_key_frame_array& mutable_vmd_shadow_key_frame_array() override;
+
 		const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() override;
 		vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() override;
+
+		bool read_from_file(const std::string& file_name) override;
+		[[nodiscard]] bool write_to_file(const std::string& file_name) const override;
+
+		bool read_from_file(const std::wstring& file_name) override;
+		[[nodiscard]] bool write_to_file(const std::wstring& file_name) const override;
+
+	private:
+		bool read_from_file_impl(const path& path);
+		[[nodiscard]] bool write_to_file_impl(const path& path) const;
 	};
 }

@@ -217,6 +217,12 @@ namespace libmmd
 		using vmd_shadow_key_frame_array = vmd_element_array<vmd_shadow_key_frame>;
 		using vmd_model_controller_key_frame_array = vmd_element_array<vmd_model_controller_key_frame>;
 
+		virtual bool read_from_file(const std::string& file_name);
+		virtual bool write_to_file(const std::string& file_name) const;
+
+		virtual bool read_from_file(const std::wstring& file_name);
+		virtual bool write_to_file(const std::wstring& file_name) const;
+
 		virtual std::string get_model_name() const = 0;
 		virtual void set_model_name(const std::string& name) = 0;
 
