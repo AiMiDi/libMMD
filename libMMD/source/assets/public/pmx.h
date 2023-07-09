@@ -27,7 +27,7 @@ namespace libmmd
 	class pmx_model_impl final : public pmx_model
 	{
 		// 模型信息 
-		pmx_model_description model_description_;
+		pmx_model_description model_description_{ u8"model", u8"model", u8"", u8"" };
 		// 顶点数据
 		pmx_element_array_impl<pmx_vertex, pmx_vertex_impl>					vertex_data_{ &model_description_ };
 		// 面数据  

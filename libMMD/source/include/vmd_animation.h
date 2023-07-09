@@ -226,6 +226,9 @@ namespace libmmd
 		virtual std::string get_model_name() const = 0;
 		virtual void set_model_name(const std::string& name) = 0;
 
+		virtual bool is_camera() = 0;
+		virtual void set_camera(bool value) = 0;
+
 		virtual const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() = 0;
 		virtual vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() = 0;
 

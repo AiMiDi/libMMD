@@ -92,159 +92,159 @@ namespace libmmd
 		}
 	}
 
-	std::string pmx_model_impl::get_model_name_local() const
+	inline std::string pmx_model_impl::get_model_name_local() const
 	{
 		auto& name = model_description_.get_model_name_local();
 		return std::string{name.begin(), name.end()};
 	}
 
-	void pmx_model_impl::set_model_name_local(const std::string& name)
+	inline void pmx_model_impl::set_model_name_local(const std::string& name)
 	{
 		model_description_.set_model_name_local(std::u8string(name.begin(), name.end()));
 	}
 
-	std::string pmx_model_impl::get_model_name_universal() const
+	inline std::string pmx_model_impl::get_model_name_universal() const
 	{
 		auto& name = model_description_.get_model_name_universal();
 		return std::string{name.begin(), name.end()};
 	}
 
-	void pmx_model_impl::set_model_name_universal(const std::string& name)
+	inline void pmx_model_impl::set_model_name_universal(const std::string& name)
 	{
 		model_description_.set_model_name_universal(std::u8string(name.begin(), name.end()));
 	}
 
-	std::string pmx_model_impl::get_comments_local() const
+	inline std::string pmx_model_impl::get_comments_local() const
 	{
 		auto& comment = model_description_.get_comments_local();
 		return std::string{comment.begin(), comment.end()};
 	}
 
-	void pmx_model_impl::set_comments_local(const std::string& comments)
+	inline void pmx_model_impl::set_comments_local(const std::string& comments)
 	{
 		model_description_.set_comments_local(std::u8string(comments.begin(), comments.end()));
 	}
 
-	std::string pmx_model_impl::get_comments_universal() const
+	inline std::string pmx_model_impl::get_comments_universal() const
 	{
 		auto& comment = model_description_.get_comments_universal();
 		return std::string{comment.begin(), comment.end()};
 	}
 
-	void pmx_model_impl::set_comments_universal(const std::string& comments)
+	inline void pmx_model_impl::set_comments_universal(const std::string& comments)
 	{
 		model_description_.set_model_name_universal(std::u8string(comments.begin(), comments.end()));
 	}
 
-	const pmx_model::pmx_vertex_array& pmx_model_impl::get_pmx_vertex_array()
+	inline const pmx_model::pmx_vertex_array& pmx_model_impl::get_pmx_vertex_array()
 	{
 		return vertex_data_;
 	}
 
-	pmx_model::pmx_vertex_array& pmx_model_impl::mutable_pmx_vertex_array()
+	inline pmx_model::pmx_vertex_array& pmx_model_impl::mutable_pmx_vertex_array()
 	{
 		return vertex_data_;
 	}
 
-	const pmx_model::pmx_surface_array& pmx_model_impl::get_pmx_surface_array()
+	inline const pmx_model::pmx_surface_array& pmx_model_impl::get_pmx_surface_array()
 	{
 		return surface_data_;
 	}
 
-	pmx_model::pmx_surface_array& pmx_model_impl::mutable_pmx_surface_array()
+	inline pmx_model::pmx_surface_array& pmx_model_impl::mutable_pmx_surface_array()
 	{
 		return surface_data_;
 	}
 
-	const pmx_model::pmx_texture_array& pmx_model_impl::get_pmx_texture_array()
+	inline const pmx_model::pmx_texture_array& pmx_model_impl::get_pmx_texture_array()
 	{
 		return texture_data_;
 	}
 
-	pmx_model::pmx_texture_array& pmx_model_impl::mutable_pmx_texture_array()
+	inline pmx_model::pmx_texture_array& pmx_model_impl::mutable_pmx_texture_array()
 	{
 		return texture_data_;
 	}
 
-	const pmx_model::pmx_material_array& pmx_model_impl::get_pmx_material_array()
+	inline const pmx_model::pmx_material_array& pmx_model_impl::get_pmx_material_array()
 	{
 		return material_data_;
 	}
 
-	pmx_model::pmx_material_array& pmx_model_impl::mutable_pmx_material_array()
+	inline pmx_model::pmx_material_array& pmx_model_impl::mutable_pmx_material_array()
 	{
 		return material_data_;
 	}
 
-	const pmx_model::pmx_bone_array& pmx_model_impl::get_pmx_bone_array()
+	inline const pmx_model::pmx_bone_array& pmx_model_impl::get_pmx_bone_array()
 	{
 		return bone_data_;
 	}
 
-	pmx_model::pmx_bone_array& pmx_model_impl::mutable_pmx_bone_array()
+	inline pmx_model::pmx_bone_array& pmx_model_impl::mutable_pmx_bone_array()
 	{
 		return bone_data_;
 	}
 
-	const pmx_model::pmx_morph_array& pmx_model_impl::get_pmx_morph_array()
+	inline const pmx_model::pmx_morph_array& pmx_model_impl::get_pmx_morph_array()
 	{
 		return morph_data_;
 	}
 
-	pmx_model::pmx_morph_array& pmx_model_impl::mutable_pmx_morph_array()
+	inline pmx_model::pmx_morph_array& pmx_model_impl::mutable_pmx_morph_array()
 	{
 		return morph_data_;
 	}
 
-	const pmx_model::pmx_display_frame_array& pmx_model_impl::get_pmx_display_frame_array()
+	inline const pmx_model::pmx_display_frame_array& pmx_model_impl::get_pmx_display_frame_array()
 	{
 		return display_data_;
 	}
 
-	pmx_model::pmx_display_frame_array& pmx_model_impl::mutable_pmx_display_frame_array()
+	inline pmx_model::pmx_display_frame_array& pmx_model_impl::mutable_pmx_display_frame_array()
 	{
 		return display_data_;
 	}
 
-	const pmx_model::pmx_rigid_body_array& pmx_model_impl::get_pmx_rigid_body_array()
+	inline const pmx_model::pmx_rigid_body_array& pmx_model_impl::get_pmx_rigid_body_array()
 	{
 		return rigid_body_data_;
 	}
 
-	pmx_model::pmx_rigid_body_array& pmx_model_impl::mutable_pmx_rigid_body_array()
+	inline pmx_model::pmx_rigid_body_array& pmx_model_impl::mutable_pmx_rigid_body_array()
 	{
 		return rigid_body_data_;
 	}
 
-	const pmx_model::pmx_joint_array& pmx_model_impl::get_pmx_joint_array()
+	inline const pmx_model::pmx_joint_array& pmx_model_impl::get_pmx_joint_array()
 	{
 		return joint_data_;
 	}
 
-	pmx_model::pmx_joint_array& pmx_model_impl::mutable_pmx_joint_array()
+	inline pmx_model::pmx_joint_array& pmx_model_impl::mutable_pmx_joint_array()
 	{
 		return joint_data_;
 	}
 
-	bool pmx_model_impl::read_from_file(const std::string& file_name)
+	inline bool pmx_model_impl::read_from_file(const std::string& file_name)
 	{
 		const path path{ file_name };
 		return read_from_file_impl(path);
 	}
 
-	bool pmx_model_impl::write_to_file(const std::string& file_name) const
+	inline bool pmx_model_impl::write_to_file(const std::string& file_name) const
 	{
 		const path path{ file_name };
 		return write_to_file_impl(path);
 	}
 
-	bool pmx_model_impl::read_from_file(const std::wstring& file_name)
+	inline bool pmx_model_impl::read_from_file(const std::wstring& file_name)
 	{
 		const path path{ file_name };
 		return read_from_file_impl(path);
 	}
 
-	bool pmx_model_impl::write_to_file(const std::wstring& file_name) const
+	inline bool pmx_model_impl::write_to_file(const std::wstring& file_name) const
 	{
 		const path path{ file_name };
 		return write_to_file_impl(path);

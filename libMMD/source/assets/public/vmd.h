@@ -22,8 +22,8 @@ namespace libmmd
 {
 	class vmd_animation_impl final : public vmd_animation
 	{
-		std::u8string model_name_;
-		bool is_camera_;
+		std::u8string model_name_{ u8"model" };
+		bool is_camera_{};
 		vmd_element_array_impl<vmd_bone_key_frame, vmd_bone_key_frame_impl> bone_frames_{};
 		vmd_element_array_impl<vmd_morph_key_frame, vmd_morph_key_frame_impl> morph_frames_{};
 		vmd_element_array_impl<vmd_camera_key_frame, vmd_camera_key_frame_impl> camera_frames_{};
@@ -58,8 +58,11 @@ namespace libmmd
 		 */
 		vmd_animation_impl& operator =(vmd_animation_impl&&) noexcept = default;
 
-		std::string get_model_name() const override;
+		[[nodiscard]] std::string get_model_name() const override;
 		void set_model_name(const std::string& name) override;
+
+		bool is_camera() override;
+		void set_camera(bool value) override;
 
 		const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() override;
 		vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() override;
@@ -80,13 +83,15 @@ namespace libmmd
 		vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() override;
 
 		bool read_from_file(const std::string& file_name) override;
-		[[nodiscard]] bool write_to_file(const std::string& file_name) const override;
+		bool write_to_file(const std::string& file_name) const override;
 
 		bool read_from_file(const std::wstring& file_name) override;
-		[[nodiscard]] bool write_to_file(const std::wstring& file_name) const override;
+		bool write_to_file(const std::wstring& file_name) const override;
 
 	private:
 		bool read_from_file_impl(const path& path);
-		[[nodiscard]] bool write_to_file_impl(const path& path) const;
+		bool write_to_file_impl(const path& path) const;
+		// カメラ・照明 
+		static const std::u8string& get_default_camera_name();
 	};
 }
