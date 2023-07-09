@@ -31,7 +31,7 @@ namespace libmmd
 		// Enable IK bone 
 		bool	is_IK : 1 = false;
 		// seize a seat 
-		bool : 2 = false;
+		bool : 2;
 		// Turn on inherit bone rotation 
 		bool	inherit_rotation : 1 = false;
 		// Enable inherited bone movement 
@@ -45,7 +45,7 @@ namespace libmmd
 		// External bony deformation 
 		bool	external_parent_deform : 1 = false;
 		// seize a seat 
-		bool : 2 = false;
+		bool : 2;
 	};
 
 	class pmx_IK_link_impl final : public pmx_element_impl, pmx_IK_link

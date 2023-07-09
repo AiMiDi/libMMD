@@ -176,7 +176,7 @@ namespace libmmd
 		material_index_ = index;
 	}
 
-	inline ::pmx_material_morph_offset::blend_mode pmx_material_morph_offset_impl::get_blend_mode() const
+	inline pmx_material_morph_offset::blend_mode pmx_material_morph_offset_impl::get_blend_mode() const
 	{
 		return blend_mode_;
 	}

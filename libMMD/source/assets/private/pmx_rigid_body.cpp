@@ -215,12 +215,48 @@ namespace libmmd
 
 	bool pmx_rigid_body_non_collision_group_impl::read_from_file(const file& file)
 	{
-		return file.read_elements(non_collision_group_);
+		pmx_rigid_body_non_collision_group_file_data data;
+		if(!file.read_elements(data))
+			return false;
+		non_collision_group_.G0 = data.G0;
+		non_collision_group_.G1 = data.G1;
+		non_collision_group_.G2 = data.G2;
+		non_collision_group_.G3 = data.G3;
+		non_collision_group_.G4 = data.G4;
+		non_collision_group_.G5 = data.G5;
+		non_collision_group_.G6 = data.G6;
+		non_collision_group_.G7 = data.G7;
+		non_collision_group_.G8 = data.G8;
+		non_collision_group_.G9 = data.G9;
+		non_collision_group_.G10 = data.G10;
+		non_collision_group_.G11 = data.G11;
+		non_collision_group_.G12 = data.G12;
+		non_collision_group_.G13 = data.G13;
+		non_collision_group_.G14 = data.G14;
+		non_collision_group_.G15 = data.G15;
+		return true;
 	}
 
 	auto pmx_rigid_body_non_collision_group_impl::write_to_file(const file& file) const -> bool
 	{
-		return file.write_elements(non_collision_group_);
+		pmx_rigid_body_non_collision_group_file_data data;
+		data.G0 = non_collision_group_.G0;
+		data.G1 = non_collision_group_.G1;
+		data.G2 = non_collision_group_.G2;
+		data.G3 = non_collision_group_.G3;
+		data.G4 = non_collision_group_.G4;
+		data.G5 = non_collision_group_.G5;
+		data.G6 = non_collision_group_.G6;
+		data.G7 = non_collision_group_.G7;
+		data.G8 = non_collision_group_.G8;
+		data.G9 = non_collision_group_.G9;
+		data.G10 = non_collision_group_.G10;
+		data.G11 = non_collision_group_.G11;
+		data.G12 = non_collision_group_.G12;
+		data.G13 = non_collision_group_.G13;
+		data.G14 = non_collision_group_.G14;
+		data.G15 = non_collision_group_.G15;
+		return file.write_elements(data);
 	}
 
 	inline std::string pmx_rigid_body_impl::get_rigid_body_name_local() const

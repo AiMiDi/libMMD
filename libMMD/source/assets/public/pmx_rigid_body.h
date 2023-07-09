@@ -15,7 +15,7 @@ Description:	pmx rigid body data
 
 namespace libmmd
 {
-	struct pmx_rigid_body_non_collision_group_data
+	struct pmx_rigid_body_non_collision_group_file_data
 	{
 		bool	G0 : 1 = false;
 		bool	G1 : 1 = false;
@@ -35,7 +35,27 @@ namespace libmmd
 		bool	G15 : 1 = false;
 	};
 
-	static_assert(sizeof pmx_rigid_body_non_collision_group_data == 2);
+	static_assert(sizeof pmx_rigid_body_non_collision_group_file_data == 2);
+
+	struct pmx_rigid_body_non_collision_group_data
+	{
+		bool	G0 = false;
+		bool	G1 = false;
+		bool	G2 = false;
+		bool	G3 = false;
+		bool	G4 = false;
+		bool	G5 = false;
+		bool	G6 = false;
+		bool	G7 = false;
+		bool	G8 = false;
+		bool	G9 = false;
+		bool	G10 = false;
+		bool	G11 = false;
+		bool	G12 = false;
+		bool	G13 = false;
+		bool	G14 = false;
+		bool	G15 = false;
+	};
 
 	class pmx_rigid_body_non_collision_group_impl final : public pmx_rigid_body_non_collision_group, file_element_impl
 	{
