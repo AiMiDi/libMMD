@@ -22,7 +22,7 @@ namespace libmmd
     public:
         virtual ~vpd_element_array() = default;
 
-        virtual int32_t size() const = 0;
+        virtual uint64_t size() const = 0;
 
         virtual const vpd_element_type& operator[](int32_t index) const = 0;
         virtual vpd_element_type& operator[](int32_t index) = 0;
