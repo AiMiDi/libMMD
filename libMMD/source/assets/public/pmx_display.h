@@ -16,7 +16,7 @@ Description:	pmx display data
 namespace libmmd
 {
 
-	class pmx_display_item_impl final : public pmx_display_item, pmx_element_impl
+	class pmx_display_item_impl final : public pmx_element_impl, public pmx_display_item
 	{
 		// Frame type: 0: index - bone, 1: index - morph
 		display_frame_type	frame_type_ = display_frame_type::BONE;
@@ -72,7 +72,7 @@ namespace libmmd
 		auto write_to_file(const file& file) const -> bool override;
 	};
 
-	class pmx_display_frame_impl : public pmx_display_frame, pmx_element_impl
+	class pmx_display_frame_impl : public pmx_element_impl, public pmx_display_frame
 	{
 		// Represents a local name
 		std::u8string	display_name_local_{};

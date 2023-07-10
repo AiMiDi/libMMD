@@ -16,7 +16,7 @@ Description:	pmx joint data
 namespace libmmd
 {
 
-	class pmx_joint_impl final : public pmx_joint, pmx_element_impl
+	class pmx_joint_impl final : public pmx_element_impl, public pmx_joint
 	{
 		// Joint point local name 
 		std::u8string	joint_name_local_{};

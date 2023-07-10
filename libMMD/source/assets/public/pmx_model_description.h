@@ -17,7 +17,7 @@ namespace libmmd
 	/**
 	 * \brief PMX model global information struct
 	 */
-	class pmx_model_description
+	class pmx_model_description final
 	{
 		// String encoding. 0 is UTF16LE encoding and 1 is UTF8 encoding
 		Char	text_encoding_ = 0;
@@ -38,18 +38,14 @@ namespace libmmd
 		Float32 model_version_ = 2.0f;
 		// Additional Vector4d32 numbers
 		Char	additional_vec4_count_ = 1;
-		// Local model name 
-		std::u8string	model_name_local_;
-		// Generic model name 
-		std::u8string	model_name_universal_;
+		// Local model name
+		std::u8string	model_name_local_{};
+		// Generic model name
+		std::u8string	model_name_universal_{};
 		// Local language model description 
-		std::u8string	comments_local_;
+		std::u8string	comments_local_{};
 		// Common language model description
-		std::u8string	comments_universal_;
-		// Is there a UV morph  
-		bool	have_UV_morph = false;
-		// Is there a vertex morph 
-		bool	have_vertex_morph = false;
+		std::u8string	comments_universal_{};
 	public:
 		pmx_text_reader				read_text{};
 		pmx_unsigned_index_reader	read_vertex_index{};
@@ -75,6 +71,24 @@ namespace libmmd
 		* \brief Destructor function
 		*/
 		~pmx_model_description() = default;
+		/**
+		 * \brief Copy constructor function
+		 */
+		pmx_model_description(const pmx_model_description&) = default;
+		/**
+		 * \brief Copy operator
+		 * \return Self reference
+		 */
+		pmx_model_description& operator =(const pmx_model_description&) = default;
+		/**
+		 * \brief Move constructor function
+		 */
+		pmx_model_description(pmx_model_description&&) noexcept = default;
+		/**
+		 * \brief Move operator
+		 * \return Self reference
+		 */
+		pmx_model_description& operator =(pmx_model_description&&) noexcept = default;
 
 		float get_model_version() const;
 		void set_model_version(float version);

@@ -15,7 +15,7 @@ Description:	pmx vertex data
 
 namespace libmmd
 {
-	class pmx_vertex_impl final : public pmx_element_impl, pmx_vertex
+	class pmx_vertex_impl final : public pmx_element_impl, public pmx_vertex
 	{
 		// position
 		Vector32 position_{};

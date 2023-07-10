@@ -117,7 +117,7 @@ namespace libmmd
 			return true;
 		}
 
-		int32_t size() const
+		uint64_t size() const
 		{
 			return data_.size();
 		}

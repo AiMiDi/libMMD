@@ -14,7 +14,7 @@ Description:	pmx surface data
 
 namespace libmmd
 {
-	class pmx_surface_impl final : public pmx_element_impl, pmx_surface
+	class pmx_surface_impl final : public pmx_element_impl, public pmx_surface
 	{
 		UInt32 index_[3];
 	public:

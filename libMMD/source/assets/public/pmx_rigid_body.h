@@ -57,7 +57,7 @@ namespace libmmd
 		bool	G15 = false;
 	};
 
-	class pmx_rigid_body_non_collision_group_impl final : public pmx_rigid_body_non_collision_group, file_element_impl
+	class pmx_rigid_body_non_collision_group_impl final : public file_element_impl, public pmx_rigid_body_non_collision_group
 	{
 		pmx_rigid_body_non_collision_group_data non_collision_group_;
 	public:
@@ -168,7 +168,7 @@ namespace libmmd
 		auto write_to_file(const file& file) const -> bool override;
 	};
 
-	class pmx_rigid_body_impl final : public pmx_rigid_body, pmx_element_impl
+	class pmx_rigid_body_impl final : public pmx_element_impl, public pmx_rigid_body
 	{
 		// Rigid body local name 									
 		std::u8string					rigid_body_name_local_{};

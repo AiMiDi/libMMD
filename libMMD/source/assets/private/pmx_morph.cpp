@@ -511,7 +511,6 @@ namespace libmmd
 
 	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::get_morph_offset_array() const
 	{
-		if(!std::holds_alternative<std::monostate>(offset_data_))
 		switch (morph_type_)
 		{
 		case morph_type::GROUP:
@@ -570,12 +569,11 @@ namespace libmmd
 		}
 		// It shouldn't run here.
 		ELOGE << "pmx_morph_impl::get_morph_offset_array: Can't cast offset_data by type!";
-		return std::get<1>(offset_data_);
+		return std::get<0>(offset_data_);
 	}
 
 	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::mutable_morph_offset_array()
 	{
-		if (!std::holds_alternative<std::monostate>(offset_data_))
 		switch (morph_type_)
 		{
 		case morph_type::GROUP:
@@ -634,7 +632,7 @@ namespace libmmd
 		}
 		// It shouldn't run here.
 		ELOGE << "pmx_morph_impl::mutable_morph_offset_array: Can't cast offset_data by type!";
-		return std::get<1>(offset_data_);
+		return std::get<0>(offset_data_);
 	}
 
 	bool pmx_morph_impl::read_from_file(const file& file)

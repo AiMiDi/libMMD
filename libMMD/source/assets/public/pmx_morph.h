@@ -15,7 +15,7 @@ Description:	pmx morph data
 
 namespace libmmd
 {
-	class pmx_group_morph_offset_impl final : public pmx_group_morph_offset, pmx_element_impl
+	class pmx_group_morph_offset_impl final : public pmx_element_impl, public pmx_group_morph_offset
 	{
 		// Deformation index
 		Int32	morph_index_ = 0;
@@ -71,7 +71,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_vertex_morph_offset_impl final : public pmx_vertex_morph_offset, pmx_element_impl
+	class pmx_vertex_morph_offset_impl final : public pmx_element_impl, public pmx_vertex_morph_offset
 	{
 		// Vertex index
 		UInt32		vertex_index_ = 0;
@@ -127,7 +127,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_bone_morph_offset_impl final : public pmx_bone_morph_offset, pmx_element_impl
+	class pmx_bone_morph_offset_impl final : public pmx_element_impl, public pmx_bone_morph_offset
 	{
 		// Bone index
 		Int32		bone_index_ = 0;
@@ -186,7 +186,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_uv_morph_offset_impl final : public pmx_uv_morph_offset, pmx_element_impl
+	class pmx_uv_morph_offset_impl final : public pmx_element_impl, public pmx_uv_morph_offset
 	{
 		// Vertex index
 		UInt32		vertex_index_ = 0;
@@ -242,7 +242,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_material_morph_offset_impl final : public pmx_material_morph_offset, pmx_element_impl
+	class pmx_material_morph_offset_impl final : public pmx_element_impl, public pmx_material_morph_offset
 	{
 		// Material index
 		Int32		material_index_ = 0;
@@ -352,7 +352,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_flip_morph_offset_impl final : public pmx_flip_morph_offset, pmx_element_impl
+	class pmx_flip_morph_offset_impl final : public pmx_element_impl, public pmx_flip_morph_offset
 	{
 		// Deformation index
 		Int32	morph_index_ = 0;
@@ -408,7 +408,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_impulse_morph_offset_impl final : public pmx_impulse_morph_offset, pmx_element_impl
+	class pmx_impulse_morph_offset_impl final : public pmx_element_impl, public pmx_impulse_morph_offset
 	{
 		// Rigid body index
 		Int32		rigid_body_index_ = 0;
@@ -476,7 +476,7 @@ namespace libmmd
 		bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_morph_impl final : public pmx_morph, pmx_element_impl
+	class pmx_morph_impl final : public pmx_element_impl, public pmx_morph
 	{
 		// Local deformation name
 		std::u8string	morph_name_local_{};
@@ -498,6 +498,7 @@ namespace libmmd
 		using pmx_impulse_morph_array_impl = pmx_element_array_impl<pmx_morph_offset, pmx_impulse_morph_offset_impl>;
 
 		using offset_impl_type = std::variant<
+
 			pmx_group_morph_array_impl,
 			pmx_vertex_morph_array_impl,
 			pmx_bone_morph_array_impl,

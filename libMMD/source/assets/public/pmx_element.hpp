@@ -88,7 +88,7 @@ namespace libmmd
 		pmx_element_array_impl& operator =(pmx_element_array_impl&&) noexcept = default;
 
 
-		[[nodiscard]] int32_t size() const override
+		[[nodiscard]] uint64_t size() const override
 		{
 			return array_.size();
 		}

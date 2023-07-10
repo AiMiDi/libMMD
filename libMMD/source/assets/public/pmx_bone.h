@@ -48,7 +48,7 @@ namespace libmmd
 		bool : 2;
 	};
 
-	class pmx_IK_link_impl final : public pmx_element_impl, pmx_IK_link
+	class pmx_IK_link_impl final : public pmx_element_impl, public pmx_IK_link
 	{
 		// Bone index
 		Int32		bone_index_{};
@@ -99,7 +99,7 @@ namespace libmmd
 		[[nodiscard]] bool write_to_file(const file& file) const override;
 	};
 
-	class pmx_bone_impl : public pmx_element_impl, pmx_bone
+	class pmx_bone_impl : public pmx_element_impl, public pmx_bone
 	{
 		// The local name of the skeleton, usually Japanese. 
 		std::u8string	bone_name_local_{};

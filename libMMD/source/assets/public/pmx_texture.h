@@ -14,7 +14,7 @@ Description:	pmx texture data
 
 namespace libmmd
 {
-	class pmx_texture_impl final : public pmx_element_impl, pmx_texture
+	class pmx_texture_impl final : public pmx_element_impl, public pmx_texture
 	{
 		std::u8string path_{};
 

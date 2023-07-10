@@ -37,7 +37,7 @@ namespace libmmd
 	};
 
 
-	class pmx_material_impl : public pmx_element_impl, pmx_material
+	class pmx_material_impl : public pmx_element_impl, public pmx_material
 	{
 		// Local material name, Japanese, Chinese, etc 
 		std::u8string		material_name_local_{};
