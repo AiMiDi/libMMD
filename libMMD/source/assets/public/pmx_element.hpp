@@ -124,19 +124,19 @@ namespace libmmd
 		{
 			array_.clear();
 		}
-		typename std::vector<InterfaceClass>::iterator begin() override
+		auto begin()
 		{
 			return array_.begin();
 		}
-		typename std::vector<InterfaceClass>::iterator end() override
+		auto end()
 		{
 			return array_.end();
 		}
-		typename std::vector<InterfaceClass>::const_iterator begin() const override
+		auto begin() const
 		{
 			return array_.begin();
 		}
-		typename std::vector<InterfaceClass>::const_iterator end() const override
+		auto end() const
 		{
 			return array_.end();
 		}
