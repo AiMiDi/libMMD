@@ -3,14 +3,13 @@
 Copyright:Copyright(c) 2023-present, Aimidi & libmmd contributors.
 Author:			Aimidi
 Date:			2023/7/3
-File:			pmx_model.h
-Description:	pmx data interface
+File:			vmd_animation.h
+Description:	vmd data interface
 
 **************************************************************************/
 
 #pragma once
 
-#include <vector>
 #include <string>
 #include <array>
 
@@ -31,11 +30,6 @@ namespace libmmd
 
 		virtual vmd_element_type& add() = 0;
 		virtual bool remove(int32_t index, uint32_t count = 1) = 0;
-		
-		virtual typename std::vector<vmd_element_type>::iterator begin() = 0;
-		virtual typename std::vector<vmd_element_type>::iterator end() = 0;
-		virtual typename std::vector<vmd_element_type>::const_iterator begin() const = 0;
-		virtual typename std::vector<vmd_element_type>::const_iterator end() const = 0;
 
 		virtual void sort() = 0;
 	};
@@ -217,11 +211,11 @@ namespace libmmd
 		using vmd_shadow_key_frame_array = vmd_element_array<vmd_shadow_key_frame>;
 		using vmd_model_controller_key_frame_array = vmd_element_array<vmd_model_controller_key_frame>;
 
-		virtual bool read_from_file(const std::string& file_name);
-		virtual bool write_to_file(const std::string& file_name) const;
+		virtual bool read_from_file(const std::string& file_name) = 0;
+		virtual bool write_to_file(const std::string& file_name) const = 0;
 
-		virtual bool read_from_file(const std::wstring& file_name);
-		virtual bool write_to_file(const std::wstring& file_name) const;
+		virtual bool read_from_file(const std::wstring& file_name) = 0;
+		virtual bool write_to_file(const std::wstring& file_name) const = 0;
 
 		virtual std::string get_model_name() const = 0;
 		virtual void set_model_name(const std::string& name) = 0;

@@ -9,7 +9,6 @@ Description:	pmx data interface
 **************************************************************************/
 #pragma once
 
-#include <vector>
 #include <string>
 #include <array>
 
@@ -27,11 +26,6 @@ namespace libmmd
 
         virtual const pmx_element_type& operator[](int32_t index) const = 0;
         virtual pmx_element_type& operator[](int32_t index) = 0;
-
-        virtual typename std::vector<pmx_element_type>::iterator begin() = 0;
-        virtual typename std::vector<pmx_element_type>::iterator end() = 0;
-        virtual typename std::vector<pmx_element_type>::const_iterator begin() const = 0;
-        virtual typename std::vector<pmx_element_type>::const_iterator end() const = 0;
 
         virtual pmx_element_type& add() = 0;
         virtual bool remove(int32_t index, uint32_t count = 1) = 0;
@@ -829,11 +823,11 @@ namespace libmmd
         using pmx_rigid_body_array = pmx_element_array<pmx_rigid_body>;
         using pmx_joint_array = pmx_element_array<pmx_joint>;
 
-        virtual bool read_from_file(const std::string& file_name);
-        virtual bool write_to_file(const std::string& file_name) const;
+        virtual bool read_from_file(const std::string& file_name) = 0;
+        virtual bool write_to_file(const std::string& file_name) const = 0;
 
-        virtual bool read_from_file(const std::wstring& file_name);
-        virtual bool write_to_file(const std::wstring& file_name) const;
+        virtual bool read_from_file(const std::wstring& file_name) = 0;
+        virtual bool write_to_file(const std::wstring& file_name) const = 0;
 
         virtual pmx_version get_version() const = 0;
         virtual void set_version(pmx_version version) = 0;

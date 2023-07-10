@@ -8,11 +8,61 @@ Description:	vpd file data
 
 **************************************************************************/
 
-#include "vpd_data.h"
+#include "vpd.h"
 
 namespace libmmd
 {
-	bool vpd_post::load_from_file(const path& path) {
+	std::string vpd_bone_post_impl::get_bone_name()
+	{
+		return std::string{bone_name_.begin(), bone_name_.end()};
+	}
+
+	void vpd_bone_post_impl::set_bone_name(const std::string& name)
+	{
+		bone_name_ = std::u8string{ name.begin(), name.end() };
+	}
+
+	const std::array<float, 3>& vpd_bone_post_impl::get_position() const
+	{
+		return position_;
+	}
+
+	void vpd_bone_post_impl::set_position(const std::array<float, 3>& position)
+	{
+		position_ = position;
+	}
+
+	const std::array<float, 4>& vpd_bone_post_impl::get_rotation() const
+	{
+		return rotation_;
+	}
+
+	void vpd_bone_post_impl::set_rotation(const std::array<float, 4>& rotation)
+	{
+		rotation_ = rotation;
+	}
+
+	std::string vpd_morph_post_impl::get_morph_name()
+	{
+		return std::string{morph_name_.begin(), morph_name_.end()};
+	}
+
+	void vpd_morph_post_impl::set_morph_name(const std::string& name)
+	{
+		morph_name_ = std::u8string{ name.begin(), name.end() };
+	}
+
+	float vpd_morph_post_impl::get_weight() const
+	{
+		return morph_weight_;
+	}
+
+	void vpd_morph_post_impl::set_weight(float weight)
+	{
+		morph_weight_ = weight;
+	}
+
+	bool vpd_post_impl::read_from_file_impl(const path& path) {
 		file file;
 		if (!path.check_suffix("vpd"))
 			return false;
@@ -20,7 +70,7 @@ namespace libmmd
 		if (!file.open(path, file::open_mode::READ))
 			return false;
 
-		const Int64 file_length = file.get_length();
+		const auto file_length = file.get_length();
 		/* 申请文件长度的内存 */
 		std::string file_jis_string(file_length, '\0');
 		/* 将整个文件读取到申请的内存 */
@@ -66,11 +116,12 @@ namespace libmmd
 		}
 		/* get model name */
 		size_t semicolon_pos = lines[1].find_first_of(';');
-		this->model_name_ = lines[1].substr(0, semicolon_pos).data();
+		model_name_ = lines[1].substr(0, semicolon_pos).data();
+
 		const auto line_count = lines.size();
 		for (size_t i = 3; i < line_count; i += 4)
 		{
-			auto& [name, translate, rotation] = this->bones_.emplace_back();
+			auto& [name, translate, rotation] = bones_.add_impl();
 			const size_t curly_braces_pos = lines[i].find_first_of('{');
 			name = lines[i].substr(curly_braces_pos + 1, lines[i].length() - curly_braces_pos).data();
 			size_t comma_pos = lines[i + 1].find_first_of(',');
@@ -95,7 +146,7 @@ namespace libmmd
 		}
 		return true;
 	}
-	bool vpd_post::save_to_file(const path& path) const
+	bool vpd_post_impl::write_to_file_impl(const path& path) const
 	{
 		std::u8string file_string { u8"Vocaloid Pose Data file\r\n" };
 		file file;
@@ -107,5 +158,59 @@ namespace libmmd
 
 		file.write_elements(file_string.data(), file_string.length());
 		return true;
+	}
+
+	std::string vpd_post_impl::get_model_name() const
+	{
+		return std::string{model_name_.begin(), model_name_.end()};
+	}
+
+	void vpd_post_impl::set_model_name(const std::string& name)
+	{
+		model_name_ = std::u8string{ name.begin(), name.end() };
+	}
+
+	const vmd_post::vpd_bone_post_array& vpd_post_impl::get_vpd_bone_post_array()
+	{
+		return bones_;
+	}
+
+	vmd_post::vpd_bone_post_array& vpd_post_impl::mutable_vpd_bone_post_array()
+	{
+		return bones_;
+	}
+
+	const vmd_post::vpd_morph_post_array& vpd_post_impl::get_vpd_morph_post_array()
+	{
+		return morphs_;
+	}
+
+	vmd_post::vpd_morph_post_array& vpd_post_impl::mutable_vpd_morph_post_array()
+	{
+		return morphs_;
+	}
+
+	bool vpd_post_impl::read_from_file(const std::string& file_name)
+	{
+		const path path{ file_name };
+		return read_from_file_impl(path);
+	}
+
+	bool vpd_post_impl::write_to_file(const std::string& file_name) const
+	{
+		const path path{ file_name };
+		return write_to_file_impl(path);
+	}
+
+	bool vpd_post_impl::read_from_file(const std::wstring& file_name)
+	{
+		const path path{ file_name };
+		return read_from_file_impl(path);
+	}
+
+	bool vpd_post_impl::write_to_file(const std::wstring& file_name) const
+	{
+		const path path{ file_name };
+		return write_to_file_impl(path);
 	}
 }

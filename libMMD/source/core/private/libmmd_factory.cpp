@@ -1,5 +1,6 @@
 #include "pmx.h"
 #include "vmd.h"
+#include "vpd.h"
 
 namespace libmmd
 {
@@ -11,6 +12,11 @@ namespace libmmd
 	static vmd_animation* create_vmd_animation()
 	{
 		return new vmd_animation_impl();
+	}
+
+	static vmd_post* create_vmd_post()
+	{
+		return new vpd_post_impl();
 	}
 }
 
