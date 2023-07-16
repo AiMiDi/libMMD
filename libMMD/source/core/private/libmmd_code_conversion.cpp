@@ -9,7 +9,7 @@ Description:	Character coding conversion util
 **************************************************************************/
 
 #include "libmmd_code_conversion.h"
-#include "libiconv/iconv.h"
+#include ""
 
 namespace libmmd
 {

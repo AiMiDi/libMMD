@@ -9,17 +9,6 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${DEPENDENCY_INSTALL_PATH}/lib/cmake)
 
-if(NOT TARGET Iconv::Iconv)
-	find_package(Iconv 
-	CONFIG 
-	COMPONENTS Iconv 
-	PATHS ${DEPENDENCY_INSTALL_PATH})
-
-	if(NOT TARGET Iconv::Iconv)
-		find_package(iconv REQUIRED)
-	endif()
-endif()
-
 if(NOT TARGET yalantinglibs::easylog)
 	find_package(yalantinglibs 
 	CONFIG 
@@ -55,8 +44,17 @@ else()
 	   DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
 endif()
 
-target_link_libraries(libmmd PRIVATE Iconv::Iconv)
+
 target_link_libraries(libmmd PRIVATE yalantinglibs::easylog)
+
+set(ICU_STATIC ON)
+set(ICU_BUILD_I18N OFF)
+set(ICU_BUILD_IO OFF)
+set(ICU_NO_INSTALL ON)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/dependency/icu")
+add_dependencies(libmmd icu::uc)
+target_link_libraries(libmmd PRIVATE icu::uc)
+target_include_directories(libmmd PRIVATE ICU_UC_INCLUDEDIR)
 
 target_compile_features(libmmd PRIVATE cxx_std_20)
 

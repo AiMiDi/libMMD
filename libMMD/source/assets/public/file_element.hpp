@@ -84,11 +84,11 @@ namespace libmmd
 		 */
 		bool read_from_file(const file& file)
 		{
-			uint32_t data_number = 0;
+			auto data_number = UInt32();
 			if (!file.read_elements(data_number))
 				return false;
 			data_.resize(data_number, std::make_from_tuple<file_element_type>(default_construction_args_));
-			for (int data_index = 0; data_index < data_number; ++data_index)
+			for (uint32_t data_index = 0; data_index < data_number; ++data_index)
 			{
 				if (!data_[data_index].read_from_file(file))
 				{
@@ -107,7 +107,7 @@ namespace libmmd
 			const auto data_number = static_cast<UInt32>(data_.size());
 			if (!file.write_elements(data_number))
 				return false;
-			for (int data_index = 0; data_index < data_number; ++data_index)
+			for (uint32_t data_index = 0; data_index < data_number; ++data_index)
 			{
 				if (!data_[data_index].write_to_file(file))
 				{
