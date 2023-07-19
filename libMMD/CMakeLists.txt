@@ -47,14 +47,16 @@ endif()
 
 target_link_libraries(libmmd PRIVATE yalantinglibs::easylog)
 
+# add libicu::uc dependencies.
+add_dependencies(libmmd icu::uc)
 set(ICU_STATIC ON)
+set(ICU_BUILD_UC ON)
 set(ICU_BUILD_I18N OFF)
 set(ICU_BUILD_IO OFF)
 set(ICU_NO_INSTALL ON)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/dependency/icu")
-add_dependencies(libmmd icu::uc)
 target_link_libraries(libmmd PRIVATE icu::uc)
-target_include_directories(libmmd PRIVATE ICU_UC_INCLUDEDIR)
+target_include_directories(libmmd PRIVATE ${ICU_INCLUDEDIR})
 
 target_compile_features(libmmd PRIVATE cxx_std_20)
 
