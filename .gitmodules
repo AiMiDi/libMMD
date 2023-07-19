@@ -1,6 +1,6 @@
-[submodule "libMMD/dependency/yalantinglibs"]
-	path = libMMD/dependency/yalantinglibs
+[submodule "thirdparty/yalantinglibs"]
+	path = thirdparty/yalantinglibs
 	url = https://github.com/alibaba/yalantinglibs.git
-[submodule "libMMD/dependency/icu"]
-	path = libMMD/dependency/icu
+[submodule "thirdparty/icu"]
+	path = thirdparty/icu
 	url = https://github.com/AiMiDi/icu-cmake.git
