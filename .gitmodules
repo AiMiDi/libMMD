@@ -1,6 +1,6 @@
-[submodule "libMMD/dependency/libiconv"]
-	path = libMMD/dependency/libiconv
-	url = https://github.com/AiMiDi/libiconv_cmake.git
 [submodule "libMMD/dependency/yalantinglibs"]
 	path = libMMD/dependency/yalantinglibs
 	url = https://github.com/alibaba/yalantinglibs.git
+[submodule "libMMD/dependency/icu"]
+	path = libMMD/dependency/icu
+	url = https://github.com/AiMiDi/icu-cmake.git
