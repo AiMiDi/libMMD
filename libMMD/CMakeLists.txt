@@ -1,30 +1,11 @@
-﻿# CMakeList.txt: libMMD 的 CMake 项目，在此处包括源代码并定义
-# 项目特定的逻辑。
-#
+﻿#Copyright:Copyright(c) 2023-present, Aimidi contributors.
+
 cmake_minimum_required (VERSION 3.8)
 
-if(NOT DEPENDENCY_INSTALL_PATH)
-	set(DEPENDENCY_INSTALL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/dependency/install)
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${DEPENDENCY_INSTALL_PATH}/lib/cmake)
-
-if(NOT TARGET yalantinglibs::easylog)
-	find_package(yalantinglibs 
-	CONFIG 
-	COMPONENTS easylog 
-	PATHS ${DEPENDENCY_INSTALL_PATH})
-
-	if(NOT TARGET yalantinglibs::easylog)
-		find_package(yalantinglibs REQUIRED COMPONENTS easylog)
-	endif()
-endif()
-
-
-# 将源代码添加到此项目的可执行文件。
+# Add the source code to the executable file for this project.
 file(GLOB_RECURSE SRC_LIST "source/*.cpp" "source/*.hpp" "source/*.c")
 
-# Build
+# target
 if (USE_SHARED_LIB)
    add_library(libmmd ${SRC_LIST})
    set_target_properties(
@@ -45,8 +26,6 @@ else()
 endif()
 
 
-target_link_libraries(libmmd PRIVATE yalantinglibs::easylog)
-
 # add libicu::uc dependencies.
 add_dependencies(libmmd icu::uc)
 set(ICU_STATIC ON)
@@ -57,6 +36,16 @@ set(ICU_NO_INSTALL ON)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/dependency/icu")
 target_link_libraries(libmmd PRIVATE icu::uc)
 target_include_directories(libmmd PRIVATE ${ICU_INCLUDEDIR})
+
+# add yalantinglibs::easylog dependencies.
+add_dependencies(libmmd yalantinglibs::easylog)
+set(BUILD_BENCHMARK OFF)
+set(BUILD_EXAMPLES OFF)
+set(INSTALL_INDEPENDENT_THIRDPARTY ON)
+set(Build_ylt_struct_pb OFF)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/dependency/yalantinglibs")
+target_link_libraries(libmmd PRIVATE yalantinglibs::easylog)
+
 
 target_compile_features(libmmd PRIVATE cxx_std_20)
 
