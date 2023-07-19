@@ -1,4 +1,4 @@
-﻿# Copyright:Copyright(c) 2023-present, Aimidi & contributors.
+# Copyright:Copyright(c) 2023-present, Aimidi & contributors.
 
 cmake_minimum_required (VERSION 3.8)
 
