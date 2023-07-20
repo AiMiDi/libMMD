@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Copyright:Copyright(c) 2023-present, Aimidi & contributors.
+=======
+﻿# Copyright:Copyright(c) 2023-present, Aimidi & contributors.
+>>>>>>> 60d2f1e (feat: Remove the cmakelists under the subdirectory)
 
 cmake_minimum_required (VERSION 3.8)
 
