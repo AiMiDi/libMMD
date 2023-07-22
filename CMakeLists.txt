@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # Copyright:Copyright(c) 2023-present, Aimidi & contributors.
-=======
-﻿# Copyright:Copyright(c) 2023-present, Aimidi & contributors.
->>>>>>> 60d2f1e (feat: Remove the cmakelists under the subdirectory)
 
 cmake_minimum_required (VERSION 3.8)
 
@@ -13,7 +9,11 @@ project("libMMD"
 
 option(USE_SHARED_LIB "use shared lib" OFF)
 
-# Definitions
+set(LIBMMD_VERSION 0.1.0)
+
+
+# ----- Setting -----
+
 if (USE_SHARED_LIB)
     add_definitions(-DLIBMMD_SHARED_BUILD)
 endif()
@@ -22,23 +22,38 @@ if (NOT DEFINED CMAKE_DEBUG_POSTFIX)
   set(CMAKE_DEBUG_POSTFIX "_debug")
 endif()
 
+if(NOT CMAKE_INSTALL_BINDIR)
+  set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
+endif()
+
+if(NOT CMAKE_INSTALL_LIBDIR)
+  set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
+endif()
+
+if(NOT CMAKE_INSTALL_INCLUDEDIR)
+  set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+endif()
+
 if(MSVC)
   add_compile_options(/MP)
 endif()
 
+
+# ----- Find source file -----
+
 # Add the source code to the executable file for this project.
 file(GLOB_RECURSE SRC_LIST "source/*.cpp" "source/*.hpp" "source/*.c")
 
-# target
+# ----- Target -----
 set(TARGET_NAME libMMD)
 
 add_library(${TARGET_NAME} ${SRC_LIST})
-  set_target_properties(
-     ${TARGET_NAME} 
-     PROPERTIES 
-     VERSION ${PROJECT_VERSION} 
-     SOVERSION ${PROJECT_VERSION} 
-     DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
+set_target_properties(
+   ${TARGET_NAME} 
+   PROPERTIES 
+   VERSION ${PROJECT_VERSION} 
+   SOVERSION ${PROJECT_VERSION} 
+   DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
 
 if (NOT USE_SHARED_LIB)
    set_target_properties(
@@ -78,8 +93,54 @@ target_compile_features(${TARGET_NAME} PRIVATE cxx_std_20)
 target_precompile_headers(${TARGET_NAME} PRIVATE "source/pch.h")
 
 # add public include for interface
-target_include_directories(${TARGET_NAME} PUBLIC "include")
+target_include_directories(${TARGET_NAME} PRIVATE "include/libMMD")
 
 # add private include for internal implementation
 target_include_directories(${TARGET_NAME} PRIVATE "source/core/public")
 target_include_directories(${TARGET_NAME} PRIVATE "source/assets/public")
+
+
+# ----- Install -----
+
+install(
+    TARGETS ${TARGET_NAME}
+    EXPORT "${TARGET_NAME}Target"
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+
+# Installation header file
+install(
+  DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libMMD"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+#Export target
+export(
+  EXPORT "${TARGET_NAME}Target"
+  NAMESPACE "${TARGET_NAME}::"
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}Target.cmake"
+)
+
+#Install Targets.cmake
+install(
+  EXPORT "${TARGET_NAME}Target"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+  NAMESPACE "${TARGET_NAME}::"
+  FILE "${TARGET_NAME}Target.cmake"
+)
+
+#Export config.cmake
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}-config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+)
+#Install config.cmake
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+)
