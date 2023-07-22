@@ -69,13 +69,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE icu::uc)
 target_include_directories(${TARGET_NAME} PRIVATE ${ICU_INCLUDEDIR})
 
 # add yalantinglibs::easylog dependencies.
-add_dependencies(${TARGET_NAME} yalantinglibs::easylog)
-set(BUILD_BENCHMARK OFF)
-set(BUILD_EXAMPLES OFF)
-set(BUILD_UNIT_TESTS OFF)
-set(Build_ylt_struct_pb OFF)
-add_subdirectory("thirdparty/yalantinglibs")
-target_link_libraries(${TARGET_NAME} PRIVATE yalantinglibs::easylog)
+target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/yalantinglibs/include")
 
 # set compile feature C++20
 target_compile_features(${TARGET_NAME} PRIVATE cxx_std_20)
