@@ -23,15 +23,15 @@ if (NOT DEFINED CMAKE_DEBUG_POSTFIX)
 endif()
 
 if(NOT CMAKE_INSTALL_BINDIR)
-  set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
+  set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 endif()
 
 if(NOT CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
+  set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
 if(NOT CMAKE_INSTALL_INCLUDEDIR)
-  set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+  set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include/libMMD")
 endif()
 
 if(MSVC)
@@ -72,16 +72,12 @@ if (NOT USE_SHARED_LIB)
   endif()
 endif()
 
-# add libicu::uc dependencies.
-add_dependencies(${TARGET_NAME} icu::uc)
-set(ICU_STATIC ON)
+# add icu::uc dependencies.
 set(ICU_BUILD_UC ON)
 set(ICU_BUILD_I18N OFF)
 set(ICU_BUILD_IO OFF)
-set(ICU_NO_INSTALL ON)
 add_subdirectory("thirdparty/icu")
 target_link_libraries(${TARGET_NAME} PRIVATE icu::uc)
-target_include_directories(${TARGET_NAME} PRIVATE ${ICU_INCLUDEDIR})
 
 # add yalantinglibs::easylog dependencies.
 target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/yalantinglibs/include")
@@ -113,7 +109,7 @@ install(
 
 # Installation header file
 install(
-  DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/libMMD"
+  DIRECTORY "/include"
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
@@ -135,12 +131,12 @@ install(
 #Export config.cmake
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}-config.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}Config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake"
   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
 )
 #Install config.cmake
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
 )
