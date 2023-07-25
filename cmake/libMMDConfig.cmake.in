@@ -1,0 +1,17 @@
+# Copyright:Copyright(c) 2023-present, Aimidi & contributors.
+
+# Define exported variables
+set(LIBMMD_INCLUDE_DIRS "@CMAKE_INSTALL_INCLUDEDIR@")
+set(LIBMMD_LIBRARIES "@CMAKE_INSTALL_LIBDIR@")
+
+# Check if exported variables are empty
+if(NOT LIBMMD_INCLUDE_DIRS OR NOT LIBMMD_LIBRARIES)
+  message(FATAL_ERROR "libMMD library configuration is incomplete. LIBMMD_INCLUDE_DIRS and LIBMMD_LIBRARIES must be set.")
+endif()
+
+# Export variables
+set(LIBMMD_FOUND TRUE)
+set(LIBMMD_VERSION "@LIBMMD_VERSION@")
+set(LIBMMD_CMAKE_VERSION "@PROJECT_VERSION@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/@TARGET_NAME@Target.cmake")

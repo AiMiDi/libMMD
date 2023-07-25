@@ -16,7 +16,7 @@ Description:	vmd data interface
 namespace libmmd
 {
 	template<typename T>
-	class vmd_element_array
+	class LIBMMD_API vmd_element_array
 	{
 	protected:
 		using vmd_element_type = T;
@@ -34,7 +34,7 @@ namespace libmmd
 		virtual void sort() = 0;
 	};
 
-	class vmd_interpolator
+	class LIBMMD_API vmd_interpolator
 	{
 	public:
 		virtual ~vmd_interpolator() = default;
@@ -55,7 +55,7 @@ namespace libmmd
 		virtual void set_linear() = 0;
 	};
 
-	class vmd_key_frame
+	class LIBMMD_API vmd_key_frame
 	{
 	public:
 		virtual ~vmd_key_frame() = default;
@@ -64,7 +64,7 @@ namespace libmmd
 		virtual void set_frame_at(uint32_t frame_at) = 0;
 	};
 
-	class vmd_bone_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_bone_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_bone_key_frame() override = default;
@@ -91,7 +91,7 @@ namespace libmmd
 		virtual vmd_interpolator& mutable_rotation_interpolator() = 0;
 	};
 
-	class vmd_morph_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_morph_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_morph_key_frame() override = default;
@@ -103,7 +103,7 @@ namespace libmmd
 		virtual void set_weight(float weight) = 0;
 	};
 
-	class vmd_camera_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_camera_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_camera_key_frame() override = default;
@@ -142,7 +142,7 @@ namespace libmmd
 		virtual vmd_interpolator& mutable_view_angle_interpolator() = 0;
 	};
 
-	class vmd_light_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_light_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_light_key_frame() override = default;
@@ -154,12 +154,12 @@ namespace libmmd
 		virtual void set_position(const std::array<float, 3>& position) = 0;
 	};
 
-	class vmd_shadow_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_shadow_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_shadow_key_frame() override = default;
 
-		enum class shadow_type
+		enum class LIBMMD_API shadow_type
 		{
 			OFF,
 			MODE1,
@@ -173,7 +173,7 @@ namespace libmmd
 		virtual void set_distance(float distance) = 0;
 	};
 
-	class vmd_IK_controller
+	class LIBMMD_API vmd_IK_controller
 	{
 	public:
 		virtual ~vmd_IK_controller() = default;
@@ -185,7 +185,7 @@ namespace libmmd
 		virtual void set_IK_enable(bool value) = 0;
 	};
 
-	class vmd_model_controller_key_frame : virtual public vmd_key_frame
+	class LIBMMD_API vmd_model_controller_key_frame : virtual public vmd_key_frame
 	{
 	public:
 		~vmd_model_controller_key_frame() override = default;
@@ -199,7 +199,7 @@ namespace libmmd
 		virtual vmd_IK_controller_array& mutable_vmd_IK_controller_array() = 0;
 	};
 
-	class vmd_animation
+	class LIBMMD_API vmd_animation
 	{
 	public:
 		virtual ~vmd_animation() = default;
@@ -242,5 +242,5 @@ namespace libmmd
 		virtual vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() = 0;
 	};
 
-	static vmd_animation* create_vmd_animation();
+	LIBMMD_API vmd_animation* create_vmd_animation();
 }

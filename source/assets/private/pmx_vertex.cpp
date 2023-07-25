@@ -13,42 +13,42 @@ Description:	pmx vertex data
 
 namespace libmmd
 {
-	inline const std::array<float, 3>& pmx_vertex_impl::get_position() const
+	 const std::array<float, 3>& pmx_vertex_impl::get_position() const
 	{
 		return position_;
 	}
 
-	inline void pmx_vertex_impl::set_position(const std::array<float, 3>& position)
+	 void pmx_vertex_impl::set_position(const std::array<float, 3>& position)
 	{
 		position_ = position;
 	}
 
-	inline const std::array<float, 3>& pmx_vertex_impl::get_normal() const
+	 const std::array<float, 3>& pmx_vertex_impl::get_normal() const
 	{
 		return normal_;
 	}
 
-	inline void pmx_vertex_impl::set_normal(const std::array<float, 3>& normal)
+	 void pmx_vertex_impl::set_normal(const std::array<float, 3>& normal)
 	{
 		normal_ = normal;
 	}
 
-	inline const std::array<float, 2>& pmx_vertex_impl::get_uv() const
+	 const std::array<float, 2>& pmx_vertex_impl::get_uv() const
 	{
 		return uv_;
 	}
 
-	inline void pmx_vertex_impl::set_uv(const std::array<float, 2>& uv)
+	 void pmx_vertex_impl::set_uv(const std::array<float, 2>& uv)
 	{
 		uv_ = uv;
 	}
 
-	inline pmx_vertex_skinning::skinning_type pmx_vertex_impl::get_skinning_type() const
+	 pmx_vertex_skinning::skinning_type pmx_vertex_impl::get_skinning_type() const
 	{
 		return skinning_type_;
 	}
 
-	inline const pmx_vertex_skinning* pmx_vertex_impl::get_skinning() const
+	 const pmx_vertex_skinning* pmx_vertex_impl::get_skinning() const
 	{
 		return skinning_.get();
 	}
@@ -59,12 +59,12 @@ namespace libmmd
 		return skinning_.get();
 	}
 
-	inline float pmx_vertex_impl::get_edge_scale() const
+	 float pmx_vertex_impl::get_edge_scale() const
 	{
 		return edge_scale_;
 	}
 
-	inline void pmx_vertex_impl::set_edge_scale(const float scale)
+	 void pmx_vertex_impl::set_edge_scale(const float scale)
 	{
 		edge_scale_ = scale;
 	}

@@ -21,6 +21,6 @@
 #include "libmmd_code_conversion.h"
 
 // The third party
-#include "easylog/easylog.h"
+#include "ylt/easylog.hpp"
 
 

@@ -12,72 +12,72 @@ Description:	MMD style bone animation
 
 namespace libmmd
 {
-	inline std::string vmd_bone_key_frame_impl::get_bone_name() const
+	 std::string vmd_bone_key_frame_impl::get_bone_name() const
 	{
 		return std::string{bone_name_.begin(), bone_name_.end()};
 	}
 
-	inline void vmd_bone_key_frame_impl::set_bone_name(const std::string& name)
+	 void vmd_bone_key_frame_impl::set_bone_name(const std::string& name)
 	{
 		bone_name_ = std::u8string{ name.begin(), name.end() };
 	}
 
-	inline const std::array<float, 3>& vmd_bone_key_frame_impl::get_position() const
+	 const std::array<float, 3>& vmd_bone_key_frame_impl::get_position() const
 	{
 		return position_;
 	}
 
-	inline void vmd_bone_key_frame_impl::set_position(const std::array<float, 3>& position)
+	 void vmd_bone_key_frame_impl::set_position(const std::array<float, 3>& position)
 	{
 		position_ = position;
 	}
 
-	inline const std::array<float, 4>& vmd_bone_key_frame_impl::get_rotation() const
+	 const std::array<float, 4>& vmd_bone_key_frame_impl::get_rotation() const
 	{
 		return rotation_;
 	}
 
-	inline void vmd_bone_key_frame_impl::set_rotation(const std::array<float, 4>& rotation)
+	 void vmd_bone_key_frame_impl::set_rotation(const std::array<float, 4>& rotation)
 	{
 		rotation_ = rotation;
 	}
 
-	inline const vmd_interpolator& vmd_bone_key_frame_impl::get_position_x_interpolator() const
+	 const vmd_interpolator& vmd_bone_key_frame_impl::get_position_x_interpolator() const
 	{
 		return interpolator_position_x_;
 	}
 
-	inline vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_x_interpolator()
+	 vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_x_interpolator()
 	{
 		return interpolator_position_x_;
 	}
 
-	inline const vmd_interpolator& vmd_bone_key_frame_impl::get_position_y_interpolator() const
+	 const vmd_interpolator& vmd_bone_key_frame_impl::get_position_y_interpolator() const
 	{
 		return interpolator_position_y_;
 	}
 
-	inline vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_y_interpolator()
+	 vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_y_interpolator()
 	{
 		return interpolator_position_y_;
 	}
 
-	inline const vmd_interpolator& vmd_bone_key_frame_impl::get_position_z_interpolator() const
+	 const vmd_interpolator& vmd_bone_key_frame_impl::get_position_z_interpolator() const
 	{
 		return interpolator_position_z_;
 	}
 
-	inline vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_z_interpolator()
+	 vmd_interpolator& vmd_bone_key_frame_impl::mutable_position_z_interpolator()
 	{
 		return interpolator_position_z_;
 	}
 
-	inline const vmd_interpolator& vmd_bone_key_frame_impl::get_rotation_interpolator() const
+	 const vmd_interpolator& vmd_bone_key_frame_impl::get_rotation_interpolator() const
 	{
 		return interpolator_rotation_;
 	}
 
-	inline vmd_interpolator& vmd_bone_key_frame_impl::mutable_rotation_interpolator()
+	 vmd_interpolator& vmd_bone_key_frame_impl::mutable_rotation_interpolator()
 	{
 		return interpolator_rotation_;
 	}

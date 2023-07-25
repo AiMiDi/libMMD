@@ -12,32 +12,32 @@ Description:	pmx surface data
 
 namespace libmmd
 {
-	inline const uint32_t& pmx_surface_impl::get_a() const
+	 const uint32_t& pmx_surface_impl::get_a() const
 	{
 		return index_[0];
 	}
 
-	inline void pmx_surface_impl::set_a(const uint32_t& point_index)
+	 void pmx_surface_impl::set_a(const uint32_t& point_index)
 	{
 		index_[0] = point_index;
 	}
 
-	inline const uint32_t& pmx_surface_impl::get_b() const
+	 const uint32_t& pmx_surface_impl::get_b() const
 	{
 		return index_[1];
 	}
 
-	inline void pmx_surface_impl::set_b(const uint32_t& point_index)
+	 void pmx_surface_impl::set_b(const uint32_t& point_index)
 	{
 		index_[1] = point_index;
 	}
 
-	inline const uint32_t& pmx_surface_impl::get_c() const
+	 const uint32_t& pmx_surface_impl::get_c() const
 	{
 		return index_[2];
 	}
 
-	inline void pmx_surface_impl::set_c(const uint32_t& point_index)
+	 void pmx_surface_impl::set_c(const uint32_t& point_index)
 	{
 		index_[2] = point_index;
 	}

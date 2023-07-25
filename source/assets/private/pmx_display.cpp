@@ -12,22 +12,22 @@ Description:	pmx display data
 
 namespace libmmd
 {
-	inline pmx_display_item::display_frame_type pmx_display_item_impl::get_frame_type() const
+	 pmx_display_item::display_frame_type pmx_display_item_impl::get_frame_type() const
 	{
 		return frame_type_;
 	}
 
-	inline void pmx_display_item_impl::set_frame_type(const display_frame_type type)
+	 void pmx_display_item_impl::set_frame_type(const display_frame_type type)
 	{
 		frame_type_ = type;
 	}
 
-	inline int32_t pmx_display_item_impl::get_index() const
+	 int32_t pmx_display_item_impl::get_index() const
 	{
 		return index_;
 	}
 
-	inline void pmx_display_item_impl::set_index(int32_t data)
+	 void pmx_display_item_impl::set_index(int32_t data)
 	{
 		index_ = data;
 	}
@@ -58,42 +58,42 @@ namespace libmmd
 		return false;
 	}
 
-	inline std::string pmx_display_frame_impl::get_display_name_local() const
+	 std::string pmx_display_frame_impl::get_display_name_local() const
 	{
 		return std::string{display_name_local_.begin(), display_name_local_.end()};
 	}
 
-	inline void pmx_display_frame_impl::set_display_name_local(const std::string& name)
+	 void pmx_display_frame_impl::set_display_name_local(const std::string& name)
 	{
 		display_name_local_ = std::u8string{ name.begin(),name.end() };
 	}
 
-	inline std::string pmx_display_frame_impl::get_display_name_universal() const
+	 std::string pmx_display_frame_impl::get_display_name_universal() const
 	{
 		return std::string{display_name_universal_.begin(), display_name_universal_.end()};
 	}
 
-	inline void pmx_display_frame_impl::set_display_name_universal(const std::string& name)
+	 void pmx_display_frame_impl::set_display_name_universal(const std::string& name)
 	{
 		display_name_universal_ = std::u8string{ name.begin(),name.end() };
 	}
 
-	inline pmx_display_frame::special_flag pmx_display_frame_impl::get_special_flag() const
+	 pmx_display_frame::special_flag pmx_display_frame_impl::get_special_flag() const
 	{
 		return special_flag_;
 	}
 
-	inline void pmx_display_frame_impl::set_special_flag(const special_flag flag)
+	 void pmx_display_frame_impl::set_special_flag(const special_flag flag)
 	{
 		special_flag_ = flag;
 	}
 
-	inline const pmx_display_frame::pmx_display_item_array& pmx_display_frame_impl::get_display_item_array() const
+	 const pmx_display_frame::pmx_display_item_array& pmx_display_frame_impl::get_display_item_array() const
 	{
 		return frame_item_array_;
 	}
 
-	inline pmx_display_frame::pmx_display_item_array& pmx_display_frame_impl::mutable_display_item_array()
+	 pmx_display_frame::pmx_display_item_array& pmx_display_frame_impl::mutable_display_item_array()
 	{
 		return frame_item_array_;
 	}
