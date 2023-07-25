@@ -48,18 +48,13 @@ endif()
 # Add the source code to the executable file for this project.
 file(GLOB_RECURSE SRC_LIST "source/*.cpp" "source/*.hpp" "source/*.c")
 
+file(GLOB_RECURSE HDR_LIST "include/*.h")
+
 # ----- Target -----
 set(TARGET_NAME libMMD)
 
-add_library(${TARGET_NAME} ${SRC_LIST})
-set_target_properties(
-   ${TARGET_NAME} 
-   PROPERTIES 
-   VERSION ${PROJECT_VERSION} 
-   SOVERSION ${PROJECT_VERSION} 
-   DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
-
 if (NOT LIBMMD_BUILD_SHARED)
+   add_library(${TARGET_NAME} STATIC)
    target_compile_definitions(${TARGET_NAME} PRIVATE LIBMMD_STATIC=1)
    target_compile_definitions(${TARGET_NAME} PUBLIC LIBMMD_STATIC=1)
    set_target_properties(
@@ -77,8 +72,18 @@ if (NOT LIBMMD_BUILD_SHARED)
     )
   endif()
 else()
+  add_library(${TARGET_NAME} SHARED)
   target_compile_definitions(${TARGET_NAME} PRIVATE LIBMMD_BUILD_SHARED=1)
 endif()
+
+target_sources(${TARGET_NAME} PRIVATE ${SRC_LIST} ${HDR_LIST})
+set_target_properties(
+   ${TARGET_NAME} 
+   PROPERTIES 
+   VERSION ${PROJECT_VERSION} 
+   SOVERSION ${PROJECT_VERSION} 
+   DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
+
 
 # add icu::uc dependencies.
 set(ICU_BUILD_UC ON)

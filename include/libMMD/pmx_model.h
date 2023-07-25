@@ -805,9 +805,9 @@ namespace libmmd
 
     class LIBMMD_API pmx_model {
     public:
-        virtual ~pmx_model();
+        virtual ~pmx_model() = default;
 
-        enum class LIBMMD_API pmx_version : int8_t
+        enum class pmx_version : int8_t
         {
             V2_0,
             V2_1
@@ -872,5 +872,5 @@ namespace libmmd
         virtual pmx_joint_array& mutable_pmx_joint_array() = 0;
     };
 
-    static pmx_model* create_pmx_model();
+    LIBMMD_API pmx_model* create_pmx_model();
 }

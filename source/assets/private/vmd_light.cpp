@@ -12,22 +12,22 @@ Description:	MMD style lighting animation
 
 namespace libmmd
 {
-	inline const std::array<float, 3>& vmd_light_key_frame_impl::get_color() const
+	 const std::array<float, 3>& vmd_light_key_frame_impl::get_color() const
 	{
 		return color_;
 	}
 
-	inline void vmd_light_key_frame_impl::set_color(const std::array<float, 3>& color)
+	 void vmd_light_key_frame_impl::set_color(const std::array<float, 3>& color)
 	{
 		color_ = color;
 	}
 
-	inline const std::array<float, 3>& vmd_light_key_frame_impl::get_position() const
+	 const std::array<float, 3>& vmd_light_key_frame_impl::get_position() const
 	{
 		return position_;
 	}
 
-	inline void vmd_light_key_frame_impl::set_position(const std::array<float, 3>& position)
+	 void vmd_light_key_frame_impl::set_position(const std::array<float, 3>& position)
 	{
 		position_ = position;
 	}

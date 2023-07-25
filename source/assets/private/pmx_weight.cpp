@@ -290,7 +290,7 @@ namespace libmmd
 		bone_weight_[3] /= weight;
 	}
 
-	inline bool pmx_vertex_skinning_BDEF1_impl::read_from_file(const file& file)
+	 bool pmx_vertex_skinning_BDEF1_impl::read_from_file(const file& file)
 	{
 		if (!(*bone_index_reader_)(file, bone_index_))
 			return false;
@@ -303,7 +303,7 @@ namespace libmmd
 		return true;
 	}
 
-	inline bool pmx_vertex_skinning_BDEF2_impl::read_from_file(const file& file)
+	 bool pmx_vertex_skinning_BDEF2_impl::read_from_file(const file& file)
 	{
 		if (!(*bone_index_reader_)(file, bone_index_[0]))
 			return false;
@@ -320,7 +320,7 @@ namespace libmmd
 		return true;
 	}
 
-	inline bool pmx_vertex_skinning_BDEF4_impl::read_from_file(const file& file)
+	 bool pmx_vertex_skinning_BDEF4_impl::read_from_file(const file& file)
 	{
 		if (!(*bone_index_reader_)(file, bone_index_[0]))
 			return false;
@@ -347,7 +347,7 @@ namespace libmmd
 		return true;
 	}
 
-	inline bool pmx_vertex_skinning_SDEF_impl::read_from_file(const file& file)
+	 bool pmx_vertex_skinning_SDEF_impl::read_from_file(const file& file)
 	{
 		if (!(*bone_index_reader_)(file, bone_index_[0]))
 			return false;
@@ -370,7 +370,7 @@ namespace libmmd
 		return true;
 	}
 
-	inline bool pmx_vertex_skinning_QDEF_impl::read_from_file(const file& file)
+	 bool pmx_vertex_skinning_QDEF_impl::read_from_file(const file& file)
 	{
 		if (!(*bone_index_reader_)(file, bone_index_[0]))
 			return false;

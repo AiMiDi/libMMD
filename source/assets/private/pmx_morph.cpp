@@ -12,22 +12,22 @@ Description:	pmx morph data
 
 namespace libmmd
 {
-	inline int32_t pmx_group_morph_offset_impl::get_morph_index() const
+	 int32_t pmx_group_morph_offset_impl::get_morph_index() const
 	{
 		return  morph_index_;
 	}
 
-	inline void pmx_group_morph_offset_impl::set_morph_index(const int32_t morph_index)
+	 void pmx_group_morph_offset_impl::set_morph_index(const int32_t morph_index)
 	{
 		morph_index_ = morph_index;
 	}
 
-	inline float pmx_group_morph_offset_impl::get_morph_weight() const
+	 float pmx_group_morph_offset_impl::get_morph_weight() const
 	{
 		return morph_weight_;
 	}
 
-	inline void pmx_group_morph_offset_impl::set_morph_weight(const float morph_weight)
+	 void pmx_group_morph_offset_impl::set_morph_weight(const float morph_weight)
 	{
 		morph_weight_ = morph_weight;
 	}
@@ -47,22 +47,22 @@ namespace libmmd
 		return false;
 	}
 
-	inline uint32_t pmx_vertex_morph_offset_impl::get_vertex_index() const
+	 uint32_t pmx_vertex_morph_offset_impl::get_vertex_index() const
 	{
 		return vertex_index_;
 	}
 
-	inline void pmx_vertex_morph_offset_impl::set_vertex_index(const uint32_t vertex_index)
+	 void pmx_vertex_morph_offset_impl::set_vertex_index(const uint32_t vertex_index)
 	{
 		vertex_index_ = vertex_index;
 	}
 
-	inline const std::array<float, 3>& pmx_vertex_morph_offset_impl::get_offset_position() const
+	 const std::array<float, 3>& pmx_vertex_morph_offset_impl::get_offset_position() const
 	{
 		return offset_position_;
 	}
 
-	inline void pmx_vertex_morph_offset_impl::set_offset_position(const std::array<float, 3>& offset_position)
+	 void pmx_vertex_morph_offset_impl::set_offset_position(const std::array<float, 3>& offset_position)
 	{
 		offset_position_ = offset_position;
 	}
@@ -82,32 +82,32 @@ namespace libmmd
 		return false;
 	}
 
-	inline int32_t pmx_bone_morph_offset_impl::get_bone_index() const
+	 int32_t pmx_bone_morph_offset_impl::get_bone_index() const
 	{
 		return bone_index_;
 	}
 
-	inline void pmx_bone_morph_offset_impl::set_bone_index(const int32_t bone_index)
+	 void pmx_bone_morph_offset_impl::set_bone_index(const int32_t bone_index)
 	{
 		bone_index_ = bone_index;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_morph_offset_impl::get_bone_translation() const
+	 const std::array<float, 3>& pmx_bone_morph_offset_impl::get_bone_translation() const
 	{
 		return bone_translation_;
 	}
 
-	inline void pmx_bone_morph_offset_impl::set_bone_translation(const std::array<float, 3>& bone_translation)
+	 void pmx_bone_morph_offset_impl::set_bone_translation(const std::array<float, 3>& bone_translation)
 	{
 		bone_translation_ = bone_translation;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_morph_offset_impl::get_bone_rotation() const
+	 const std::array<float, 3>& pmx_bone_morph_offset_impl::get_bone_rotation() const
 	{
 		return bone_rotation_;
 	}
 
-	inline void pmx_bone_morph_offset_impl::set_bone_rotation(const std::array<float, 3>& bone_rotation)
+	 void pmx_bone_morph_offset_impl::set_bone_rotation(const std::array<float, 3>& bone_rotation)
 	{
 		bone_rotation_ = bone_rotation;
 	}
@@ -131,22 +131,22 @@ namespace libmmd
 		return false;
 	}
 
-	inline uint32_t pmx_uv_morph_offset_impl::get_vertex_index() const
+	 uint32_t pmx_uv_morph_offset_impl::get_vertex_index() const
 	{
 		return vertex_index_;
 	}
 
-	inline void pmx_uv_morph_offset_impl::set_vertex_index(uint32_t vertex_index)
+	 void pmx_uv_morph_offset_impl::set_vertex_index(uint32_t vertex_index)
 	{
 		vertex_index_ = vertex_index;
 	}
 
-	inline const std::array<float, 4>& pmx_uv_morph_offset_impl::get_uv_offset() const
+	 const std::array<float, 4>& pmx_uv_morph_offset_impl::get_uv_offset() const
 	{
 		return uv_offset_;
 	}
 
-	inline void pmx_uv_morph_offset_impl::set_uv_offset(const std::array<float, 4>& offset)
+	 void pmx_uv_morph_offset_impl::set_uv_offset(const std::array<float, 4>& offset)
 	{
 		uv_offset_ = offset;
 	}
@@ -166,112 +166,112 @@ namespace libmmd
 		return false;
 	}
 
-	inline int32_t pmx_material_morph_offset_impl::get_material_index() const
+	 int32_t pmx_material_morph_offset_impl::get_material_index() const
 	{
 		return material_index_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_material_index(int32_t index)
+	 void pmx_material_morph_offset_impl::set_material_index(int32_t index)
 	{
 		material_index_ = index;
 	}
 
-	inline pmx_material_morph_offset::blend_mode pmx_material_morph_offset_impl::get_blend_mode() const
+	 pmx_material_morph_offset::blend_mode pmx_material_morph_offset_impl::get_blend_mode() const
 	{
 		return blend_mode_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_blend_mode(const blend_mode& mode)
+	 void pmx_material_morph_offset_impl::set_blend_mode(const blend_mode& mode)
 	{
 		blend_mode_ = mode;
 	}
 
-	inline const std::array<float, 4>& pmx_material_morph_offset_impl::get_diffuse() const
+	 const std::array<float, 4>& pmx_material_morph_offset_impl::get_diffuse() const
 	{
 		return diffuse_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_diffuse(const std::array<float, 4>& diffuse)
+	 void pmx_material_morph_offset_impl::set_diffuse(const std::array<float, 4>& diffuse)
 	{
 		diffuse_ = diffuse;
 	}
 
-	inline const std::array<float, 3>& pmx_material_morph_offset_impl::get_specular() const
+	 const std::array<float, 3>& pmx_material_morph_offset_impl::get_specular() const
 	{
 		return specular_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_specular(const std::array<float, 3>& specular)
+	 void pmx_material_morph_offset_impl::set_specular(const std::array<float, 3>& specular)
 	{
 		specular_ = specular;
 	}
 
-	inline float pmx_material_morph_offset_impl::get_specular_intensity() const
+	 float pmx_material_morph_offset_impl::get_specular_intensity() const
 	{
 		return specular_intensity_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_specular_intensity(float specular_intensity)
+	 void pmx_material_morph_offset_impl::set_specular_intensity(float specular_intensity)
 	{
 		specular_intensity_ = specular_intensity;
 	}
 
-	inline const std::array<float, 3>& pmx_material_morph_offset_impl::get_ambient() const
+	 const std::array<float, 3>& pmx_material_morph_offset_impl::get_ambient() const
 	{
 		return ambient_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_ambient(const std::array<float, 3>& ambient)
+	 void pmx_material_morph_offset_impl::set_ambient(const std::array<float, 3>& ambient)
 	{
 		ambient_ = ambient;
 	}
 
-	inline const std::array<float, 4>& pmx_material_morph_offset_impl::get_edge_color() const
+	 const std::array<float, 4>& pmx_material_morph_offset_impl::get_edge_color() const
 	{
 		return edge_color_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_edge_color(const std::array<float, 4>& edge_color)
+	 void pmx_material_morph_offset_impl::set_edge_color(const std::array<float, 4>& edge_color)
 	{
 		edge_color_ = edge_color;
 	}
 
-	inline float pmx_material_morph_offset_impl::get_edge_size() const
+	 float pmx_material_morph_offset_impl::get_edge_size() const
 	{
 		return edge_size_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_edge_size(float edge_size)
+	 void pmx_material_morph_offset_impl::set_edge_size(float edge_size)
 	{
 		edge_size_ = edge_size;
 	}
 
-	inline const std::array<float, 4>& pmx_material_morph_offset_impl::get_texture_tint() const
+	 const std::array<float, 4>& pmx_material_morph_offset_impl::get_texture_tint() const
 	{
 		return texture_tint_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_texture_tint(const std::array<float, 4>& texture_tint)
+	 void pmx_material_morph_offset_impl::set_texture_tint(const std::array<float, 4>& texture_tint)
 	{
 		texture_tint_ = texture_tint;
 	}
 
-	inline const std::array<float, 4>& pmx_material_morph_offset_impl::get_environment_tint() const
+	 const std::array<float, 4>& pmx_material_morph_offset_impl::get_environment_tint() const
 	{
 		return environment_tint_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_environment_tint(const std::array<float, 4>& environment_tint)
+	 void pmx_material_morph_offset_impl::set_environment_tint(const std::array<float, 4>& environment_tint)
 	{
 		environment_tint_ = environment_tint;
 	}
 
-	inline const std::array<float, 4>& pmx_material_morph_offset_impl::get_toon_tint() const
+	 const std::array<float, 4>& pmx_material_morph_offset_impl::get_toon_tint() const
 	{
 		return toon_tint_;
 	}
 
-	inline void pmx_material_morph_offset_impl::set_toon_tint(const std::array<float, 4>& toon_tint)
+	 void pmx_material_morph_offset_impl::set_toon_tint(const std::array<float, 4>& toon_tint)
 	{
 		toon_tint_ = toon_tint;
 	}
@@ -303,28 +303,28 @@ namespace libmmd
 		return true;
 	}
 
-	inline bool pmx_material_morph_offset_impl::write_to_file(const file& file) const
+	 bool pmx_material_morph_offset_impl::write_to_file(const file& file) const
 	{
 		// TODO: write to file
 		return false;
 	}
 
-	inline int32_t pmx_flip_morph_offset_impl::get_morph_index() const
+	 int32_t pmx_flip_morph_offset_impl::get_morph_index() const
 	{
 		return morph_index_;
 	}
 
-	inline void pmx_flip_morph_offset_impl::set_morph_index(int32_t morph_index)
+	 void pmx_flip_morph_offset_impl::set_morph_index(int32_t morph_index)
 	{
 		morph_index_ = morph_index;
 	}
 
-	inline float pmx_flip_morph_offset_impl::get_morph_weight() const
+	 float pmx_flip_morph_offset_impl::get_morph_weight() const
 	{
 		return morph_weight_;
 	}
 
-	inline void pmx_flip_morph_offset_impl::set_morph_weight(float morph_weight)
+	 void pmx_flip_morph_offset_impl::set_morph_weight(float morph_weight)
 	{
 		morph_weight_ = morph_weight;
 	}
@@ -344,42 +344,42 @@ namespace libmmd
 		return false;
 	}
 
-	inline int32_t pmx_impulse_morph_offset_impl::get_rigid_body_index() const
+	 int32_t pmx_impulse_morph_offset_impl::get_rigid_body_index() const
 	{
 		return rigid_body_index_;
 	}
 
-	inline void pmx_impulse_morph_offset_impl::set_rigid_body_index(int32_t rigid_body_index)
+	 void pmx_impulse_morph_offset_impl::set_rigid_body_index(int32_t rigid_body_index)
 	{
 		rigid_body_index_ = rigid_body_index;
 	}
 
-	inline bool pmx_impulse_morph_offset_impl::is_local() const
+	 bool pmx_impulse_morph_offset_impl::is_local() const
 	{
 		return is_local_;
 	}
 
-	inline void pmx_impulse_morph_offset_impl::set_local(bool value)
+	 void pmx_impulse_morph_offset_impl::set_local(bool value)
 	{
 		is_local_ = value;
 	}
 
-	inline const std::array<float, 3>& pmx_impulse_morph_offset_impl::get_movement_speed() const
+	 const std::array<float, 3>& pmx_impulse_morph_offset_impl::get_movement_speed() const
 	{
 		return movement_speed_;
 	}
 
-	inline void pmx_impulse_morph_offset_impl::set_movement_speed(const std::array<float, 3>& speed)
+	 void pmx_impulse_morph_offset_impl::set_movement_speed(const std::array<float, 3>& speed)
 	{
 		movement_speed_ = speed;
 	}
 
-	inline const std::array<float, 3>& pmx_impulse_morph_offset_impl::get_rotation_torque() const
+	 const std::array<float, 3>& pmx_impulse_morph_offset_impl::get_rotation_torque() const
 	{
 		return rotation_torque_;
 	}
 
-	inline void pmx_impulse_morph_offset_impl::set_rotation_torque(const std::array<float, 3>& torque)
+	 void pmx_impulse_morph_offset_impl::set_rotation_torque(const std::array<float, 3>& torque)
 	{
 		rotation_torque_ = torque;
 	}
@@ -417,37 +417,37 @@ namespace libmmd
 		return result;
 	}
 
-	inline std::string pmx_morph_impl::get_morph_name_local() const
+	 std::string pmx_morph_impl::get_morph_name_local() const
 	{
 		return std::string{morph_name_local_.begin(), morph_name_local_.end()};
 	}
 
-	inline void pmx_morph_impl::set_morph_name_local(const std::string& name)
+	 void pmx_morph_impl::set_morph_name_local(const std::string& name)
 	{
 		morph_name_local_ = std::u8string{ name.begin(),name.end() };
 	}
 
-	inline std::string pmx_morph_impl::get_morph_name_universal() const
+	 std::string pmx_morph_impl::get_morph_name_universal() const
 	{
 		return std::string{morph_name_universal_.begin(), morph_name_universal_.end()};
 	}
 
-	inline void pmx_morph_impl::set_morph_name_universal(const std::string& name)
+	 void pmx_morph_impl::set_morph_name_universal(const std::string& name)
 	{
 		morph_name_universal_ = std::u8string{ name.begin(),name.end() };
 	}
 
-	inline pmx_morph::display_panel_type pmx_morph_impl::get_display_panel_type() const
+	 pmx_morph::display_panel_type pmx_morph_impl::get_display_panel_type() const
 	{
 		return display_panel_type_;
 	}
 
-	inline void pmx_morph_impl::set_display_panel_type(display_panel_type type)
+	 void pmx_morph_impl::set_display_panel_type(display_panel_type type)
 	{
 		display_panel_type_ = type;
 	}
 
-	inline pmx_morph::morph_type pmx_morph_impl::get_morph_offset_type() const
+	 pmx_morph::morph_type pmx_morph_impl::get_morph_offset_type() const
 	{
 		return morph_type_;
 	}

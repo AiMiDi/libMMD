@@ -82,5 +82,5 @@ namespace libmmd
         virtual vpd_morph_post_array& mutable_vpd_morph_post_array() = 0;
     };
 
-    static vmd_post* create_vmd_post();
+    LIBMMD_API vmd_post* create_vmd_post();
 }

@@ -12,22 +12,22 @@ Description:	MMD style expression animation
 
 namespace libmmd
 {
-	inline std::string vmd_morph_key_frame_impl::get_morph_name() const
+	 std::string vmd_morph_key_frame_impl::get_morph_name() const
 	{
 		return std::string{morph_name_.begin(), morph_name_.end()};
 	}
 
-	inline void vmd_morph_key_frame_impl::set_morph_name(const std::string& name)
+	 void vmd_morph_key_frame_impl::set_morph_name(const std::string& name)
 	{
 		morph_name_ = std::u8string{ name.begin(), name.end() };
 	}
 
-	inline float vmd_morph_key_frame_impl::get_weight() const
+	 float vmd_morph_key_frame_impl::get_weight() const
 	{
 		return weight_;
 	}
 
-	inline void vmd_morph_key_frame_impl::set_weight(float weight)
+	 void vmd_morph_key_frame_impl::set_weight(float weight)
 	{
 		weight_ = weight;
 	}

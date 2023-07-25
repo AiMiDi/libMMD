@@ -12,42 +12,42 @@ Description:	pmx bone data
 
 namespace libmmd
 {
-	inline int32_t pmx_IK_link_impl::get_bone_index() const
+	 int32_t pmx_IK_link_impl::get_bone_index() const
 	{
 		return bone_index_;
 	}
 
-	inline void pmx_IK_link_impl::set_bone_index(const int32_t index)
+	 void pmx_IK_link_impl::set_bone_index(const int32_t index)
 	{
 		bone_index_ = index;
 	}
 
-	inline bool pmx_IK_link_impl::have_limits() const
+	 bool pmx_IK_link_impl::have_limits() const
 	{
 		return have_limits_;
 	}
 
-	inline void pmx_IK_link_impl::set_have_limits(const bool value)
+	 void pmx_IK_link_impl::set_have_limits(const bool value)
 	{
 		have_limits_ = value;
 	}
 
-	inline const std::array<float, 3>& pmx_IK_link_impl::get_limit_min() const
+	 const std::array<float, 3>& pmx_IK_link_impl::get_limit_min() const
 	{
 		return limit_min_;
 	}
 
-	inline void pmx_IK_link_impl::set_limit_min(const std::array<float, 3>& min)
+	 void pmx_IK_link_impl::set_limit_min(const std::array<float, 3>& min)
 	{
 		limit_min_ = min;
 	}
 
-	inline const std::array<float, 3>& pmx_IK_link_impl::get_limit_max() const
+	 const std::array<float, 3>& pmx_IK_link_impl::get_limit_max() const
 	{
 		return limit_max_;
 	}
 
-	inline void pmx_IK_link_impl::set_limit_max(const std::array<float, 3>& max)
+	 void pmx_IK_link_impl::set_limit_max(const std::array<float, 3>& max)
 	{
 		limit_max_ = max;
 	}
@@ -74,282 +74,282 @@ namespace libmmd
 		return false;
 	}
 
-	inline std::string pmx_bone_impl::get_bone_name_local() const
+	 std::string pmx_bone_impl::get_bone_name_local() const
 	{
 		return std::string{bone_name_local_.begin(), bone_name_local_.end()};
 	}
 
-	inline void pmx_bone_impl::set_bone_name_local(const std::string& name)
+	 void pmx_bone_impl::set_bone_name_local(const std::string& name)
 	{
 		bone_name_local_ = std::u8string(name.begin(), name.end());
 	}
 
-	inline std::string pmx_bone_impl::get_bone_name_universal() const
+	 std::string pmx_bone_impl::get_bone_name_universal() const
 	{
 		return std::string{bone_name_universal_.begin(), bone_name_universal_.end()};
 	}
 
-	inline void pmx_bone_impl::set_bone_name_universal(const std::string& name)
+	 void pmx_bone_impl::set_bone_name_universal(const std::string& name)
 	{
 		bone_name_universal_ = std::u8string(name.begin(), name.end());
 	}
 
-	inline const std::array<float, 3>& pmx_bone_impl::get_position() const
+	 const std::array<float, 3>& pmx_bone_impl::get_position() const
 	{
 		return position_;
 	}
 
-	inline void pmx_bone_impl::set_position(const std::array<float, 3>& position)
+	 void pmx_bone_impl::set_position(const std::array<float, 3>& position)
 	{
 		position_ = position;
 	}
 
-	inline int32_t pmx_bone_impl::get_parent_bone_index() const
+	 int32_t pmx_bone_impl::get_parent_bone_index() const
 	{
 		return parent_bone_index_;
 	}
 
-	inline void pmx_bone_impl::set_parent_bone_index(const int32_t index)
+	 void pmx_bone_impl::set_parent_bone_index(const int32_t index)
 	{
 		parent_bone_index_ = index;
 	}
 
-	inline int32_t pmx_bone_impl::get_layer() const
+	 int32_t pmx_bone_impl::get_layer() const
 	{
 		return layer_;
 	}
 
-	inline void pmx_bone_impl::set_layer(const int32_t layer)
+	 void pmx_bone_impl::set_layer(const int32_t layer)
 	{
 		layer_ = layer;
 	}
 
-	inline bool pmx_bone_impl::is_rotatable() const
+	 bool pmx_bone_impl::is_rotatable() const
 	{
 		return bone_flags_.rotatable;
 	}
 
-	inline void pmx_bone_impl::set_is_rotatable(const bool value)
+	 void pmx_bone_impl::set_is_rotatable(const bool value)
 	{
 		bone_flags_.rotatable = value;
 	}
 
-	inline bool pmx_bone_impl::is_translatable() const
+	 bool pmx_bone_impl::is_translatable() const
 	{
 		return bone_flags_.translatable;
 	}
 
-	inline void pmx_bone_impl::set_is_translatable(const bool value)
+	 void pmx_bone_impl::set_is_translatable(const bool value)
 	{
 		bone_flags_.translatable = value;
 	}
 
-	inline bool pmx_bone_impl::is_visible() const
+	 bool pmx_bone_impl::is_visible() const
 	{
 		return bone_flags_.is_visible;
 	}
 
-	inline void pmx_bone_impl::set_is_visible(const bool value)
+	 void pmx_bone_impl::set_is_visible(const bool value)
 	{
 		bone_flags_.is_visible = value;
 	}
 
-	inline bool pmx_bone_impl::is_enabled() const
+	 bool pmx_bone_impl::is_enabled() const
 	{
 		return bone_flags_.enabled;
 	}
 
-	inline void pmx_bone_impl::set_is_enabled(const bool value)
+	 void pmx_bone_impl::set_is_enabled(const bool value)
 	{
 		bone_flags_.enabled = value;
 	}
 
-	inline bool pmx_bone_impl::is_physics_after_deform() const
+	 bool pmx_bone_impl::is_physics_after_deform() const
 	{
 		return bone_flags_.physics_after_deform;
 	}
 
-	inline void pmx_bone_impl::set_is_physics_after_deform(const bool value)
+	 void pmx_bone_impl::set_is_physics_after_deform(const bool value)
 	{
 		bone_flags_.physics_after_deform = value;
 	}
 
-	inline bool pmx_bone_impl::have_external_parent_deform() const
+	 bool pmx_bone_impl::have_external_parent_deform() const
 	{
 		return bone_flags_.external_parent_deform;
 	}
 
-	inline void pmx_bone_impl::set_have_external_parent_deform(const bool value)
+	 void pmx_bone_impl::set_have_external_parent_deform(const bool value)
 	{
 		bone_flags_.external_parent_deform = value;
 	}
 
-	inline bool pmx_bone_impl::is_tail_use_index() const
+	 bool pmx_bone_impl::is_tail_use_index() const
 	{
 		return bone_flags_.indexed_tail_position;
 	}
 
-	inline void pmx_bone_impl::set_is_tail_use_index(const bool value)
+	 void pmx_bone_impl::set_is_tail_use_index(const bool value)
 	{
 		bone_flags_.indexed_tail_position = value;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_impl::get_tail_position() const
+	 const std::array<float, 3>& pmx_bone_impl::get_tail_position() const
 	{
 		return tail_position_;
 	}
 
-	inline void pmx_bone_impl::set_tail_position(const std::array<float, 3>& position)
+	 void pmx_bone_impl::set_tail_position(const std::array<float, 3>& position)
 	{
 		tail_position_ = position;
 	}
 
-	inline int32_t pmx_bone_impl::get_tail_index() const
+	 int32_t pmx_bone_impl::get_tail_index() const
 	{
 		return tail_index_;
 	}
 
-	inline void pmx_bone_impl::set_tail_index(const int32_t index)
+	 void pmx_bone_impl::set_tail_index(const int32_t index)
 	{
 		tail_index_ = index;
 	}
 
-	inline bool pmx_bone_impl::have_inherit_rotation() const
+	 bool pmx_bone_impl::have_inherit_rotation() const
 	{
 		return bone_flags_.inherit_rotation;
 	}
 
-	inline void pmx_bone_impl::set_have_inherit_rotation(const bool value)
+	 void pmx_bone_impl::set_have_inherit_rotation(const bool value)
 	{
 		bone_flags_.inherit_rotation = value;
 	}
 
-	inline bool pmx_bone_impl::have_inherit_translation() const
+	 bool pmx_bone_impl::have_inherit_translation() const
 	{
 		return bone_flags_.inherit_translation;
 	}
 
-	inline void pmx_bone_impl::set_have_inherit_translation(const bool value)
+	 void pmx_bone_impl::set_have_inherit_translation(const bool value)
 	{
 		bone_flags_.inherit_translation = value;
 	}
 
-	inline int32_t pmx_bone_impl::get_inherit_bone_parent_index() const
+	 int32_t pmx_bone_impl::get_inherit_bone_parent_index() const
 	{
 		return inherit_bone_parent_index_;
 	}
 
-	inline void pmx_bone_impl::set_inherit_bone_parent_index(const int32_t index)
+	 void pmx_bone_impl::set_inherit_bone_parent_index(const int32_t index)
 	{
 		inherit_bone_parent_index_ = index;
 	}
 
-	inline float pmx_bone_impl::get_inherit_bone_parent_influence() const
+	 float pmx_bone_impl::get_inherit_bone_parent_influence() const
 	{
 		return inherit_bone_parent_influence_;
 	}
 
-	inline void pmx_bone_impl::set_inherit_bone_parent_influence(const float influence)
+	 void pmx_bone_impl::set_inherit_bone_parent_influence(const float influence)
 	{
 		inherit_bone_parent_influence_ = influence;
 	}
 
-	inline bool pmx_bone_impl::have_fixed_axis() const
+	 bool pmx_bone_impl::have_fixed_axis() const
 	{
 		return bone_flags_.fixed_axis;
 	}
 
-	inline void pmx_bone_impl::set_have_fixed_axis(const bool value)
+	 void pmx_bone_impl::set_have_fixed_axis(const bool value)
 	{
 		bone_flags_.fixed_axis = value;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_impl::get_bone_fixed_axis() const
+	 const std::array<float, 3>& pmx_bone_impl::get_bone_fixed_axis() const
 	{
 		return bone_fixed_axis_;
 	}
 
-	inline void pmx_bone_impl::set_bone_fixed_axis(const std::array<float, 3>& axis)
+	 void pmx_bone_impl::set_bone_fixed_axis(const std::array<float, 3>& axis)
 	{
 		bone_fixed_axis_ = axis;
 	}
 
-	inline bool pmx_bone_impl::have_local_coordinate() const
+	 bool pmx_bone_impl::have_local_coordinate() const
 	{
 		return bone_flags_.local_coordinate;
 	}
 
-	inline void pmx_bone_impl::set_have_local_coordinate(const bool value)
+	 void pmx_bone_impl::set_have_local_coordinate(const bool value)
 	{
 		bone_flags_.local_coordinate = value;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_impl::get_bone_local_coordinate_x() const
+	 const std::array<float, 3>& pmx_bone_impl::get_bone_local_coordinate_x() const
 	{
 		return bone_local_x_;
 	}
 
-	inline void pmx_bone_impl::set_bone_local_coordinate_x(const std::array<float, 3>& x)
+	 void pmx_bone_impl::set_bone_local_coordinate_x(const std::array<float, 3>& x)
 	{
 		bone_local_x_ = x;
 	}
 
-	inline const std::array<float, 3>& pmx_bone_impl::get_bone_local_coordinate_z() const
+	 const std::array<float, 3>& pmx_bone_impl::get_bone_local_coordinate_z() const
 	{
 		return bone_local_z_;
 	}
 
-	inline void pmx_bone_impl::set_bone_local_coordinate_z(const std::array<float, 3>& z)
+	 void pmx_bone_impl::set_bone_local_coordinate_z(const std::array<float, 3>& z)
 	{
 		bone_local_z_ = z;
 	}
 
-	inline bool pmx_bone_impl::is_IK() const
+	 bool pmx_bone_impl::is_IK() const
 	{
 		return bone_flags_.is_IK;
 	}
 
-	inline void pmx_bone_impl::set_is_IK(const bool value)
+	 void pmx_bone_impl::set_is_IK(const bool value)
 	{
 		bone_flags_.is_IK = value;
 	}
 
-	inline int32_t pmx_bone_impl::get_IK_target_index() const
+	 int32_t pmx_bone_impl::get_IK_target_index() const
 	{
 		return IK_target_index_;
 	}
 
-	inline void pmx_bone_impl::set_IK_target_index(const int32_t index)
+	 void pmx_bone_impl::set_IK_target_index(const int32_t index)
 	{
 		IK_target_index_ = index;
 	}
 
-	inline int32_t pmx_bone_impl::get_IK_loop_count() const
+	 int32_t pmx_bone_impl::get_IK_loop_count() const
 	{
 		return IK_loop_count_;
 	}
 
-	inline void pmx_bone_impl::set_IK_loop_count(int32_t count)
+	 void pmx_bone_impl::set_IK_loop_count(int32_t count)
 	{
 		IK_loop_count_ = count;
 	}
 
-	inline float pmx_bone_impl::get_IK_limit_radian() const
+	 float pmx_bone_impl::get_IK_limit_radian() const
 	{
 		return IK_limit_radian_;
 	}
 
-	inline void pmx_bone_impl::set_IK_limit_radian(float radian)
+	 void pmx_bone_impl::set_IK_limit_radian(float radian)
 	{
 		IK_limit_radian_ = radian;
 	}
 
-	inline const pmx_bone::pmx_IK_link_array& pmx_bone_impl::get_IK_link_array() const
+	 const pmx_bone::pmx_IK_link_array& pmx_bone_impl::get_IK_link_array() const
 	{
 		return IK_links_;
 	}
 
-	inline pmx_bone::pmx_IK_link_array& pmx_bone_impl::mutable_IK_link_array()
+	 pmx_bone::pmx_IK_link_array& pmx_bone_impl::mutable_IK_link_array()
 	{
 		return IK_links_;
 	}

@@ -21,61 +21,61 @@ namespace libmmd
 		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	inline bool vmd_interpolator_impl::operator==(const vmd_interpolator_impl& other) const
+	 bool vmd_interpolator_impl::operator==(const vmd_interpolator_impl& other) const
 	{
 		return ax_ == other.ax_ && ay_ == other.ay_ && bx_ == other.bx_ && by_ == other.by_;
 	}
 
-	inline uint8_t vmd_interpolator_impl::get_ax() const
+	 uint8_t vmd_interpolator_impl::get_ax() const
 	{
 		return ax_;
 	}
 
-	inline void vmd_interpolator_impl::set_ax(uint8_t value)
+	 void vmd_interpolator_impl::set_ax(uint8_t value)
 	{
 		ax_ = value;
 		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	inline uint8_t vmd_interpolator_impl::get_ay() const
+	 uint8_t vmd_interpolator_impl::get_ay() const
 	{
 		return ay_;
 	}
 
-	inline void vmd_interpolator_impl::set_ay(uint8_t value)
+	 void vmd_interpolator_impl::set_ay(uint8_t value)
 	{
 		ay_ = value;
 		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	inline uint8_t vmd_interpolator_impl::get_bx() const
+	 uint8_t vmd_interpolator_impl::get_bx() const
 	{
 		return bx_;
 	}
 
-	inline void vmd_interpolator_impl::set_bx(uint8_t value)
+	 void vmd_interpolator_impl::set_bx(uint8_t value)
 	{
 		bx_ = value;
 		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	inline uint8_t vmd_interpolator_impl::get_by() const
+	 uint8_t vmd_interpolator_impl::get_by() const
 	{
 		return by_;
 	}
 
-	inline void vmd_interpolator_impl::set_by(uint8_t value)
+	 void vmd_interpolator_impl::set_by(uint8_t value)
 	{
 		by_ = value;
 		is_linear_ = ax_ == ay_ && bx_ == by_;
 	}
 
-	inline bool vmd_interpolator_impl::is_linear() const
+	 bool vmd_interpolator_impl::is_linear() const
 	{
 		return is_linear_;
 	}
 
-	inline void vmd_interpolator_impl::set_linear()
+	 void vmd_interpolator_impl::set_linear()
 	{
 		ax_ = 20U;
 		ay_ = 20U;

@@ -242,5 +242,5 @@ namespace libmmd
 		virtual vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() = 0;
 	};
 
-	static vmd_animation* create_vmd_animation();
+	LIBMMD_API vmd_animation* create_vmd_animation();
 }
