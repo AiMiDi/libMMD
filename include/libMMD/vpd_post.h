@@ -15,7 +15,7 @@ Description:	vpd data interface
 namespace libmmd
 {
     template<typename T>
-    class vpd_element_array
+    class LIBMMD_API vpd_element_array
     {
     protected:
         using vpd_element_type = T;
@@ -31,7 +31,7 @@ namespace libmmd
         virtual bool remove(int32_t index, uint32_t count = 1) = 0;
     };
 
-    class vpd_bone_post
+    class LIBMMD_API vpd_bone_post
     {
     public:
         virtual ~vpd_bone_post() = default;
@@ -46,7 +46,7 @@ namespace libmmd
         virtual void set_rotation(const std::array<float, 4>& rotation) = 0;
     };
 
-    class vpd_morph_post
+    class LIBMMD_API vpd_morph_post
     {
     public:
         virtual ~vpd_morph_post() = default;
@@ -58,7 +58,7 @@ namespace libmmd
         virtual void set_weight(float weight) = 0;
     };
 
-    class vmd_post
+    class LIBMMD_API vmd_post
     { 
     public:
         virtual ~vmd_post() = default;

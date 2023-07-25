@@ -15,7 +15,7 @@ Description:	pmx data interface
 namespace libmmd
 {
     template<typename T>
-    class pmx_element_array
+    class LIBMMD_API pmx_element_array
     {
     protected:
         using pmx_element_type = T;
@@ -31,12 +31,12 @@ namespace libmmd
         virtual bool remove(int32_t index, uint32_t count = 1) = 0;
     };
 
-    class pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning
     {
     public:
         virtual ~pmx_vertex_skinning() = default;
 
-        enum class skinning_type : int8_t
+        enum class LIBMMD_API skinning_type : int8_t
         {
             NONE = -1,
             BDEF1,
@@ -47,7 +47,7 @@ namespace libmmd
         };
     };
 
-    class pmx_vertex_skinning_BDEF1 : public pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning_BDEF1 : public pmx_vertex_skinning
     {
     public:
         ~pmx_vertex_skinning_BDEF1() override = default;
@@ -56,7 +56,7 @@ namespace libmmd
         virtual void set_bone_index(int32_t bone_index) = 0;
     };
 
-    class pmx_vertex_skinning_BDEF2 : public pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning_BDEF2 : public pmx_vertex_skinning
     {
     public:
         ~pmx_vertex_skinning_BDEF2() override = default;
@@ -71,7 +71,7 @@ namespace libmmd
         virtual void set_bone_weight(float bone_weight) = 0;
     };
 
-    class pmx_vertex_skinning_BDEF4 : public pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning_BDEF4 : public pmx_vertex_skinning
     {
     public:
         ~pmx_vertex_skinning_BDEF4() override = default;
@@ -104,7 +104,7 @@ namespace libmmd
 
     };
 
-    class pmx_vertex_skinning_SDEF : public pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning_SDEF : public pmx_vertex_skinning
     {
     public:
         ~pmx_vertex_skinning_SDEF() override = default;
@@ -128,7 +128,7 @@ namespace libmmd
         virtual void set_sdef_r1(const std::array<float, 3>& sdef_r1) = 0;
     };
 
-    class pmx_vertex_skinning_QDEF : public pmx_vertex_skinning
+    class LIBMMD_API pmx_vertex_skinning_QDEF : public pmx_vertex_skinning
     {
     public:
         ~pmx_vertex_skinning_QDEF() override = default;
@@ -160,7 +160,7 @@ namespace libmmd
         virtual void normalization() = 0;
     };
 
-    class pmx_vertex
+    class LIBMMD_API pmx_vertex
     {
     public:
         virtual ~pmx_vertex() = default;
@@ -182,7 +182,7 @@ namespace libmmd
         virtual void set_edge_scale(float scale) = 0;
     };
 
-    class pmx_surface
+    class LIBMMD_API pmx_surface
     {
     public:
         virtual ~pmx_surface() = default;
@@ -197,26 +197,26 @@ namespace libmmd
         virtual void set_c(const uint32_t& point_index) = 0;
     };
 
-    class pmx_texture {
+    class LIBMMD_API pmx_texture {
     public:
         virtual ~pmx_texture() = default;
         virtual std::string get_texture_path() const = 0;
         virtual void set_texture_path(std::string& path) = 0;
     };
 
-    class pmx_material
+    class LIBMMD_API pmx_material
     {
     public:
         virtual ~pmx_material() = default;
 
-        enum class environment_blend_mode : int8_t
+        enum class LIBMMD_API environment_blend_mode : int8_t
         {
             OFF,
             MULTIPLY,
             ADD,
             EXTRA
         };
-        enum class toon_reference_type : int8_t
+        enum class LIBMMD_API toon_reference_type : int8_t
         {
             TEXTURE,
             INTERNAL
@@ -295,7 +295,7 @@ namespace libmmd
         virtual void set_surface_count(int32_t count) = 0;
     };
 
-    class pmx_IK_link
+    class LIBMMD_API pmx_IK_link
     {
     public:
         virtual ~pmx_IK_link() = default;
@@ -313,7 +313,7 @@ namespace libmmd
         virtual void set_limit_max(const std::array<float, 3>& max) = 0;
     };
 
-    class pmx_bone
+    class LIBMMD_API pmx_bone
     {
     public:
         virtual ~pmx_bone() = default;
@@ -405,13 +405,13 @@ namespace libmmd
         virtual pmx_IK_link_array& mutable_IK_link_array() = 0;
     };
 
-    class pmx_morph_offset
+    class LIBMMD_API pmx_morph_offset
     {
     public:
         virtual ~pmx_morph_offset() = default;
     };
 
-    class pmx_group_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_group_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_group_morph_offset() override = default;
@@ -423,7 +423,7 @@ namespace libmmd
         virtual void set_morph_weight(float morph_weight) = 0;
     };
 
-    class pmx_vertex_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_vertex_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_vertex_morph_offset() override = default;
@@ -435,7 +435,7 @@ namespace libmmd
         virtual void set_offset_position(const std::array<float, 3>& offset_position) = 0;
     };
 
-    class pmx_bone_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_bone_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_bone_morph_offset() override = default;
@@ -450,7 +450,7 @@ namespace libmmd
         virtual void set_bone_rotation(const std::array<float, 3>& bone_rotation) = 0;
     };
 
-    class pmx_uv_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_uv_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_uv_morph_offset() override = default;
@@ -462,12 +462,12 @@ namespace libmmd
         virtual void set_uv_offset(const std::array<float, 4>& offset) = 0;
     };
 
-    class pmx_material_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_material_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_material_morph_offset() override = default;
 
-        enum class blend_mode : int8_t
+        enum class LIBMMD_API blend_mode : int8_t
         {
             MULTIPLY = 0,
             ADD
@@ -507,7 +507,7 @@ namespace libmmd
         virtual void set_toon_tint(const std::array<float, 4>& toon_tint) = 0;
     };
 
-    class pmx_flip_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_flip_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_flip_morph_offset() override = default;
@@ -519,7 +519,7 @@ namespace libmmd
         virtual void set_morph_weight(float morph_weight) = 0;
     };
 
-    class pmx_impulse_morph_offset : public pmx_morph_offset
+    class LIBMMD_API pmx_impulse_morph_offset : public pmx_morph_offset
     {
     public:
         ~pmx_impulse_morph_offset() override = default;
@@ -537,12 +537,12 @@ namespace libmmd
         virtual void set_rotation_torque(const std::array<float, 3>& torque) = 0;
     };
 
-    class pmx_morph
+    class LIBMMD_API pmx_morph
     {
     public:
         virtual ~pmx_morph() = default;
 
-        enum class display_panel_type : int8_t
+        enum class LIBMMD_API display_panel_type : int8_t
         {
             EYE = 1,
             MOUTH,
@@ -550,7 +550,7 @@ namespace libmmd
             OTHER
         };
 
-        enum class morph_type : int8_t
+        enum class LIBMMD_API morph_type : int8_t
         {
             GROUP,      // Group
             VERTEX,     // Vertex
@@ -583,12 +583,12 @@ namespace libmmd
         virtual pmx_morph_offset_array& mutable_morph_offset_array() = 0;
     };
 
-    class pmx_display_item
+    class LIBMMD_API pmx_display_item
     {
     public:
         virtual ~pmx_display_item() = default;
 
-        enum class display_frame_type : int8_t
+        enum class LIBMMD_API display_frame_type : int8_t
         {
             BONE = 0,
             MORPH,
@@ -601,12 +601,12 @@ namespace libmmd
         virtual void set_index(int32_t data) = 0;
     };
 
-    class pmx_display_frame
+    class LIBMMD_API pmx_display_frame
     {
     public:
         virtual ~pmx_display_frame() = default;
 
-        enum class special_flag : int8_t
+        enum class LIBMMD_API special_flag : int8_t
         {
             NORMAL_FRAME,
             SPECIAL_FRAME
@@ -627,7 +627,7 @@ namespace libmmd
         virtual pmx_display_item_array& mutable_display_item_array() = 0;
     };
 
-    class pmx_rigid_body_non_collision_group
+    class LIBMMD_API pmx_rigid_body_non_collision_group
     {
     public:
         virtual ~pmx_rigid_body_non_collision_group() = default;
@@ -683,19 +683,19 @@ namespace libmmd
         virtual bool& operator[](uint8_t group_index) = 0;
     };
 
-    class pmx_rigid_body
+    class LIBMMD_API pmx_rigid_body
     {
     public:
         virtual ~pmx_rigid_body() = default;
 
-        enum class shape_type : int8_t
+        enum class LIBMMD_API shape_type : int8_t
         {
             SPHERE,
             BOX,
             CAPSULE
         };
 
-        enum class physics_mode : int8_t
+        enum class LIBMMD_API physics_mode : int8_t
         {
             TRACKING_BONES,
             PHYSICAL_CALCULUS,
@@ -748,12 +748,12 @@ namespace libmmd
         virtual void set_physics_mode(physics_mode mode) = 0;
     };
 
-    class pmx_joint
+    class LIBMMD_API pmx_joint
     {
     public:
         virtual ~pmx_joint() = default;
 
-        enum class joint_type : int8_t
+        enum class LIBMMD_API joint_type : int8_t
         {
             SPRING_6DOF,
             NON_SPRING_6DOF,
@@ -803,11 +803,11 @@ namespace libmmd
         virtual void set_rotation_spring(const std::array<float, 3>& spring) = 0;
     };
 
-    class pmx_model {
+    class LIBMMD_API pmx_model {
     public:
         virtual ~pmx_model();
 
-        enum class pmx_version : int8_t
+        enum class LIBMMD_API pmx_version : int8_t
         {
             V2_0,
             V2_1
