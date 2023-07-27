@@ -59,10 +59,10 @@ namespace libmmd
         virtual void set_weight(float weight) = 0;
     };
 
-    class LIBMMD_API vmd_post
+    class LIBMMD_API vpd_post
     { 
     public:
-        virtual ~vmd_post() = default;
+        virtual ~vpd_post() = default;
 
         using vpd_bone_post_array = vpd_element_array<vpd_bone_post>;
         using vpd_morph_post_array = vpd_element_array<vpd_morph_post>;
@@ -83,5 +83,6 @@ namespace libmmd
         virtual vpd_morph_post_array& mutable_vpd_morph_post_array() = 0;
     };
 
-    LIBMMD_API vmd_post* create_vmd_post();
+    LIBMMD_API vpd_post* create_vpd_post();
+    LIBMMD_API void delete_vpd_post(vpd_post** post);
 }

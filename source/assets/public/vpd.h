@@ -100,7 +100,7 @@ namespace libmmd
 		friend class vpd_post_impl;
 	};
 
-	class vpd_post_impl final : public vmd_post
+	class vpd_post_impl final : public vpd_post
 	{
 		std::u8string model_name_{};
 		vpd_element_array_impl<vpd_bone_post, vpd_bone_post_impl> bones_;
