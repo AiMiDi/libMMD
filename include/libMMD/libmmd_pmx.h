@@ -7,8 +7,10 @@ File:			pmx_model.h
 Description:	pmx data interface
 
 **************************************************************************/
+
 #pragma once
 
+#include "libmmd_marco.h"
 #include <string>
 #include <array>
 
