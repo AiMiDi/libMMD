@@ -1,8 +1,8 @@
 /**************************************************************************
 
-Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
+Copyright:Copyright(c) 2023-present, Aimidi & libMMD contributors.
 Author:			Aimidi
-Date:			2022/7/2
+Date:			2023/7/27
 File:			libmmd_code_conversion.h
 Description:	Character coding conversion util
 
