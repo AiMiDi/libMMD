@@ -170,22 +170,22 @@ namespace libmmd
 		model_name_ = std::u8string{ name.begin(), name.end() };
 	}
 
-	const vmd_post::vpd_bone_post_array& vpd_post_impl::get_vpd_bone_post_array()
+	const vpd_post::vpd_bone_post_array& vpd_post_impl::get_vpd_bone_post_array()
 	{
 		return bones_;
 	}
 
-	vmd_post::vpd_bone_post_array& vpd_post_impl::mutable_vpd_bone_post_array()
+	vpd_post::vpd_bone_post_array& vpd_post_impl::mutable_vpd_bone_post_array()
 	{
 		return bones_;
 	}
 
-	const vmd_post::vpd_morph_post_array& vpd_post_impl::get_vpd_morph_post_array()
+	const vpd_post::vpd_morph_post_array& vpd_post_impl::get_vpd_morph_post_array()
 	{
 		return morphs_;
 	}
 
-	vmd_post::vpd_morph_post_array& vpd_post_impl::mutable_vpd_morph_post_array()
+	vpd_post::vpd_morph_post_array& vpd_post_impl::mutable_vpd_morph_post_array()
 	{
 		return morphs_;
 	}

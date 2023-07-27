@@ -875,4 +875,5 @@ namespace libmmd
     };
 
     LIBMMD_API pmx_model* create_pmx_model();
+    LIBMMD_API void delete_pmx_model(pmx_model** model);
 }
