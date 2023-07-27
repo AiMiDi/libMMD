@@ -15,7 +15,7 @@
 #include "libmmd_file.h"
 
 // interface
-#include "mmd_assets.h"
+#include "libmmd_assets.h"
 
 // utils
 #include "libmmd_code_conversion.h"

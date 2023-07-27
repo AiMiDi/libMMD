@@ -9,6 +9,7 @@ Description:	vpd data interface
 **************************************************************************/
 #pragma once
 
+#include "libmmd_marco.h"
 #include <string>
 #include <array>
 
