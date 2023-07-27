@@ -1,6 +1,6 @@
 /**************************************************************************
 
-Copyright:Copyright(c) 2023-present, Aimidi & libmmd contributors.
+Copyright:Copyright(c) 2023-present, Aimidi & libMMD contributors.
 Author:			Aimidi
 Date:			2023/5/28
 File:			pmx_model.h

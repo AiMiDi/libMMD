@@ -97,7 +97,7 @@ target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/yalantinglibs/incl
 target_compile_features(${TARGET_NAME} PRIVATE cxx_std_20)
 
 # add public include for interface
-target_include_directories(${TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/libMMD>"
+target_include_directories(${TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
                                                  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
 # add private include for internal implementation

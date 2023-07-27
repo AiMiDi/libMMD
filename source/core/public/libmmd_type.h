@@ -10,7 +10,7 @@ Description:	type
 
 #pragma once
 
-#include "libmmd_marco.h"
+#include "libMMD/libmmd_marco.h"
 
 namespace libmmd
 {
