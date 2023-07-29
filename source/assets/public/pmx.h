@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -89,31 +89,31 @@ namespace libmmd
 		[[nodiscard]] std::string get_comments_universal() const override;
 		void set_comments_universal(const std::string& comments) override;
 
-		const pmx_vertex_array& get_pmx_vertex_array() override;
+		const pmx_vertex_array& get_pmx_vertex_array() const override;
 		pmx_vertex_array& mutable_pmx_vertex_array() override;
 
-		const pmx_surface_array& get_pmx_surface_array() override;
+		const pmx_surface_array& get_pmx_surface_array() const override;
 		pmx_surface_array& mutable_pmx_surface_array() override;
 
-		const pmx_texture_array& get_pmx_texture_array() override;
+		const pmx_texture_array& get_pmx_texture_array() const override;
 		pmx_texture_array& mutable_pmx_texture_array() override;
 
-		const pmx_material_array& get_pmx_material_array() override;
+		const pmx_material_array& get_pmx_material_array() const override;
 		pmx_material_array& mutable_pmx_material_array() override;
 
-		const pmx_bone_array& get_pmx_bone_array() override;
+		const pmx_bone_array& get_pmx_bone_array() const override;
 		pmx_bone_array& mutable_pmx_bone_array() override;
 
-		const pmx_morph_array& get_pmx_morph_array() override;
+		const pmx_morph_array& get_pmx_morph_array() const override;
 		pmx_morph_array& mutable_pmx_morph_array() override;
 
-		const pmx_display_frame_array& get_pmx_display_frame_array() override;
+		const pmx_display_frame_array& get_pmx_display_frame_array() const override;
 		pmx_display_frame_array& mutable_pmx_display_frame_array() override;
 
-		const pmx_rigid_body_array& get_pmx_rigid_body_array() override;
+		const pmx_rigid_body_array& get_pmx_rigid_body_array() const override;
 		pmx_rigid_body_array& mutable_pmx_rigid_body_array() override;
 
-		const pmx_joint_array& get_pmx_joint_array() override;
+		const pmx_joint_array& get_pmx_joint_array() const override;
 		pmx_joint_array& mutable_pmx_joint_array() override;
 
 		bool read_from_file(const std::string& file_name) override;

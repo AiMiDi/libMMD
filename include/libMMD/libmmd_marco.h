@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifdef _MSC_VER 
 #define	LIBMMD_ATTRIBUTE_FORCE_INLINE __forceinline
@@ -40,4 +40,18 @@
 #define LIBMMD_API
 #else
 #define LIBMMD_API LIBMMD_IMPORT
+#endif
+
+#ifdef LIBMMD_USE_NODISCARD
+#  ifdef __has_cpp_attribute
+#    if __has_cpp_attribute(nodiscard)
+#      define LIBMMD_NODISCARD [[nodiscard]]
+#    else
+#      define LIBMMD_NODISCARD
+#    endif
+#  else
+#    define LIBMMD_NODISCARD
+#  endif
+#else
+#  define LIBMMD_NODISCARD
 #endif

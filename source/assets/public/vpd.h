@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -136,10 +136,10 @@ namespace libmmd
 		std::string get_model_name() const override;
 		void set_model_name(const std::string& name) override;
 
-		const vpd_bone_post_array& get_vpd_bone_post_array() override;
+		const vpd_bone_post_array& get_vpd_bone_post_array() const override;
 		vpd_bone_post_array& mutable_vpd_bone_post_array() override;
 
-		const vpd_morph_post_array& get_vpd_morph_post_array() override;
+		const vpd_morph_post_array& get_vpd_morph_post_array() const override;
 		vpd_morph_post_array& mutable_vpd_morph_post_array() override;
 
 		bool read_from_file(const std::string& file_name) override;

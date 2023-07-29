@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -29,7 +29,7 @@ namespace libmmd
 		pmx_vertex_skinning_BDEF1_impl(pmx_vertex_skinning_BDEF1_impl&&) noexcept = default;
 		pmx_vertex_skinning_BDEF1_impl& operator =(pmx_vertex_skinning_BDEF1_impl&&) noexcept = default;
 
-		int32_t get_bone_index() override;
+		int32_t get_bone_index() const override;
 		void set_bone_index(int32_t bone_index) override;
 
 		bool read_from_file(const file& file);
@@ -53,11 +53,11 @@ namespace libmmd
 		pmx_vertex_skinning_BDEF2_impl(pmx_vertex_skinning_BDEF2_impl&&) noexcept = default;
 		pmx_vertex_skinning_BDEF2_impl& operator =(pmx_vertex_skinning_BDEF2_impl&&) noexcept = default;
 
-		int32_t get_bone_index1() override;
+		int32_t get_bone_index1() const override;
 		void set_bone_index1(int32_t bone_index) override;
-		int32_t get_bone_index2() override;
+		int32_t get_bone_index2() const override;
 		void set_bone_index2(int32_t bone_index) override;
-		float get_bone_weight() override;
+		float get_bone_weight() const override;
 		void set_bone_weight(float bone_weight) override;
 
 		bool read_from_file(const file& file);
@@ -81,21 +81,21 @@ namespace libmmd
 		pmx_vertex_skinning_BDEF4_impl(pmx_vertex_skinning_BDEF4_impl&&) noexcept = default;
 		pmx_vertex_skinning_BDEF4_impl& operator =(pmx_vertex_skinning_BDEF4_impl&&) noexcept = default;
 
-		int32_t get_bone_index1() override;
+		int32_t get_bone_index1() const override;
 		void set_bone_index1(int32_t bone_index) override;
-		int32_t get_bone_index2() override;
+		int32_t get_bone_index2() const override;
 		void set_bone_index2(int32_t bone_index) override;
-		int32_t get_bone_index3() override;
+		int32_t get_bone_index3() const override;
 		void set_bone_index3(int32_t bone_index) override;
-		int32_t get_bone_index4() override;
+		int32_t get_bone_index4() const override;
 		void set_bone_index4(int32_t bone_index) override;
-		float get_bone_weight1() override;
+		float get_bone_weight1() const override;
 		void set_bone_weight1(float bone_weight) override;
-		float get_bone_weight2() override;
+		float get_bone_weight2() const override;
 		void set_bone_weight2(float bone_weight) override;
-		float get_bone_weight3() override;
+		float get_bone_weight3() const override;
 		void set_bone_weight3(float bone_weight) override;
-		float get_bone_weight4() override;
+		float get_bone_weight4() const override;
 		void set_bone_weight4(float bone_weight) override;
 
 		void normalization() override;
@@ -123,11 +123,11 @@ namespace libmmd
 		pmx_vertex_skinning_SDEF_impl(pmx_vertex_skinning_SDEF_impl&&) noexcept = default;
 		pmx_vertex_skinning_SDEF_impl& operator =(pmx_vertex_skinning_SDEF_impl&&) noexcept = default;
 
-		int32_t get_bone_index1() override;
+		int32_t get_bone_index1() const override;
 		void set_bone_index1(int32_t bone_index) override;
-		int32_t get_bone_index2() override;
+		int32_t get_bone_index2() const override;
 		void set_bone_index2(int32_t bone_index) override;
-		float get_bone_weight() override;
+		float get_bone_weight() const override;
 		void set_bone_weight(float bone_weight) override;
 		const std::array<float, 3>& get_sdef_c() const override;
 		void set_sdef_c(const std::array<float, 3>& sdef_c) override;
@@ -157,21 +157,21 @@ namespace libmmd
 		pmx_vertex_skinning_QDEF_impl(pmx_vertex_skinning_QDEF_impl&&) noexcept = default;
 		pmx_vertex_skinning_QDEF_impl& operator =(pmx_vertex_skinning_QDEF_impl&&) noexcept = default;
 
-		int32_t get_bone_index1() override;
+		int32_t get_bone_index1() const override;
 		void set_bone_index1(int32_t bone_index) override;
-		int32_t get_bone_index2() override;
+		int32_t get_bone_index2() const override;
 		void set_bone_index2(int32_t bone_index) override;
-		int32_t get_bone_index3() override;
+		int32_t get_bone_index3() const override;
 		void set_bone_index3(int32_t bone_index) override;
-		int32_t get_bone_index4() override;
+		int32_t get_bone_index4() const override;
 		void set_bone_index4(int32_t bone_index) override;
-		float get_bone_weight1() override;
+		float get_bone_weight1() const override;
 		void set_bone_weight1(float bone_weight) override;
-		float get_bone_weight2() override;
+		float get_bone_weight2() const override;
 		void set_bone_weight2(float bone_weight) override;
-		float get_bone_weight3() override;
+		float get_bone_weight3() const override;
 		void set_bone_weight3(float bone_weight) override;
-		float get_bone_weight4() override;
+		float get_bone_weight4() const override;
 		void set_bone_weight4(float bone_weight) override;
 
 		void normalization() override;

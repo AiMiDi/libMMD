@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -136,7 +136,7 @@ namespace libmmd
 		model_description_.set_model_name_universal(std::u8string(comments.begin(), comments.end()));
 	}
 
-	 const pmx_model::pmx_vertex_array& pmx_model_impl::get_pmx_vertex_array()
+	 const pmx_model::pmx_vertex_array& pmx_model_impl::get_pmx_vertex_array() const
 	{
 		return vertex_data_;
 	}
@@ -146,7 +146,7 @@ namespace libmmd
 		return vertex_data_;
 	}
 
-	 const pmx_model::pmx_surface_array& pmx_model_impl::get_pmx_surface_array()
+	 const pmx_model::pmx_surface_array& pmx_model_impl::get_pmx_surface_array() const
 	{
 		return surface_data_;
 	}
@@ -156,7 +156,7 @@ namespace libmmd
 		return surface_data_;
 	}
 
-	 const pmx_model::pmx_texture_array& pmx_model_impl::get_pmx_texture_array()
+	 const pmx_model::pmx_texture_array& pmx_model_impl::get_pmx_texture_array() const
 	{
 		return texture_data_;
 	}
@@ -166,7 +166,7 @@ namespace libmmd
 		return texture_data_;
 	}
 
-	 const pmx_model::pmx_material_array& pmx_model_impl::get_pmx_material_array()
+	 const pmx_model::pmx_material_array& pmx_model_impl::get_pmx_material_array() const
 	{
 		return material_data_;
 	}
@@ -176,7 +176,7 @@ namespace libmmd
 		return material_data_;
 	}
 
-	 const pmx_model::pmx_bone_array& pmx_model_impl::get_pmx_bone_array()
+	 const pmx_model::pmx_bone_array& pmx_model_impl::get_pmx_bone_array() const
 	{
 		return bone_data_;
 	}
@@ -186,7 +186,7 @@ namespace libmmd
 		return bone_data_;
 	}
 
-	 const pmx_model::pmx_morph_array& pmx_model_impl::get_pmx_morph_array()
+	 const pmx_model::pmx_morph_array& pmx_model_impl::get_pmx_morph_array() const
 	{
 		return morph_data_;
 	}
@@ -196,7 +196,7 @@ namespace libmmd
 		return morph_data_;
 	}
 
-	 const pmx_model::pmx_display_frame_array& pmx_model_impl::get_pmx_display_frame_array()
+	 const pmx_model::pmx_display_frame_array& pmx_model_impl::get_pmx_display_frame_array() const
 	{
 		return display_data_;
 	}
@@ -206,7 +206,7 @@ namespace libmmd
 		return display_data_;
 	}
 
-	 const pmx_model::pmx_rigid_body_array& pmx_model_impl::get_pmx_rigid_body_array()
+	 const pmx_model::pmx_rigid_body_array& pmx_model_impl::get_pmx_rigid_body_array() const
 	{
 		return rigid_body_data_;
 	}
@@ -216,7 +216,7 @@ namespace libmmd
 		return rigid_body_data_;
 	}
 
-	 const pmx_model::pmx_joint_array& pmx_model_impl::get_pmx_joint_array()
+	 const pmx_model::pmx_joint_array& pmx_model_impl::get_pmx_joint_array() const
 	{
 		return joint_data_;
 	}
