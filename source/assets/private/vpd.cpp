@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -170,7 +170,7 @@ namespace libmmd
 		model_name_ = std::u8string{ name.begin(), name.end() };
 	}
 
-	const vpd_post::vpd_bone_post_array& vpd_post_impl::get_vpd_bone_post_array()
+	const vpd_post::vpd_bone_post_array& vpd_post_impl::get_vpd_bone_post_array() const
 	{
 		return bones_;
 	}
@@ -180,7 +180,7 @@ namespace libmmd
 		return bones_;
 	}
 
-	const vpd_post::vpd_morph_post_array& vpd_post_impl::get_vpd_morph_post_array()
+	const vpd_post::vpd_morph_post_array& vpd_post_impl::get_vpd_morph_post_array() const
 	{
 		return morphs_;
 	}

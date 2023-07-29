@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -61,36 +61,36 @@ namespace libmmd
 		[[nodiscard]] std::string get_model_name() const override;
 		void set_model_name(const std::string& name) override;
 
-		bool is_camera() override;
+		[[nodiscard]] bool is_camera() const override;
 		void set_camera(bool value) override;
 
-		const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() override;
+		[[nodiscard]] const vmd_bone_key_frame_array& get_vmd_bone_key_frame_array() const override;
 		vmd_bone_key_frame_array& mutable_vmd_bone_key_frame_array() override;
 
-		const vmd_morph_key_frame_array& get_vmd_morph_key_frame_array() override;
+		[[nodiscard]] const vmd_morph_key_frame_array& get_vmd_morph_key_frame_array() const override;
 		vmd_morph_key_frame_array& mutable_vmd_morph_key_frame_array() override;
 
-		const vmd_camera_key_frame_array& get_vmd_camera_key_frame_array() override;
+		[[nodiscard]] const vmd_camera_key_frame_array& get_vmd_camera_key_frame_array() const override;
 		vmd_camera_key_frame_array& mutable_vmd_camera_key_frame_array() override;
 
-		const vmd_light_key_frame_array& get_vmd_light_key_frame_array() override;
+		[[nodiscard]] const vmd_light_key_frame_array& get_vmd_light_key_frame_array() const override;
 		vmd_light_key_frame_array& mutable_vmd_light_key_frame_array() override;
 
-		const vmd_shadow_key_frame_array& get_vmd_shadow_key_frame_array() override;
+		[[nodiscard]] const vmd_shadow_key_frame_array& get_vmd_shadow_key_frame_array() const override;
 		vmd_shadow_key_frame_array& mutable_vmd_shadow_key_frame_array() override;
 
-		const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() override;
+		[[nodiscard]] const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() const override;
 		vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() override;
 
 		bool read_from_file(const std::string& file_name) override;
-		bool write_to_file(const std::string& file_name) const override;
+		[[nodiscard]] bool write_to_file(const std::string& file_name) const override;
 
 		bool read_from_file(const std::wstring& file_name) override;
-		bool write_to_file(const std::wstring& file_name) const override;
+		[[nodiscard]] bool write_to_file(const std::wstring& file_name) const override;
 
 	private:
 		bool read_from_file_impl(const path& path);
-		bool write_to_file_impl(const path& path) const;
+		[[nodiscard]] bool write_to_file_impl(const path& path) const;
 		// カメラ・照明 
 		static const std::u8string& get_default_camera_name();
 	};

@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -101,113 +101,113 @@ namespace libmmd
 		return true;
 	}
 
-	 const std::u8string& vmd_animation_impl::get_default_camera_name()
+	const std::u8string& vmd_animation_impl::get_default_camera_name()
 	{
 		static std::u8string camera_name = u8"カメラ・照明";
 		return camera_name;
 	}
 
-	 std::string vmd_animation_impl::get_model_name() const
+	std::string vmd_animation_impl::get_model_name() const
 	{
 		return std::string{model_name_.begin(), model_name_.end()};
 	}
 
-	 void vmd_animation_impl::set_model_name(const std::string& name)
+	void vmd_animation_impl::set_model_name(const std::string& name)
 	{
 		model_name_ = std::u8string{ name.begin(), name.end() };
 	}
 
-	 bool vmd_animation_impl::is_camera()
+	bool vmd_animation_impl::is_camera() const
 	{
 		return is_camera_;
 	}
 
-	 void vmd_animation_impl::set_camera(bool value)
+	void vmd_animation_impl::set_camera(bool value)
 	{
 		is_camera_ = value;
 	}
 
-	 const vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::get_vmd_bone_key_frame_array()
+	const vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::get_vmd_bone_key_frame_array() const
 	{
 		return bone_frames_;
 	}
 
-	 vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::mutable_vmd_bone_key_frame_array()
+	vmd_animation::vmd_bone_key_frame_array& vmd_animation_impl::mutable_vmd_bone_key_frame_array()
 	{
 		return bone_frames_;
 	}
 
-	 const vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::get_vmd_morph_key_frame_array()
+	const vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::get_vmd_morph_key_frame_array() const
 	{
 		return morph_frames_;
 	}
 
-	 vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::mutable_vmd_morph_key_frame_array()
+	vmd_animation::vmd_morph_key_frame_array& vmd_animation_impl::mutable_vmd_morph_key_frame_array()
 	{
 		return morph_frames_;
 	}
 
-	 const vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::get_vmd_camera_key_frame_array()
+	const vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::get_vmd_camera_key_frame_array() const
 	{
 		return camera_frames_;
 	}
 
-	 vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::mutable_vmd_camera_key_frame_array()
+	vmd_animation::vmd_camera_key_frame_array& vmd_animation_impl::mutable_vmd_camera_key_frame_array()
 	{
 		return camera_frames_;
 	}
 
-	 const vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::get_vmd_light_key_frame_array()
+	const vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::get_vmd_light_key_frame_array() const
 	{
 		return light_frames_;
 	}
 
-	 vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::mutable_vmd_light_key_frame_array()
+	vmd_animation::vmd_light_key_frame_array& vmd_animation_impl::mutable_vmd_light_key_frame_array()
 	{
 		return light_frames_;
 	}
 
-	 const vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::get_vmd_shadow_key_frame_array()
+	const vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::get_vmd_shadow_key_frame_array() const
 	{
 		return shadow_frames_;
 	}
 
-	 vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::mutable_vmd_shadow_key_frame_array()
+	vmd_animation::vmd_shadow_key_frame_array& vmd_animation_impl::mutable_vmd_shadow_key_frame_array()
 	{
 		return shadow_frames_;
 	}
 
-	 const vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
-	get_vmd_model_controller_key_frame_array()
+	const vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
+	get_vmd_model_controller_key_frame_array() const
 	{
 		return model_controller_frames_;
 	}
 
-	 vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
+	vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
 	mutable_vmd_model_controller_key_frame_array()
 	{
 		return model_controller_frames_;
 	}
 
-	 bool vmd_animation_impl::read_from_file(const std::string& file_name)
+	bool vmd_animation_impl::read_from_file(const std::string& file_name)
 	{
 		const path path{ file_name };
 		return read_from_file_impl(path);
 	}
 
-	 bool vmd_animation_impl::write_to_file(const std::string& file_name) const
+	bool vmd_animation_impl::write_to_file(const std::string& file_name) const
 	{
 		const path path{ file_name };
 		return write_to_file_impl(path);
 	}
 
-	 bool vmd_animation_impl::read_from_file(const std::wstring& file_name)
+	bool vmd_animation_impl::read_from_file(const std::wstring& file_name)
 	{
 		const path path{ file_name };
 		return read_from_file_impl(path);
 	}
 
-	 bool vmd_animation_impl::write_to_file(const std::wstring& file_name) const
+	bool vmd_animation_impl::write_to_file(const std::wstring& file_name) const
 	{
 		const path path{ file_name };
 		return write_to_file_impl(path);

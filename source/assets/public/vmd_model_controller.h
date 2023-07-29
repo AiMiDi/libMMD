@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -52,7 +52,7 @@ namespace libmmd
 
 		void set_mode_show(bool value) override;
 
-		const vmd_IK_controller_array& get_vmd_IK_controller_array() override;
+		const vmd_IK_controller_array& get_vmd_IK_controller_array() const override;
 
 		vmd_IK_controller_array& mutable_vmd_IK_controller_array() override;
 		bool read_from_file(const file& file) override;

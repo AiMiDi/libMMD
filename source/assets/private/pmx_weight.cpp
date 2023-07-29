@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -12,7 +12,7 @@ Description:	pmx weight data
 
 namespace libmmd
 {
-	int32_t pmx_vertex_skinning_BDEF1_impl::get_bone_index()
+	int32_t pmx_vertex_skinning_BDEF1_impl::get_bone_index() const
 	{
 		return bone_index_;
 	}
@@ -22,7 +22,7 @@ namespace libmmd
 		bone_index_ = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF2_impl::get_bone_index1()
+	int32_t pmx_vertex_skinning_BDEF2_impl::get_bone_index1() const
 	{
 		return bone_index_[0];
 	}
@@ -32,7 +32,7 @@ namespace libmmd
 		bone_index_[0] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF2_impl::get_bone_index2()
+	int32_t pmx_vertex_skinning_BDEF2_impl::get_bone_index2() const
 	{
 		return bone_index_[1];
 	}
@@ -42,7 +42,7 @@ namespace libmmd
 		bone_index_[1] = bone_index;
 	}
 
-	float pmx_vertex_skinning_BDEF2_impl::get_bone_weight()
+	float pmx_vertex_skinning_BDEF2_impl::get_bone_weight() const
 	{
 		return bone_weight_;
 	}
@@ -52,7 +52,7 @@ namespace libmmd
 		bone_weight_ = bone_weight;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index1()
+	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index1() const
 	{
 		return bone_index_[0];
 	}
@@ -62,7 +62,7 @@ namespace libmmd
 		bone_index_[0] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index2()
+	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index2() const
 	{
 		return bone_index_[1];
 	}
@@ -72,7 +72,7 @@ namespace libmmd
 		bone_index_[1] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index3()
+	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index3() const
 	{
 		return bone_index_[2];
 	}
@@ -82,7 +82,7 @@ namespace libmmd
 		bone_index_[2] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index4()
+	int32_t pmx_vertex_skinning_BDEF4_impl::get_bone_index4() const
 	{
 		return bone_index_[3];
 	}
@@ -92,7 +92,7 @@ namespace libmmd
 		bone_index_[3] = bone_index;
 	}
 
-	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight1()
+	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight1() const
 	{
 		return bone_weight_[0];
 	}
@@ -102,7 +102,7 @@ namespace libmmd
 		bone_weight_[0] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight2()
+	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight2() const
 	{
 		return bone_weight_[1];
 	}
@@ -112,7 +112,7 @@ namespace libmmd
 		bone_weight_[1] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight3()
+	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight3() const
 	{
 		return bone_weight_[2];
 	}
@@ -122,7 +122,7 @@ namespace libmmd
 		bone_weight_[2] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight4()
+	float pmx_vertex_skinning_BDEF4_impl::get_bone_weight4() const
 	{
 		return bone_weight_[3];
 	}
@@ -141,7 +141,7 @@ namespace libmmd
 		bone_weight_[3] /= weight;
 	}
 
-	int32_t pmx_vertex_skinning_SDEF_impl::get_bone_index1()
+	int32_t pmx_vertex_skinning_SDEF_impl::get_bone_index1() const
 	{
 		return bone_index_[0];
 	}
@@ -151,7 +151,7 @@ namespace libmmd
 		bone_index_[0] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_SDEF_impl::get_bone_index2()
+	int32_t pmx_vertex_skinning_SDEF_impl::get_bone_index2() const
 	{
 		return bone_index_[1];
 	}
@@ -161,7 +161,7 @@ namespace libmmd
 		bone_index_[1] = bone_index;
 	}
 
-	float pmx_vertex_skinning_SDEF_impl::get_bone_weight()
+	float pmx_vertex_skinning_SDEF_impl::get_bone_weight() const
 	{
 		return bone_weight_;
 	}
@@ -201,7 +201,7 @@ namespace libmmd
 		r1_ = sdef_r1;
 	}
 
-	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index1()
+	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index1() const
 	{
 		return bone_index_[0];
 	}
@@ -211,7 +211,7 @@ namespace libmmd
 		bone_index_[0] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index2()
+	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index2() const
 	{
 		return bone_index_[1];
 	}
@@ -221,7 +221,7 @@ namespace libmmd
 		bone_index_[1] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index3()
+	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index3() const
 	{
 		return bone_index_[2];
 	}
@@ -231,7 +231,7 @@ namespace libmmd
 		bone_index_[2] = bone_index;
 	}
 
-	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index4()
+	int32_t pmx_vertex_skinning_QDEF_impl::get_bone_index4() const
 	{
 		return bone_index_[3];
 	}
@@ -241,7 +241,7 @@ namespace libmmd
 		bone_index_[3] = bone_index;
 	}
 
-	float pmx_vertex_skinning_QDEF_impl::get_bone_weight1()
+	float pmx_vertex_skinning_QDEF_impl::get_bone_weight1() const
 	{
 		return bone_weight_[0];
 	}
@@ -251,7 +251,7 @@ namespace libmmd
 		bone_weight_[0] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_QDEF_impl::get_bone_weight2()
+	float pmx_vertex_skinning_QDEF_impl::get_bone_weight2() const
 	{
 		return bone_weight_[1];
 	}
@@ -261,7 +261,7 @@ namespace libmmd
 		bone_weight_[1] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_QDEF_impl::get_bone_weight3()
+	float pmx_vertex_skinning_QDEF_impl::get_bone_weight3() const
 	{
 		return bone_weight_[2];
 	}
@@ -271,7 +271,7 @@ namespace libmmd
 		bone_weight_[2] = bone_weight;
 	}
 
-	float pmx_vertex_skinning_QDEF_impl::get_bone_weight4()
+	float pmx_vertex_skinning_QDEF_impl::get_bone_weight4() const
 	{
 		return bone_weight_[3];
 	}

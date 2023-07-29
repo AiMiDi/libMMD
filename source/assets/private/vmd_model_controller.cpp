@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -23,7 +23,7 @@ namespace libmmd
 	}
 
 	const vmd_model_controller_key_frame::vmd_IK_controller_array& vmd_model_controller_key_frame_impl::
-	get_vmd_IK_controller_array()
+	get_vmd_IK_controller_array() const
 	{
 		return IK_controller_array;
 	}
