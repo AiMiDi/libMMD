@@ -27,11 +27,13 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
                 TLS_VERIFY ON)
 endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
-conan_cmake_autodetect(settings)
-conan_cmake_install(PATH_OR_REFERENCE  ${PROJECT_SOURCE_DIR}/conanfile.txt
-                    BUILD missing
-                    REMOTE conancenter
-                    SETTINGS ${settings})
+foreach(TYPE ${CMAKE_CONFIGURATION_TYPES})
+    conan_cmake_autodetect(settings BUILD_TYPE ${TYPE})
+    conan_cmake_install(PATH_OR_REFERENCE ${PROJECT_SOURCE_DIR}/conanfile.txt
+                        BUILD missing
+                        REMOTE conancenter
+                        SETTINGS ${settings})
+endforeach()
 find_package(ICU REQUIRED)
 
 
