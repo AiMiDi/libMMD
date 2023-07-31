@@ -15,7 +15,7 @@ namespace libmmd
 	bool vmd_animation_impl::read_from_file_impl(const path& path)
 	{
 		file file;
-		if (!path.check_suffix("vmd"))
+		if (!path.check_suffix(".vmd"))
 			return false;
 
 		if (!file.open(path, file::open_mode::READ))
@@ -75,7 +75,7 @@ namespace libmmd
 	bool vmd_animation_impl::write_to_file_impl(const path& path) const
 	{
 		file file;
-		if (!path.check_suffix("vmd"))
+		if (!path.check_suffix(".vmd"))
 			return false;
 
 		if (!file.open(path, file::open_mode::WRITE))
@@ -191,25 +191,25 @@ namespace libmmd
 
 	bool vmd_animation_impl::read_from_file(const std::string& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	bool vmd_animation_impl::write_to_file(const std::string& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 
 	bool vmd_animation_impl::read_from_file(const std::wstring& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	bool vmd_animation_impl::write_to_file(const std::wstring& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 }

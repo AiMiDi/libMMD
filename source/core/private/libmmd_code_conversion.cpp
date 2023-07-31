@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & libMMD contributors.
 Author:			Aimidi
@@ -69,7 +69,7 @@ namespace libmmd
 			return {};
 		}
 		std::string output_string(input_length, '\0');
-		ucnv_converter shift_jis_to_u8_converter(u"SHIFT_JIS", u"UTF8");
+		ucnv_converter shift_jis_to_u8_converter(u"Shift_JIS", u"UTF8");
 		if (shift_jis_to_u8_converter.is_init_error())
 		{
 			ELOGE << "code_converter::utf8_to_shift_jis(): init converter error!";
@@ -110,7 +110,7 @@ namespace libmmd
 		}
 
 		std::vector buffer_vector(input_length, '\0');
-		ucnv_converter u8_to_shift_jis_converter(u"UTF8", u"SHIFT_JIS");
+		ucnv_converter u8_to_shift_jis_converter(u"UTF8", u"Shift_JIS");
 		if (u8_to_shift_jis_converter.is_init_error())
 		{
 			ELOGE << "code_converter::u8_to_shift_jis_converter(): init converter error!";

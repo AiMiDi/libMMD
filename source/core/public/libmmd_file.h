@@ -26,18 +26,18 @@ namespace libmmd
 		/// Constructs the path from a character array.
 		/// @param[in] string							The path character array.
 		//----------------------------------------------------------------------------------------
-		explicit path(const char* string) :path_(string) {}
+		explicit path(const char8_t* string) :path_(string) {}
 
-		explicit path(const wchar_t* wide_string) :path_(wide_string) {}
+		explicit path(const char16_t* string) :path_(string) {}
 
 
 		//----------------------------------------------------------------------------------------
 		/// Constructs the path from a string.
 		/// @param[in] string							The path string.
 		//----------------------------------------------------------------------------------------
-		explicit path(const std::string& string) :path_(string) {}
+		explicit path(const std::u8string& string) :path_(string) {}
 
-		explicit path(const std::wstring& wide_string) :path_(wide_string) {}
+		explicit path(const std::u16string& string) :path_(string) {}
 
 		//----------------------------------------------------------------------------------------
 		/// Copy constructor. Creates a path from another path.
@@ -326,14 +326,15 @@ namespace libmmd
 		{
 			open_mode_ = mode;
 #ifdef _WIN32
-			const wchar_t* path_str = path.get_wide_string().c_str();
-			if (length_ = get_file_size(path_str); length_ == 0)
+
+			const auto path_str = path.get_wide_string();
+			if (length_ = get_file_size(path_str.c_str()); length_ == 0)
 			{
 				return false;
 			}
 
 			static const wchar_t* mode_string[] = { L"ab", L"rb", L"wb", L"w+b" };
-			if(const auto errno_code = _wfopen_s(&file_, path_str, mode_string[static_cast<int>(mode)]); errno_code != 0)
+			if(const auto errno_code = _wfopen_s(&file_, path_str.c_str(), mode_string[static_cast<int>(mode)]); errno_code != 0)
 			{
 				return false;
 			}
@@ -373,26 +374,26 @@ namespace libmmd
 		UInt64 read_elements(T& data, const UInt64 length = 1) const
 		{
 			constexpr auto elements_size = sizeof(T);
-			return fread_s(&data, length * elements_size, elements_size, length, file_) == 0;
+			return fread_s(&data, length * elements_size, elements_size, length, file_) != 0;
 		}
 
 		template<typename T>
 		UInt64 read_elements(T* data, const UInt64 length = 1) const
 		{
 			constexpr auto elements_size = sizeof(T);
-			return fread_s(data, length * elements_size, elements_size, length, file_) == 0;
+			return fread_s(data, length * elements_size, elements_size, length, file_) != 0;
 		}
 
 		template<typename T>
 		UInt64 write_elements(const T& data, const UInt64 length = 1) const
 		{
-			return fwrite(&data, sizeof(T), length, file_) == 0;
+			return fwrite(&data, sizeof(T), length, file_) != 0;
 		}
 
 		template<typename T>
 		UInt64 write_elements(const T* data, const UInt64 length = 1) const
 		{
-			return fwrite(data, sizeof(T), length, file_) == 0;
+			return fwrite(data, sizeof(T), length, file_) != 0;
 		}
 
 		

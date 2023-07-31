@@ -64,7 +64,7 @@ namespace libmmd
 
 	bool vpd_post_impl::read_from_file_impl(const path& path) {
 		file file;
-		if (!path.check_suffix("vpd"))
+		if (!path.check_suffix(".vpd"))
 			return false;
 
 		if (!file.open(path, file::open_mode::READ))
@@ -150,7 +150,7 @@ namespace libmmd
 	{
 		std::u8string file_string { u8"Vocaloid Pose Data file\r\n" };
 		file file;
-		if (!path.check_suffix("vpd"))
+		if (!path.check_suffix(".vpd"))
 			return false;
 
 		if (!file.open(path, file::open_mode::WRITE))
@@ -192,25 +192,25 @@ namespace libmmd
 
 	bool vpd_post_impl::read_from_file(const std::string& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	bool vpd_post_impl::write_to_file(const std::string& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 
 	bool vpd_post_impl::read_from_file(const std::wstring& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	bool vpd_post_impl::write_to_file(const std::wstring& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 }

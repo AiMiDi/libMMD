@@ -16,7 +16,7 @@ namespace libmmd
 	bool pmx_model_impl::read_from_file_impl(const path& path)
 	{
 		file file;
-		if (!path.check_suffix("pmx"))
+		if (!path.check_suffix(".pmx"))
 			return false;
 
 		if (!file.open(path, file::open_mode::READ))
@@ -228,25 +228,25 @@ namespace libmmd
 
 	 bool pmx_model_impl::read_from_file(const std::string& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	 bool pmx_model_impl::write_to_file(const std::string& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 
 	 bool pmx_model_impl::read_from_file(const std::wstring& file_name)
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return read_from_file_impl(path);
 	}
 
 	 bool pmx_model_impl::write_to_file(const std::wstring& file_name) const
 	{
-		const path path{ file_name };
+		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
 }
