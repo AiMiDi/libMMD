@@ -18,6 +18,23 @@ option(LIBMMD_INSTALL "Generate the install target" ON)
 message(STATUS "Is build libMMD shared library: ${LIBMMD_BUILD_SHARED}")
 message(STATUS "Is generate the libMMD install target: ${LIBMMD_INSTALL}")
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+  message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+  file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/0.18.1/conan.cmake"
+                "${CMAKE_BINARY_DIR}/conan.cmake"
+                TLS_VERIFY ON)
+endif()
+include(${CMAKE_BINARY_DIR}/conan.cmake)
+conan_cmake_autodetect(settings)
+conan_cmake_install(PATH_OR_REFERENCE  ${PROJECT_SOURCE_DIR}/conanfile.txt
+                    BUILD missing
+                    REMOTE conancenter
+                    SETTINGS ${settings})
+find_package(ICU REQUIRED)
+
+
 if (LIBMMD_BUILD_SHARED)
   set(BUILD_SHARED_LIBS True)
 endif()
@@ -83,12 +100,12 @@ endif()
 
 
 # add icu::uc dependencies.
-set(ICU_BUILD_UC ON)
-set(ICU_BUILD_I18N OFF)
-set(ICU_BUILD_IO OFF)
-set(ICU_INSTALL LIBMMD_INSTALL)
-add_subdirectory("thirdparty/icu")
-target_link_libraries(${TARGET_NAME} PRIVATE icu::uc)
+# set(ICU_BUILD_UC ON)
+# set(ICU_BUILD_I18N OFF)
+# set(ICU_BUILD_IO OFF)
+# set(ICU_INSTALL LIBMMD_INSTALL)
+# add_subdirectory("thirdparty/icu")
+target_link_libraries(${TARGET_NAME} PRIVATE ICU::uc)
 
 # add yalantinglibs::easylog dependencies.
 target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/yalantinglibs/include")

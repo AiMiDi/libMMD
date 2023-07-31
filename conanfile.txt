@@ -1,0 +1,5 @@
+[requires]
+icu/73.2
+
+[generators]
+cmake_find_package
