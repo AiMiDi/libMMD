@@ -31,7 +31,7 @@ namespace libmmd
 				return false;
 			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
 			// カメラ照明
-			if(model_name_.compare(0, 6, get_default_camera_name()) == 0)
+			if(model_name_.compare(0, 18, get_default_camera_name()) == 0)
 			{
 				is_camera_ = true;
 			}
@@ -44,7 +44,7 @@ namespace libmmd
 			if (!file.read_elements(VMD_model_name, 10LLU))
 				return false;
 			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
-			if (model_name_.compare(0, 6, get_default_camera_name()) == 0)
+			if (model_name_.compare(0, 18, get_default_camera_name()) == 0)
 			{
 				is_camera_ = true;
 			}
