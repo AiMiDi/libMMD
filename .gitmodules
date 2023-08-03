@@ -1,6 +1,3 @@
 [submodule "thirdparty/yalantinglibs"]
 	path = thirdparty/yalantinglibs
 	url = https://github.com/alibaba/yalantinglibs.git
-[submodule "thirdparty/icu"]
-	path = thirdparty/icu
-	url = https://github.com/AiMiDi/icu-cmake.git
