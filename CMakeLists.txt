@@ -8,7 +8,16 @@ project("libMMD"
         LANGUAGES CXX)
 
 set(LIBMMD_VERSION 0.1.0)
+include("cmake/conan.cmake")
+include("cmake/utlis.cmake")
 
+if(NOT CMAKE_BUILD_TYPE)
+  foreach(BUILD_TYPE ${CMAKE_CONFIGURATION_TYPES})
+   conan_cmake_setup(${BUILD_TYPE})
+  endforeach()
+else()
+  conan_cmake_setup(${CMAKE_BUILD_TYPE})
+endif()
 
 # ----- Setting -----
 
@@ -17,25 +26,6 @@ option(LIBMMD_INSTALL "Generate the install target" ON)
 
 message(STATUS "Is build libMMD shared library: ${LIBMMD_BUILD_SHARED}")
 message(STATUS "Is generate the libMMD install target: ${LIBMMD_INSTALL}")
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-  message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-  file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/0.18.1/conan.cmake"
-                "${CMAKE_BINARY_DIR}/conan.cmake"
-                TLS_VERIFY ON)
-endif()
-include(${CMAKE_BINARY_DIR}/conan.cmake)
-foreach(TYPE ${CMAKE_CONFIGURATION_TYPES})
-    conan_cmake_autodetect(settings BUILD_TYPE ${TYPE})
-    conan_cmake_install(PATH_OR_REFERENCE ${PROJECT_SOURCE_DIR}/conanfile.txt
-                        BUILD missing
-                        REMOTE conancenter
-                        SETTINGS ${settings})
-endforeach()
-find_package(ICU REQUIRED)
-
 
 if (LIBMMD_BUILD_SHARED)
   set(BUILD_SHARED_LIBS True)
@@ -55,6 +45,13 @@ endif()
 
 if(NOT CMAKE_INSTALL_INCLUDEDIR)
   set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include")
+endif()
+
+# Set the compiler to support utf8
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-finput-charset=UTF-8)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  add_compile_options(/utf-8)
 endif()
 
 if(MSVC)
@@ -82,6 +79,7 @@ set_target_properties(
 if (NOT LIBMMD_BUILD_SHARED)
    target_compile_definitions(${TARGET_NAME} PRIVATE LIBMMD_STATIC=1)
    target_compile_definitions(${TARGET_NAME} PUBLIC LIBMMD_STATIC=1)
+   target_compile_definitions(${TARGET_NAME} PRIVATE U_STATIC_IMPLEMENTATION=1)
    set_target_properties(
 	   ${TARGET_NAME} 
 	   PROPERTIES 
@@ -102,12 +100,11 @@ endif()
 
 
 # add icu::uc dependencies.
-# set(ICU_BUILD_UC ON)
-# set(ICU_BUILD_I18N OFF)
-# set(ICU_BUILD_IO OFF)
-# set(ICU_INSTALL LIBMMD_INSTALL)
-# add_subdirectory("thirdparty/icu")
+find_package(ICU CONFIG REQUIRED)
 target_link_libraries(${TARGET_NAME} PRIVATE ICU::uc)
+if (NOT LIBMMD_BUILD_SHARED)
+  combine_icu_static_libraries(${TARGET_NAME})
+endif()
 
 # add yalantinglibs::easylog dependencies.
 target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/yalantinglibs/include")
