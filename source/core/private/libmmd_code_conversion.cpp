@@ -36,6 +36,7 @@ namespace libmmd
 
 		size_t convert(const char* source, const size_t source_length, char* target, const size_t target_capacity)
 		{
+			status = U_ZERO_ERROR;
 			auto source_ptr = source;
 			const auto source_end = source + source_length;
 			auto target_ptr = target;
@@ -45,17 +46,17 @@ namespace libmmd
 			return static_cast<size_t>(target_ptr - target);
 		}
 
-		[[nodiscard]] bool is_error() const
+		[[nodiscard]] bool is_error()
 		{
 			return !U_SUCCESS(status);
 		}
 
-		[[nodiscard]] bool is_init_error() const
+		[[nodiscard]] bool is_init_error()
 		{
 			return status == U_MEMORY_ALLOCATION_ERROR || status == U_FILE_ACCESS_ERROR;
 		}
 
-		[[nodiscard]] bool is_buffer_overflow() const
+		[[nodiscard]] bool is_buffer_overflow()
 		{
 			return status == U_BUFFER_OVERFLOW_ERROR;
 		}
