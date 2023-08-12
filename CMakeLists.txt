@@ -100,7 +100,7 @@ endif()
 
 
 # add icu::uc dependencies.
-find_package(ICU CONFIG REQUIRED)
+find_package(ICU CONFIG REQUIRED PATHS ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(${TARGET_NAME} PRIVATE ICU::uc)
 if (NOT LIBMMD_BUILD_SHARED)
   combine_icu_static_libraries(${TARGET_NAME})
