@@ -249,4 +249,31 @@ namespace libmmd
 		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
 		return write_to_file_impl(path);
 	}
+
+#ifdef __cpp_lib_string_view
+	 bool pmx_model_impl::read_from_file(const std::string_view& file_name)
+	 {
+		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
+		 return read_from_file_impl(path);
+	 }
+
+	 bool pmx_model_impl::write_to_file(const std::string_view& file_name) const
+	 {
+		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
+		 return write_to_file_impl(path);
+	 }
+
+	 bool pmx_model_impl::read_from_file(const std::wstring_view& file_name)
+	 {
+		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
+		 return read_from_file_impl(path);
+	 }
+
+	 bool pmx_model_impl::write_to_file(const std::wstring_view& file_name) const
+	 {
+		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
+		 return write_to_file_impl(path);
+	 }
+#endif
+
 }

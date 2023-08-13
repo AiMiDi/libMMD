@@ -117,13 +117,21 @@ namespace libmmd
 		pmx_joint_array& mutable_pmx_joint_array() override;
 
 		bool read_from_file(const std::string& file_name) override;
-		[[nodiscard]] bool write_to_file(const std::string& file_name) const override;
+		bool write_to_file(const std::string& file_name) const override;
 
 		bool read_from_file(const std::wstring& file_name) override;
-		[[nodiscard]] bool write_to_file(const std::wstring& file_name) const override;
+		bool write_to_file(const std::wstring& file_name) const override;
+
+#ifdef __cpp_lib_string_view
+		bool read_from_file(const std::string_view& file_name) override;
+		bool write_to_file(const std::string_view& file_name) const override;
+
+		bool read_from_file(const std::wstring_view& file_name) override;
+		bool write_to_file(const std::wstring_view& file_name) const override;
+#	endif
 
 	private:
 		bool read_from_file_impl(const path& path);
-		[[nodiscard]] bool write_to_file_impl(const path& path) const;
+		bool write_to_file_impl(const path& path) const;
 	};
 }

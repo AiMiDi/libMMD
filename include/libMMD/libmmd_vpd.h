@@ -73,6 +73,14 @@ namespace libmmd
         virtual bool read_from_file(const std::wstring& file_name) = 0;
 		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring& file_name) const = 0;
 
+#ifdef __cpp_lib_string_view
+		virtual bool read_from_file(const std::string_view& file_name) = 0;
+		LIBMMD_NODISCARD virtual bool write_to_file(const std::string_view& file_name) const = 0;
+
+		virtual bool read_from_file(const std::wstring_view& file_name) = 0;
+		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring_view& file_name) const = 0;
+#endif
+
 		LIBMMD_NODISCARD virtual std::string get_model_name() const = 0;
         virtual void set_model_name(const std::string& name) = 0;
 
