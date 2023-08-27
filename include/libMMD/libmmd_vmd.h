@@ -252,5 +252,5 @@ namespace libmmd
 	};
 
 	LIBMMD_API vmd_animation* create_vmd_animation();
-	LIBMMD_API void delete_vmd_animation(vmd_animation** animation);
+	LIBMMD_API void delete_vmd_animation(vmd_animation* animation);
 }

@@ -92,5 +92,5 @@ namespace libmmd
     };
 
     LIBMMD_API vpd_post* create_vpd_post();
-    LIBMMD_API void delete_vpd_post(vpd_post** post);
+    LIBMMD_API void delete_vpd_post(vpd_post* post);
 }
