@@ -1,6 +1,9 @@
 [requires]
 icu/73.2
 
+[options]
+icu:with_icuio=False
+
 [generators]
 cmake_find_package_multi
 

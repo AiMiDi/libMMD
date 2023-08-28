@@ -328,7 +328,7 @@ namespace libmmd
 #ifdef _WIN32
 
 			const auto path_str = path.get_wide_string();
-			if (length_ = get_file_size(path_str.c_str()); length_ == 0)
+			if (length_ = get_file_size(path_str.c_str());  mode == open_mode::READ && length_ == 0)
 			{
 				return false;
 			}

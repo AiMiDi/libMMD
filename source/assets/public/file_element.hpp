@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -142,7 +142,7 @@ namespace libmmd
 		file_element_type& add()
 		{
 			data_.push_back(std::make_from_tuple<file_element_type>(default_construction_args_));
-			return *data_.end();
+			return data_[data_.size() - 1];
 		}
 
 		bool remove(int32_t index, uint32_t count)
