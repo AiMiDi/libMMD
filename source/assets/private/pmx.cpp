@@ -23,7 +23,7 @@ namespace libmmd
 			return false;
 
 		// read signature, value is "PMX "
-		if (char signature[5]{ 0 }; !file.read_elements(signature, 4) && strncmp(signature, "PMX", 3) != 0)
+		if (char signature[5]{ 0 }; !file.read_elements(std::span(signature), 4) && strncmp(signature, "PMX", 3) != 0)
 		{
 			ELOGE << "PMX::read_from_file(): error at read signature.";
 			return false;
@@ -225,55 +225,4 @@ namespace libmmd
 	{
 		return joint_data_;
 	}
-
-	 bool pmx_model_impl::read_from_file(const std::string& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	 bool pmx_model_impl::write_to_file(const std::string& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-	 bool pmx_model_impl::read_from_file(const std::wstring& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	 bool pmx_model_impl::write_to_file(const std::wstring& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-#ifdef __cpp_lib_string_view
-	 bool pmx_model_impl::read_from_file(const std::string_view& file_name)
-	 {
-		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		 return read_from_file_impl(path);
-	 }
-
-	 bool pmx_model_impl::write_to_file(const std::string_view& file_name) const
-	 {
-		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		 return write_to_file_impl(path);
-	 }
-
-	 bool pmx_model_impl::read_from_file(const std::wstring_view& file_name)
-	 {
-		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		 return read_from_file_impl(path);
-	 }
-
-	 bool pmx_model_impl::write_to_file(const std::wstring_view& file_name) const
-	 {
-		 const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		 return write_to_file_impl(path);
-	 }
-#endif
-
 }

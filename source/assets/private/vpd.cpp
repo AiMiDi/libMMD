@@ -74,7 +74,7 @@ namespace libmmd
 		/* 申请文件长度的内存 */
 		std::string file_jis_string(file_length, '\0');
 		/* 将整个文件读取到申请的内存 */
-		file.read_elements(file_jis_string.data(), file_length);
+		file.read_elements(std::span(file_jis_string.begin(), file_jis_string.end()), file_length);
 		/* 将读取的字符转为UTF8 */
 		const std::u8string file_u8_string = code_converter::shift_jis_to_utf8(file_jis_string);
 		/* file_length用于判断是否到达文件尾 */
@@ -156,7 +156,7 @@ namespace libmmd
 		if (!file.open(path, file::open_mode::WRITE))
 			return false;
 
-		file.write_elements(file_string.data(), file_string.length());
+		file.write_elements(std::span(file_string.begin(), file_string.end()), file_string.length());
 		return true;
 	}
 
@@ -189,55 +189,4 @@ namespace libmmd
 	{
 		return morphs_;
 	}
-
-	bool vpd_post_impl::read_from_file(const std::string& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vpd_post_impl::write_to_file(const std::string& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-	bool vpd_post_impl::read_from_file(const std::wstring& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vpd_post_impl::write_to_file(const std::wstring& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-#ifdef __cpp_lib_string_view
-	bool vpd_post_impl::read_from_file(const std::string_view& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vpd_post_impl::write_to_file(const std::string_view& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-	bool vpd_post_impl::read_from_file(const std::wstring_view& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vpd_post_impl::write_to_file(const std::wstring_view& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-#endif
-
 }

@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -35,11 +35,11 @@ namespace libmmd
 	bool vmd_morph_key_frame_impl::read_from_file(const file& file)
 	{
 		Char morph_name[15] = { '\0' };
-		if (!file.read_elements(morph_name, 15LLU))
+		if (!file.read_elements(std::span(morph_name), 15LLU))
 			return false;
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(weight_))
+		if (!file.read_element(weight_))
 			return false;
 		morph_name_ = code_converter::shift_jis_to_utf8(morph_name);
 		return true;
@@ -49,11 +49,11 @@ namespace libmmd
 	{
 		std::string morph_name = code_converter::utf8_to_shift_jis(morph_name_);
 		morph_name.resize(15, '\0');
-		if (!file.write_elements(morph_name.c_str(), 15LLU))
+		if (!file.write_elements(std::span(morph_name.begin(), morph_name.end()), 15LLU))
 			return false;
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(weight_))
+		if (!file.write_element(weight_))
 			return false;
 		return true;
 	}

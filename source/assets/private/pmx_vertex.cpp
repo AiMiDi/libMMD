@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -71,15 +71,15 @@ namespace libmmd
 
 	bool pmx_vertex_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
-		if (!file.read_elements(normal_))
+		if (!file.read_element(normal_))
 			return false;
-		if (!file.read_elements(uv_))
+		if (!file.read_element(uv_))
 			return false;
 		if (!file.seek(16LL * model_description_->get_additional_vec4_count()))
 			return false;
-		if (!file.read_elements(&skinning_type_))
+		if (!file.read_element(skinning_type_))
 			return false;
 		skinning_ = new_skinning(skinning_type_);
 
@@ -135,7 +135,7 @@ namespace libmmd
 			}
 		}
 
-		if (!file.read_elements(edge_scale_))
+		if (!file.read_element(edge_scale_))
 			return false;
 		return true;
 	}

@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -124,13 +124,13 @@ namespace libmmd
 
 	bool vmd_camera_key_frame_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(distance_))
+		if (!file.read_element(distance_))
 			return false;
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
-		if (!file.read_elements(rotation_))
+		if (!file.read_element(rotation_))
 			return false;
 		if (!interpolator_position_x_.read_from_file(file))
 			return false;
@@ -144,22 +144,22 @@ namespace libmmd
 			return false;
 		if (!interpolator_viewing_angle_.read_from_file(file))
 			return false;
-		if (!file.read_elements(viewing_angle_))
+		if (!file.read_element(viewing_angle_))
 			return false;
-		if (!file.read_elements(perspective_))
+		if (!file.read_element(perspective_))
 			return false;
 		return true;
 	}
 
 	bool vmd_camera_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(distance_))
+		if (!file.write_element(distance_))
 			return false;
-		if (!file.write_elements(position_))
+		if (!file.write_element(position_))
 			return false;
-		if (!file.write_elements(rotation_))
+		if (!file.write_element(rotation_))
 			return false;
 		if (!interpolator_position_x_.write_to_file(file))
 			return false;
@@ -173,9 +173,9 @@ namespace libmmd
 			return false;
 		if (!interpolator_viewing_angle_.write_to_file(file))
 			return false;
-		if (!file.write_elements(viewing_angle_))
+		if (!file.write_element(viewing_angle_))
 			return false;
-		if (!file.write_elements(perspective_))
+		if (!file.write_element(perspective_))
 			return false;
 		return true;
 	}

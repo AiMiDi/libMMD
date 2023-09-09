@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -258,27 +258,27 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_text(file, material_name_universal_))
 			return false;
-		if (!file.read_elements(diffuse_color_))
+		if (!file.read_element(diffuse_color_))
 			return false;
-		if (!file.read_elements(specular_color_))
+		if (!file.read_element(specular_color_))
 			return false;
-		if (!file.read_elements(specular_strength_))
+		if (!file.read_element(specular_strength_))
 			return false;
-		if (!file.read_elements(ambient_color_))
+		if (!file.read_element(ambient_color_))
 			return false;
-		if (!file.read_elements(material_flags_))
+		if (!file.read_element(material_flags_))
 			return false;
-		if (!file.read_elements(edge_color_))
+		if (!file.read_element(edge_color_))
 			return false;
-		if (!file.read_elements(edge_scale_))
+		if (!file.read_element(edge_scale_))
 			return false;
 		if (!model_description_->read_texture_index(file, texture_index_))
 			return false;
 		if (!model_description_->read_texture_index(file, environment_index_))
 			return false;
-		if (!file.read_elements(environment_blend_mode_))
+		if (!file.read_element(environment_blend_mode_))
 			return false;
-		if (!file.read_elements(toon_reference_))
+		if (!file.read_element(toon_reference_))
 			return false;
 		if (toon_reference_ == toon_reference_type::TEXTURE)
 		{
@@ -287,12 +287,12 @@ namespace libmmd
 		}
 		else if (toon_reference_ == toon_reference_type::INTERNAL)
 		{
-			if (!file.read_elements(toon_internal_))
+			if (!file.read_element(toon_internal_))
 				return false;
 		}
 		if (!model_description_->read_text(file, meta_data_))
 			return false;
-		if (!file.read_elements(surface_count_))
+		if (!file.read_element(surface_count_))
 			return false;
 		surface_count_ /= 3;
 		return true;

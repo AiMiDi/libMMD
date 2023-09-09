@@ -3,7 +3,7 @@
 Copyright:Copyright(c) 2023-present, Aimidi & libMMD contributors.
 Author:			Aimidi
 Date:			2023/5/28
-File:			pmx_model.h
+File:			libmmd_pmx_model.h
 Description:	pmx data interface
 
 **************************************************************************/
@@ -11,6 +11,7 @@ Description:	pmx data interface
 #pragma once
 
 #include "libmmd_marco.h"
+#include "libmmd_assets_file.h"
 #include <string>
 #include <array>
 
@@ -805,9 +806,12 @@ namespace libmmd
         virtual void set_rotation_spring(const std::array<float, 3>& spring) = 0;
     };
 
-    class LIBMMD_API pmx_model {
+    class LIBMMD_API pmx_model : virtual public mmd_assets_file
+	{
+    protected:
+		pmx_model() = default;
     public:
-        virtual ~pmx_model() = default;
+	    ~pmx_model() override = default;
 
         enum class pmx_version : int8_t
         {
@@ -825,19 +829,8 @@ namespace libmmd
         using pmx_rigid_body_array = pmx_element_array<pmx_rigid_body>;
         using pmx_joint_array = pmx_element_array<pmx_joint>;
 
-        virtual bool read_from_file(const std::string& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::string& file_name) const = 0;
-
-		virtual bool read_from_file(const std::wstring& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring& file_name) const = 0;
-
-#ifdef __cpp_lib_string_view
-		virtual bool read_from_file(const std::string_view& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::string_view& file_name) const = 0;
-
-		virtual bool read_from_file(const std::wstring_view& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring_view& file_name) const = 0;
-#endif
+		static pmx_model* create();
+		static void free(pmx_model* model);
 
 		LIBMMD_NODISCARD virtual pmx_version get_version() const = 0;
         virtual void set_version(pmx_version version) = 0;
@@ -881,7 +874,4 @@ namespace libmmd
 		LIBMMD_NODISCARD virtual const pmx_joint_array& get_pmx_joint_array() const = 0;
         virtual pmx_joint_array& mutable_pmx_joint_array() = 0;
     };
-
-    LIBMMD_API pmx_model* create_pmx_model();
-	LIBMMD_API void delete_pmx_model(pmx_model* model);
 }

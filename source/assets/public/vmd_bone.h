@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -58,6 +58,9 @@ namespace libmmd
 		 * \return Result reference
 		 */
 		vmd_bone_key_frame_impl& operator =(vmd_bone_key_frame_impl&&) noexcept = default;
+
+		using vmd_key_frame_impl::get_frame_at;
+		using vmd_key_frame_impl::set_frame_at;
 
 		[[nodiscard]] std::string get_bone_name() const override;
 		void set_bone_name(const std::string& name) override;

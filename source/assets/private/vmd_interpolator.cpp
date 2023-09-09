@@ -86,19 +86,19 @@ namespace libmmd
 
 	bool vmd_bone_interpolator_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(ax_))
+		if (!file.read_element(ax_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(ay_))
+		if (!file.read_element(ay_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(bx_))
+		if (!file.read_element(bx_))
 			return false;
 		if (!file.seek(3))
 			return false;
-		if (!file.read_elements(by_))
+		if (!file.read_element(by_))
 			return false;
 		if (!file.seek(3))
 			return false;
@@ -108,37 +108,37 @@ namespace libmmd
 
 	bool vmd_bone_interpolator_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(ax_))
+		if (!file.write_element(ax_))
 			return false;
-		if (!file.write_elements(ax_))
+		if (!file.write_element(ax_))
 			return false;
-		if (!file.write_elements(ax_))
+		if (!file.write_element(ax_))
 			return false;
-		if (!file.write_elements(ax_))
+		if (!file.write_element(ax_))
 			return false;
-		if (!file.write_elements(ay_))
+		if (!file.write_element(ay_))
 			return false;
-		if (!file.write_elements(ay_))
+		if (!file.write_element(ay_))
 			return false;
-		if (!file.write_elements(ay_))
+		if (!file.write_element(ay_))
 			return false;
-		if (!file.write_elements(ay_))
+		if (!file.write_element(ay_))
 			return false;
-		if (!file.write_elements(bx_))
+		if (!file.write_element(bx_))
 			return false;
-		if (!file.write_elements(bx_))
+		if (!file.write_element(bx_))
 			return false;
-		if (!file.write_elements(bx_))
+		if (!file.write_element(bx_))
 			return false;
-		if (!file.write_elements(bx_))
+		if (!file.write_element(bx_))
 			return false;
-		if (!file.write_elements(by_))
+		if (!file.write_element(by_))
 			return false;
-		if (!file.write_elements(by_))
+		if (!file.write_element(by_))
 			return false;
-		if (!file.write_elements(by_))
+		if (!file.write_element(by_))
 			return false;
-		if (!file.write_elements(by_))
+		if (!file.write_element(by_))
 			return false;
 		return true;
 	}
@@ -146,7 +146,7 @@ namespace libmmd
 	bool vmd_camera_interpolator_impl::read_from_file(const file& file)
 	{
 		UInt32 tmp = 0;
-		if (!file.read_elements(tmp))
+		if (!file.read_element(tmp))
 			return false;
 		this->ax_ = static_cast<UChar>(((tmp & 0xFF) ^ 0x80) - 0x80);
 		this->bx_ = static_cast<UChar>(((tmp & 0xFF00) >> 8 ^ 0x80) - 0x80);
@@ -158,13 +158,13 @@ namespace libmmd
 
 	bool vmd_camera_interpolator_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(ax_))
+		if (!file.write_element(ax_))
 			return false;
-		if (!file.write_elements(bx_))
+		if (!file.write_element(bx_))
 			return false;
-		if (!file.write_elements(ay_))
+		if (!file.write_element(ay_))
 			return false;
-		if (!file.write_elements(by_))
+		if (!file.write_element(by_))
 			return false;
 		return true;
 	}

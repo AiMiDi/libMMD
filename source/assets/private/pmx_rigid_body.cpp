@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -216,7 +216,7 @@ namespace libmmd
 	bool pmx_rigid_body_non_collision_group_impl::read_from_file(const file& file)
 	{
 		pmx_rigid_body_non_collision_group_file_data data;
-		if(!file.read_elements(data))
+		if(!file.read_element(data))
 			return false;
 		non_collision_group_.G0 = data.G0;
 		non_collision_group_.G1 = data.G1;
@@ -256,7 +256,7 @@ namespace libmmd
 		data.G13 = non_collision_group_.G13;
 		data.G14 = non_collision_group_.G14;
 		data.G15 = non_collision_group_.G15;
-		return file.write_elements(data);
+		return file.write_element(data);
 	}
 
 	 std::string pmx_rigid_body_impl::get_rigid_body_name_local() const
@@ -418,29 +418,29 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_bone_index(file, related_bone_index_))
 			return false;
-		if (!file.read_elements(group_id_))
+		if (!file.read_element(group_id_))
 			return false;
 		if (!non_collision_group_.read_from_file(file))
 			return false;
-		if (!file.read_elements(shape_type_))
+		if (!file.read_element(shape_type_))
 			return false;
-		if (!file.read_elements(shape_size_))
+		if (!file.read_element(shape_size_))
 			return false;
-		if (!file.read_elements(shape_position_))
+		if (!file.read_element(shape_position_))
 			return false;
-		if (!file.read_elements(shape_rotation_))
+		if (!file.read_element(shape_rotation_))
 			return false;
-		if (!file.read_elements(mass_))
+		if (!file.read_element(mass_))
 			return false;
-		if (!file.read_elements(move_attenuation_))
+		if (!file.read_element(move_attenuation_))
 			return false;
-		if (!file.read_elements(rotation_damping_))
+		if (!file.read_element(rotation_damping_))
 			return false;
-		if (!file.read_elements(repulsion_force_))
+		if (!file.read_element(repulsion_force_))
 			return false;
-		if (!file.read_elements(friction_force_))
+		if (!file.read_element(friction_force_))
 			return false;
-		if (!file.read_elements(physics_mode_))
+		if (!file.read_element(physics_mode_))
 			return false;
 		return true;
 	}

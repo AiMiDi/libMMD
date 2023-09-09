@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -36,7 +36,7 @@ namespace libmmd
 	{
 		if (!model_description_->read_morph_index(file, morph_index_))
 			return false;
-		if (!file.read_elements(morph_weight_))
+		if (!file.read_element(morph_weight_))
 			return false;
 		return true;
 	}
@@ -71,7 +71,7 @@ namespace libmmd
 	{
 		if (!model_description_->read_vertex_index(file, vertex_index_))
 			return false;
-		if (!file.read_elements(offset_position_))
+		if (!file.read_element(offset_position_))
 			return false;
 		return true;
 	}
@@ -116,10 +116,10 @@ namespace libmmd
 	{
 		if (!model_description_->read_bone_index(file, bone_index_))
 			return false;
-		if (!file.read_elements(bone_translation_))
+		if (!file.read_element(bone_translation_))
 			return false;
 		Vector4d32 quaternion_rotation;
-		if (!file.read_elements(quaternion_rotation))
+		if (!file.read_element(quaternion_rotation))
 			return false;
 		bone_rotation_ = quaternion_to_euler(quaternion_rotation);
 		return true;
@@ -155,7 +155,7 @@ namespace libmmd
 	{
 		if (!model_description_->read_vertex_index(file, vertex_index_))
 			return false;
-		if (!file.read_elements(uv_offset_))
+		if (!file.read_element(uv_offset_))
 			return false;
 		return true;
 	}
@@ -280,25 +280,25 @@ namespace libmmd
 	{
 		if (!model_description_->read_material_index(file, material_index_))
 			return false;
-		if (!file.read_elements(blend_mode_))
+		if (!file.read_element(blend_mode_))
 			return false;
-		if (!file.read_elements(diffuse_))
+		if (!file.read_element(diffuse_))
 			return false;
-		if (!file.read_elements(specular_))
+		if (!file.read_element(specular_))
 			return false;
-		if (!file.read_elements(specular_intensity_))
+		if (!file.read_element(specular_intensity_))
 			return false;
-		if (!file.read_elements(ambient_))
+		if (!file.read_element(ambient_))
 			return false;
-		if (!file.read_elements(edge_color_))
+		if (!file.read_element(edge_color_))
 			return false;
-		if (!file.read_elements(edge_size_))
+		if (!file.read_element(edge_size_))
 			return false;
-		if (!file.read_elements(texture_tint_))
+		if (!file.read_element(texture_tint_))
 			return false;
-		if (!file.read_elements(environment_tint_))
+		if (!file.read_element(environment_tint_))
 			return false;
-		if (!file.read_elements(toon_tint_))
+		if (!file.read_element(toon_tint_))
 			return false;
 		return true;
 	}
@@ -333,7 +333,7 @@ namespace libmmd
 	{
 		if (!model_description_->read_morph_index(file, morph_index_))
 			return false;
-		if (!file.read_elements(morph_weight_))
+		if (!file.read_element(morph_weight_))
 			return false;
 		return true;
 	}
@@ -388,11 +388,11 @@ namespace libmmd
 	{
 		if (!model_description_->read_rigid_body_index(file, rigid_body_index_))
 			return false;
-		if (!file.read_elements(is_local_))
+		if (!file.read_element(is_local_))
 			return false;
-		if (!file.read_elements(movement_speed_))
+		if (!file.read_element(movement_speed_))
 			return false;
-		if (!file.read_elements(rotation_torque_))
+		if (!file.read_element(rotation_torque_))
 			return false;
 		return true;
 	}
@@ -641,14 +641,14 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_text(file, morph_name_universal_))
 			return false;
-		if (!file.read_elements(display_panel_type_))
+		if (!file.read_element(display_panel_type_))
 			return false;
-		if (!file.read_elements(morph_type_))
+		if (!file.read_element(morph_type_))
 			return false;
 		set_morph_offset_type(morph_type_);
 
 		auto offset_count = Int32();
-		if (!file.read_elements(offset_count))
+		if (!file.read_element(offset_count))
 			return false;
 		if(offset_count == 0)
 			return true;

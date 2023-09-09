@@ -4,32 +4,32 @@
 
 namespace libmmd
 {
-	pmx_model* create_pmx_model()
+	pmx_model* pmx_model::create()
 	{
 		return new pmx_model_impl();
 	}
 
-	void delete_pmx_model(pmx_model* model)
+	void pmx_model::free(pmx_model* model)
 	{
 		delete model;
 	}
 
-	vmd_animation* create_vmd_animation()
+	vmd_animation* vmd_animation::create()
 	{
 		return new vmd_animation_impl();
 	}
 
-	void delete_vmd_animation(vmd_animation* animation)
+	void vmd_animation::free(vmd_animation* animation)
 	{
 		delete animation;
 	}
 
-	vpd_post* create_vpd_post()
+	vpd_post* vpd_post::create()
 	{
 		return new vpd_post_impl();
 	}
 
-	void delete_vpd_post(vpd_post* post)
+	void vpd_post::free(vpd_post* post)
 	{
 		delete post;
 	}

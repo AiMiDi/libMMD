@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -148,27 +148,27 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_text(file, joint_name_universal_))
 			return false;
-		if (!file.read_elements(joint_type_))
+		if (!file.read_element(joint_type_))
 			return false;
 		if (!model_description_->read_rigid_body_index(file, rigid_body_index_a_))
 			return false;
 		if (!model_description_->read_rigid_body_index(file, rigid_body_index_b_))
 			return false;
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
-		if (!file.read_elements(rotation_))
+		if (!file.read_element(rotation_))
 			return false;
-		if (!file.read_elements(position_minimum_))
+		if (!file.read_element(position_minimum_))
 			return false;
-		if (!file.read_elements(position_maximum_))
+		if (!file.read_element(position_maximum_))
 			return false;
-		if (!file.read_elements(rotation_minimum_))
+		if (!file.read_element(rotation_minimum_))
 			return false;
-		if (!file.read_elements(rotation_maximum_))
+		if (!file.read_element(rotation_maximum_))
 			return false;
-		if (!file.read_elements(position_spring_))
+		if (!file.read_element(position_spring_))
 			return false;
-		if (!file.read_elements(rotation_spring_))
+		if (!file.read_element(rotation_spring_))
 			return false;
 		return true;
 	}

@@ -23,11 +23,11 @@ namespace libmmd
 
 		Char VMD_version[30]{ '\0' };
 		Char VMD_model_name[20]{ '\0' };
-		if (!file.read_elements(VMD_version, 30LLU))
+		if (!file.read_elements(std::span(VMD_version), 30LLU))
 			return false;
 		if (!strncmp(VMD_version, "Vocaloid Motion Data 0002", 25LLU))
 		{
-			if (!file.read_elements(VMD_model_name, 20))
+			if (!file.read_elements(std::span(VMD_model_name), 20))
 				return false;
 			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
 			// カメラ照明
@@ -41,7 +41,7 @@ namespace libmmd
 		}
 		else if (!strncmp(VMD_version, "Vocaloid Motion Data", 20LLU))
 		{
-			if (!file.read_elements(VMD_model_name, 10LLU))
+			if (!file.read_elements(std::span(VMD_model_name), 10LLU))
 				return false;
 			model_name_ = code_converter::shift_jis_to_utf8(VMD_model_name);
 			if (model_name_.compare(0, 18, get_default_camera_name()) == 0)
@@ -81,10 +81,10 @@ namespace libmmd
 		if (!file.open(path, file::open_mode::WRITE))
 			return false;
 
-		if (constexpr Char vmd_version[30] = "Vocaloid Motion Data 0002"; !file.write_elements(vmd_version, 30LLU))
+		if (constexpr Char vmd_version[30] = "Vocaloid Motion Data 0002"; !file.write_elements(std::span(vmd_version), 30LLU))
 			return false;
 		if (const std::string vmd_mode_name = code_converter::utf8_to_shift_jis(is_camera_ ? get_default_camera_name() : model_name_);
-			!file.write_elements(vmd_mode_name.data(), 20LLU))
+			!file.write_elements(std::span(vmd_mode_name.begin(), vmd_mode_name.end()), 20LLU))
 			return false;
 		if (!bone_frames_.write_to_file(file))
 			return false;
@@ -184,59 +184,9 @@ namespace libmmd
 	}
 
 	vmd_animation::vmd_model_controller_key_frame_array& vmd_animation_impl::
-	mutable_vmd_model_controller_key_frame_array()
+		mutable_vmd_model_controller_key_frame_array()
 	{
 		return model_controller_frames_;
 	}
-
-	bool vmd_animation_impl::read_from_file(const std::string& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vmd_animation_impl::write_to_file(const std::string& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-	bool vmd_animation_impl::read_from_file(const std::wstring& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vmd_animation_impl::write_to_file(const std::wstring& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-#ifdef __cpp_lib_string_view
-	bool vmd_animation_impl::read_from_file(const std::string_view& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vmd_animation_impl::write_to_file(const std::string_view& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-
-	bool vmd_animation_impl::read_from_file(const std::wstring_view& file_name)
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return read_from_file_impl(path);
-	}
-
-	bool vmd_animation_impl::write_to_file(const std::wstring_view& file_name) const
-	{
-		const path path{ reinterpret_cast<const char8_t*>(file_name.data()) };
-		return write_to_file_impl(path);
-	}
-#endif
 
 }

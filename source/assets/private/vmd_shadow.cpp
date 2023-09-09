@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -14,22 +14,22 @@ namespace libmmd
 {
 	bool vmd_shadow_key_frame_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(shadow_type_))
+		if (!file.read_element(shadow_type_))
 			return false;
-		if (!file.read_elements(distance_))
+		if (!file.read_element(distance_))
 			return false;
 		return true;
 	}
 
 	bool vmd_shadow_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(shadow_type_))
+		if (!file.write_element(shadow_type_))
 			return false;
-		if (!file.write_elements(distance_))
+		if (!file.write_element(distance_))
 			return false;
 		return true;
 	}
