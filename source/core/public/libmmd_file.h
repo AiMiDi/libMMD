@@ -405,7 +405,7 @@ namespace libmmd
 
 			const auto& [file_access, file_disposition] = win_modes[static_cast<int>(mode)];
 
-			if (file_ = CreateFileW(path_str.c_str(), file_access, 0, nullptr, file_disposition, FILE_ATTRIBUTE_NORMAL, nullptr); file_ != nullptr)
+			if (file_ = CreateFileW(path_str.c_str(), file_access, 0, nullptr, file_disposition, FILE_ATTRIBUTE_NORMAL, nullptr); file_ == nullptr)
 			{
 				return false;
 			}
