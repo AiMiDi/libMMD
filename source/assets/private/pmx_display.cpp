@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -34,7 +34,7 @@ namespace libmmd
 
 	bool pmx_display_item_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(frame_type_))
+		if (!file.read_element(frame_type_))
 			return false;
 		switch (frame_type_)
 		{
@@ -104,10 +104,10 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_text(file, display_name_universal_))
 			return false;
-		if (!file.read_elements(special_flag_))
+		if (!file.read_element(special_flag_))
 			return false;
 		auto frame_count = Int32();
-		if (!file.read_elements(frame_count))
+		if (!file.read_element(frame_count))
 			return false;
 
 		for (Int32 frame_index = 0; frame_index < frame_count; frame_index++)

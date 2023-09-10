@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2023-present, Aimidi & libmmd contributors.
 Author:			Aimidi
@@ -85,31 +85,31 @@ namespace libmmd
 
 	bool pmx_model_description::read_from_file(const file& file)
 	{
-		if (!file.read_elements(model_version_))
+		if (!file.read_element(model_version_))
 			return false;
 		Char globals_count;
-		if (!file.read_elements(globals_count))
+		if (!file.read_element(globals_count))
 			return false;
 		if (globals_count != 8)
 		{
 			ELOGE << "pmx_model_description::LoadFromFile() error at read global info count";
 			return false;
 		}
-		if (!file.read_elements(text_encoding_))
+		if (!file.read_element(text_encoding_))
 			return false;
-		if (!file.read_elements(additional_vec4_count_))
+		if (!file.read_element(additional_vec4_count_))
 			return false;
-		if (!file.read_elements(vertex_index_size_))
+		if (!file.read_element(vertex_index_size_))
 			return false;
-		if (!file.read_elements(texture_index_size_))
+		if (!file.read_element(texture_index_size_))
 			return false;
-		if (!file.read_elements(material_index_size_))
+		if (!file.read_element(material_index_size_))
 			return false;
-		if (!file.read_elements(bone_index_size_))
+		if (!file.read_element(bone_index_size_))
 			return false;
-		if (!file.read_elements(morph_index_size_))
+		if (!file.read_element(morph_index_size_))
 			return false;
-		if (!file.read_elements(rigid_body_index_size_))
+		if (!file.read_element(rigid_body_index_size_))
 			return false;
 		reset_reader();
 		if (!read_text(file, model_name_local_))

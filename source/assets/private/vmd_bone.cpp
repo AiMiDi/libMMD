@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -85,14 +85,14 @@ namespace libmmd
 	bool vmd_bone_key_frame_impl::read_from_file(const file& file)
 	{
 		Char bone_name[15] {'\0'};
-		if (!file.read_elements(bone_name, 15LLU))
+		if (!file.read_elements(std::span(bone_name), 15LLU))
 			return false;
 		bone_name_ = code_converter::shift_jis_to_utf8(bone_name);
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
-		if (!file.read_elements(rotation_))
+		if (!file.read_element(rotation_))
 			return false;
 		if (!interpolator_position_x_.read_from_file(file))
 			return false;
@@ -109,13 +109,13 @@ namespace libmmd
 	{
 		std::string bone_name = code_converter::utf8_to_shift_jis(bone_name_);
 		bone_name.resize(15, '\0');
-		if (!file.write_elements(bone_name.data(), 15LLU))
+		if (!file.write_elements(std::span(bone_name.begin(), bone_name.end()), 15LLU))
 			return false;
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(position_))
+		if (!file.write_element(position_))
 			return false;
-		if (!file.write_elements(rotation_))
+		if (!file.write_element(rotation_))
 			return false;
 		if (!interpolator_position_x_.write_to_file(file))
 			return false;

@@ -309,7 +309,7 @@ namespace libmmd
 			return false;
 		if (!(*bone_index_reader_)(file, bone_index_[1]))
 			return false;
-		if (!file.read_elements(bone_weight_))
+		if (!file.read_element(bone_weight_))
 			return false;
 		return true;
 	}
@@ -330,13 +330,13 @@ namespace libmmd
 			return false;
 		if (!(*bone_index_reader_)(file, bone_index_[3]))
 			return false;
-		if (!file.read_elements(bone_weight_[0]))
+		if (!file.read_element(bone_weight_[0]))
 			return false;
-		if (!file.read_elements(bone_weight_[1]))
+		if (!file.read_element(bone_weight_[1]))
 			return false;
-		if (!file.read_elements(bone_weight_[2]))
+		if (!file.read_element(bone_weight_[2]))
 			return false;
-		if (!file.read_elements(bone_weight_[3]))
+		if (!file.read_element(bone_weight_[3]))
 			return false;
 		return true;
 	}
@@ -353,13 +353,13 @@ namespace libmmd
 			return false;
 		if (!(*bone_index_reader_)(file, bone_index_[1]))
 			return false;
-		if (!file.read_elements(bone_weight_))
+		if (!file.read_element(bone_weight_))
 			return false;
-		if (!file.read_elements(r0_))
+		if (!file.read_element(r0_))
 			return false;
-		if (!file.read_elements(r1_))
+		if (!file.read_element(r1_))
 			return false;
-		if (!file.read_elements(c_))
+		if (!file.read_element(c_))
 			return false;
 		return true;
 	}
@@ -380,13 +380,13 @@ namespace libmmd
 			return false;
 		if (!(*bone_index_reader_)(file, bone_index_[3]))
 			return false;
-		if (!file.read_elements(bone_weight_[0]))
+		if (!file.read_element(bone_weight_[0]))
 			return false;
-		if (!file.read_elements(bone_weight_[1]))
+		if (!file.read_element(bone_weight_[1]))
 			return false;
-		if (!file.read_elements(bone_weight_[2]))
+		if (!file.read_element(bone_weight_[2]))
 			return false;
-		if (!file.read_elements(bone_weight_[3]))
+		if (!file.read_element(bone_weight_[3]))
 			return false;
 		return true;
 	}

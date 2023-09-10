@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -56,13 +56,13 @@ namespace libmmd
 	{
 		if (!model_description_->read_bone_index(file, bone_index_))
 			return false;
-		if (!file.read_elements(have_limits_))
+		if (!file.read_element(have_limits_))
 			return false;
 		if (have_limits_)
 		{
-			if (!file.read_elements(limit_min_))
+			if (!file.read_element(limit_min_))
 				return false;
-			if (!file.read_elements(limit_max_))
+			if (!file.read_element(limit_max_))
 				return false;
 		}
 		return true;
@@ -360,17 +360,17 @@ namespace libmmd
 			return false;
 		if (!model_description_->read_text(file, bone_name_universal_))
 			return false;
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
 		if (!model_description_->read_bone_index(file, parent_bone_index_))
 			return false;
-		if (!file.read_elements(layer_))
+		if (!file.read_element(layer_))
 			return false;
-		if (!file.read_elements(bone_flags_))
+		if (!file.read_element(bone_flags_))
 			return false;
 		if (bone_flags_.indexed_tail_position == 0)
 		{
-			if (!file.read_elements(tail_position_))
+			if (!file.read_element(tail_position_))
 				return false;
 		}
 		else if (bone_flags_.indexed_tail_position == 1)
@@ -382,19 +382,19 @@ namespace libmmd
 		{
 			if (!model_description_->read_bone_index(file, inherit_bone_parent_index_))
 				return false;
-			if (!file.read_elements(inherit_bone_parent_influence_))
+			if (!file.read_element(inherit_bone_parent_influence_))
 				return false;
 		}
 		if (bone_flags_.fixed_axis)
 		{
-			if (!file.read_elements(bone_fixed_axis_))
+			if (!file.read_element(bone_fixed_axis_))
 				return false;
 		}
 		if (bone_flags_.local_coordinate)
 		{
-			if (!file.read_elements(bone_local_x_))
+			if (!file.read_element(bone_local_x_))
 				return false;
-			if (!file.read_elements(bone_local_z_))
+			if (!file.read_element(bone_local_z_))
 				return false;
 		}
 		if (bone_flags_.external_parent_deform)
@@ -406,13 +406,13 @@ namespace libmmd
 		{
 			if (!model_description_->read_bone_index(file, IK_target_index_))
 				return false;
-			if (!file.read_elements(IK_loop_count_))
+			if (!file.read_element(IK_loop_count_))
 				return false;
-			if (!file.read_elements(IK_limit_radian_))
+			if (!file.read_element(IK_limit_radian_))
 				return false;
 
 			auto IK_link_count = int32_t{};
-			if (!file.read_elements(IK_link_count))
+			if (!file.read_element(IK_link_count))
 				return false;
 
 			for (auto IK_link_index = decltype(IK_link_count){}; IK_link_index < IK_link_count; IK_link_index++)

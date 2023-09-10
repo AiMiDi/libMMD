@@ -36,12 +36,12 @@ namespace libmmd
 
 	bool vmd_model_controller_key_frame_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(model_show_))
+		if (!file.read_element(model_show_))
 			return false;
 		UInt32 IK_controller_number = 0;
-		if (!file.read_elements(IK_controller_number))
+		if (!file.read_element(IK_controller_number))
 			return false;
 		IK_controller_array.read_from_file(file);
 		return true;
@@ -49,9 +49,9 @@ namespace libmmd
 
 	bool vmd_model_controller_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(model_show_))
+		if (!file.write_element(model_show_))
 			return false;
 		if (!IK_controller_array.write_to_file(file))
 			return false;

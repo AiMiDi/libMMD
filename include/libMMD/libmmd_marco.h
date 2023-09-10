@@ -55,3 +55,9 @@
 #else
 #  define LIBMMD_NODISCARD
 #endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#	define LIBMMD_SYS_WINDOWS 1
+#else
+#	define LIBMMD_SYS_WINDOWS 0
+#endif

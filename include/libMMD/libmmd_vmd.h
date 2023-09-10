@@ -11,6 +11,7 @@ Description:	vmd data interface
 #pragma once
 
 #include "libmmd_marco.h"
+#include "libmmd_assets_file.h"
 #include <string>
 #include <array>
 
@@ -200,10 +201,12 @@ namespace libmmd
 		virtual vmd_IK_controller_array& mutable_vmd_IK_controller_array() = 0;
 	};
 
-	class LIBMMD_API vmd_animation
+	class LIBMMD_API vmd_animation : virtual public mmd_assets_file
 	{
+	protected:
+		vmd_animation() = default;
 	public:
-		virtual ~vmd_animation() = default;
+		~vmd_animation() override = default;
 
 		using vmd_bone_key_frame_array = vmd_element_array<vmd_bone_key_frame>;
 		using vmd_morph_key_frame_array = vmd_element_array<vmd_morph_key_frame>;
@@ -212,19 +215,8 @@ namespace libmmd
 		using vmd_shadow_key_frame_array = vmd_element_array<vmd_shadow_key_frame>;
 		using vmd_model_controller_key_frame_array = vmd_element_array<vmd_model_controller_key_frame>;
 
-		virtual bool read_from_file(const std::string& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::string& file_name) const = 0;
-
-		virtual bool read_from_file(const std::wstring& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring& file_name) const = 0;
-
-#ifdef __cpp_lib_string_view
-		virtual bool read_from_file(const std::string_view& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::string_view& file_name) const = 0;
-
-		virtual bool read_from_file(const std::wstring_view& file_name) = 0;
-		LIBMMD_NODISCARD virtual bool write_to_file(const std::wstring_view& file_name) const = 0;
-#endif
+		static vmd_animation* create();
+		static void free(vmd_animation* animation);
 
 		LIBMMD_NODISCARD virtual std::string get_model_name() const = 0;
 		virtual void set_model_name(const std::string& name) = 0;
@@ -250,7 +242,4 @@ namespace libmmd
 		LIBMMD_NODISCARD virtual const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() const = 0;
 		virtual vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() = 0;
 	};
-
-	LIBMMD_API vmd_animation* create_vmd_animation();
-	LIBMMD_API void delete_vmd_animation(vmd_animation* animation);
 }

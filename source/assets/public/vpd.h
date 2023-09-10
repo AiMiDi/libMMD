@@ -9,6 +9,7 @@ Description:	vpd file data
 **************************************************************************/
 
 #pragma once
+#include "mmd_assets_file.h"
 #include "vpd_element.hpp"
 
 namespace libmmd
@@ -100,7 +101,7 @@ namespace libmmd
 		friend class vpd_post_impl;
 	};
 
-	class vpd_post_impl final : public vpd_post
+	class vpd_post_impl final : public vpd_post, public mmd_assets_file_impl
 	{
 		std::u8string model_name_{};
 		vpd_element_array_impl<vpd_bone_post, vpd_bone_post_impl> bones_;
@@ -142,22 +143,8 @@ namespace libmmd
 		const vpd_morph_post_array& get_vpd_morph_post_array() const override;
 		vpd_morph_post_array& mutable_vpd_morph_post_array() override;
 
-		bool read_from_file(const std::string& file_name) override;
-		bool write_to_file(const std::string& file_name) const override;
-
-		bool read_from_file(const std::wstring& file_name) override;
-		bool write_to_file(const std::wstring& file_name) const override;
-
-#ifdef __cpp_lib_string_view
-		bool read_from_file(const std::string_view& file_name) override;
-		bool write_to_file(const std::string_view& file_name) const override;
-
-		bool read_from_file(const std::wstring_view& file_name) override;
-		bool write_to_file(const std::wstring_view& file_name) const override;
-#	endif
-
 	private:
-		bool read_from_file_impl(const path& path);
-		bool write_to_file_impl(const path& path) const;
+		bool read_from_file_impl(const path& path) override;
+		bool write_to_file_impl(const path& path) const override;
 	};
 }

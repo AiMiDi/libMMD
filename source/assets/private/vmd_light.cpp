@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -34,22 +34,22 @@ namespace libmmd
 
 	bool vmd_light_key_frame_impl::read_from_file(const file& file)
 	{
-		if (!file.read_elements(frame_at_))
+		if (!file.read_element(frame_at_))
 			return false;
-		if (!file.read_elements(color_))
+		if (!file.read_element(color_))
 			return false;
-		if (!file.read_elements(position_))
+		if (!file.read_element(position_))
 			return false;
 		return true;
 	}
 
 	bool vmd_light_key_frame_impl::write_to_file(const file& file) const
 	{
-		if (!file.write_elements(frame_at_))
+		if (!file.write_element(frame_at_))
 			return false;
-		if (!file.write_elements(color_))
+		if (!file.write_element(color_))
 			return false;
-		if (!file.write_elements(position_))
+		if (!file.write_element(position_))
 			return false;
 		return true;
 	}

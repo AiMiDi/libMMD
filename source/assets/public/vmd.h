@@ -10,6 +10,7 @@ Description:	vmd file data
 
 #pragma once
 
+#include "mmd_assets_file.h"
 #include "vmd_bone.h"
 #include "vmd_camera.h"
 #include "vmd_light.h"
@@ -20,7 +21,7 @@ Description:	vmd file data
 
 namespace libmmd
 {
-	class vmd_animation_impl final : public vmd_animation
+	class vmd_animation_impl final : public vmd_animation, public mmd_assets_file_impl
 	{
 		std::u8string model_name_{ u8"model" };
 		bool is_camera_{};
@@ -82,23 +83,9 @@ namespace libmmd
 		[[nodiscard]] const vmd_model_controller_key_frame_array& get_vmd_model_controller_key_frame_array() const override;
 		vmd_model_controller_key_frame_array& mutable_vmd_model_controller_key_frame_array() override;
 
-		bool read_from_file(const std::string& file_name) override;
-		bool write_to_file(const std::string& file_name) const override;
-
-		bool read_from_file(const std::wstring& file_name) override;
-		bool write_to_file(const std::wstring& file_name) const override;
-
-#ifdef __cpp_lib_string_view
-		bool read_from_file(const std::string_view& file_name) override;
-		bool write_to_file(const std::string_view& file_name) const override;
-
-		bool read_from_file(const std::wstring_view& file_name) override;
-		bool write_to_file(const std::wstring_view& file_name) const override;
-#	endif
-
 	private:
-		bool read_from_file_impl(const path& path);
-		bool write_to_file_impl(const path& path) const;
+		bool read_from_file_impl(const path& path) override;
+		bool write_to_file_impl(const path& path) const override;
 		// カメラ・照明 
 		static const std::u8string& get_default_camera_name();
 	};

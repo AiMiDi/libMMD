@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -35,9 +35,9 @@ namespace libmmd
 	bool vmd_IK_controller_impl::read_from_file(const file& file)
 	{
 		Char ik_name[20]{ '\0' };
-		if (!file.read_elements(ik_name, 20LLU))
+		if (!file.read_elements(std::span(ik_name), 20LLU))
 			return false;
-		if (!file.read_elements(IK_enable_))
+		if (!file.read_element(IK_enable_))
 			return false;
 		IK_bone_name_ = code_converter::shift_jis_to_utf8(ik_name);
 		return true;
@@ -45,10 +45,10 @@ namespace libmmd
 
 	bool vmd_IK_controller_impl::write_to_file(const file& file) const
 	{
-		const std::string name = code_converter::utf8_to_shift_jis(IK_bone_name_);
-		if (!file.write_elements(name.data(), 20LLU))
+		if (const std::string name = code_converter::utf8_to_shift_jis(IK_bone_name_);
+			!file.write_elements(std::span(name.begin(), name.end()), 20LLU))
 			return false;
-		if (!file.write_elements(IK_enable_))
+		if (!file.write_element(IK_enable_))
 			return false;
 		return true;
 	}

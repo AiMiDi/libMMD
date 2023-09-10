@@ -10,6 +10,7 @@ Description:	pmx file data
 
 #pragma once
 
+#include "mmd_assets_file.h"
 #include "pmx_model_description.h"
 #include "pmx_vertex.h"
 #include "pmx_surface.h"
@@ -24,7 +25,7 @@ Description:	pmx file data
 
 namespace libmmd
 {
-	class pmx_model_impl final : public pmx_model
+	class pmx_model_impl final : public pmx_model, public mmd_assets_file_impl
 	{
 		// 模型信息 
 		pmx_model_description model_description_{ u8"model", u8"model", u8"", u8"" };
@@ -116,22 +117,8 @@ namespace libmmd
 		const pmx_joint_array& get_pmx_joint_array() const override;
 		pmx_joint_array& mutable_pmx_joint_array() override;
 
-		bool read_from_file(const std::string& file_name) override;
-		bool write_to_file(const std::string& file_name) const override;
-
-		bool read_from_file(const std::wstring& file_name) override;
-		bool write_to_file(const std::wstring& file_name) const override;
-
-#ifdef __cpp_lib_string_view
-		bool read_from_file(const std::string_view& file_name) override;
-		bool write_to_file(const std::string_view& file_name) const override;
-
-		bool read_from_file(const std::wstring_view& file_name) override;
-		bool write_to_file(const std::wstring_view& file_name) const override;
-#	endif
-
 	private:
-		bool read_from_file_impl(const path& path);
-		bool write_to_file_impl(const path& path) const;
+		bool read_from_file_impl(const path& path) override;
+		bool write_to_file_impl(const path& path) const override;
 	};
 }
