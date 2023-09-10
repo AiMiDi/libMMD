@@ -14,17 +14,14 @@ Description:	file utils
 #include "libMMD/libmmd_marco.h"
 
 #if LIBMMD_SYS_WINDOWS
+#	define WIN32_LEAN_AND_MEAN 1
 #	include <Windows.h>
+#else
+#	include <cstdio>
 #endif
 
 namespace libmmd
 {
-#if LIBMMD_SYS_WINDOWS
-	constexpr bool is_windows = true;
-#else
-	constexpr bool is_windows = false;
-#endif
-
 	class file;
 
 	class path
@@ -368,11 +365,7 @@ namespace libmmd
 		~file()
 		{
 			if (file_)
-			{
-				length_ = 0;
-				fclose(file_);
-				file_ = nullptr;
-			}
+				close();
 		}
 
 		file(const file&) = delete;
@@ -400,36 +393,33 @@ namespace libmmd
 			{
 				return false;
 			}
-			if (is_windows)
+#if LIBMMD_SYS_WINDOWS
+			const auto path_str = path.get_wstring();
+
+			static constexpr std::tuple<DWORD, DWORD> win_modes[] = {
+				{FILE_APPEND_DATA, OPEN_ALWAYS},
+				{GENERIC_READ , OPEN_EXISTING},
+				{GENERIC_WRITE, CREATE_ALWAYS},
+				{GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS}
+		};
+
+			const auto& [file_access, file_disposition] = win_modes[static_cast<int>(mode)];
+
+			if (file_ = CreateFileW(path_str.c_str(), file_access, 0, nullptr, file_disposition, FILE_ATTRIBUTE_NORMAL, nullptr); file_ != nullptr)
 			{
-
-				const auto path_str = path.get_wstring();
-
-				static constexpr std::tuple<DWORD, DWORD> win_modes[] = {
-					{FILE_APPEND_DATA, OPEN_ALWAYS},
-					{GENERIC_READ , OPEN_EXISTING},
-					{GENERIC_WRITE, CREATE_ALWAYS},
-					{GENERIC_READ | GENERIC_WRITE, OPEN_ALWAYS}
-				};
-
-				const auto&[file_access, file_disposition] = win_modes[static_cast<int>(mode)];
-				
-				if (file_ = CreateFileW(path_str.c_str(), file_access, 0, nullptr, file_disposition, FILE_ATTRIBUTE_NORMAL, nullptr); file_ != nullptr)
-				{
-					return false;
-				}
+				return false;
 			}
-			else {
-				const char* path_str = path.get_string().c_str();
+#else
+			const char* path_str = path.get_string().c_str();
 
-				static const char* mode_string[] = { "ab", "rb", "wb", "w+b" };
-				if (file_ = fopen(path_str, mode_string[static_cast<int>(mode)]); file_ == nullptr)
-				{
-					return false;
-				}
+			static const char* mode_string[] = { "ab", "rb", "wb", "w+b" };
+			if (file_ = fopen(path_str, mode_string[static_cast<int>(mode)]); file_ == nullptr)
+			{
+				return false;
 			}
+#endif
 			return true;
-		}
+	}
 
 		/**
 		 * \brief Closes the file.\n
@@ -440,17 +430,14 @@ namespace libmmd
 		{
 			if(file_)
 			{
-				length_ = 0;
-				if(is_windows)
-				{
-					CloseHandle(file_);
-				}
-				else
-				{
-					fclose(file_);
-				}
-				file_ = nullptr;
+#if LIBMMD_SYS_WINDOWS
+				CloseHandle(file_);
+#else
+				fclose(file_);
+#endif
 			}
+			length_ = 0;
+			file_ = nullptr;
 
 			return true;
 		}
@@ -462,10 +449,20 @@ namespace libmmd
 		 * \return If the file was successfully read true, Otherwise false.
 		 */
 		template<typename T>
-		UInt64 read_element(T& data) const
+		bool read_element(T& data) const
 		{
+			if(!file_)
+				return false;
 			constexpr auto elements_size = sizeof(T);
+#if LIBMMD_SYS_WINDOWS
+			if (DWORD bytesRead; !ReadFile(file_, &data, elements_size, &bytesRead, nullptr) || bytesRead != elements_size)
+			{
+				return false;
+			}
+			return true;
+#else
 			return fread(&data, elements_size, 1, file_) != 0;
+#endif
 		}
 
 		/**
@@ -476,23 +473,46 @@ namespace libmmd
 		 * \return If the file was successfully read true, Otherwise false.
 		 */
 		template<typename T, size_t N>
-		UInt64 read_elements(const std::span<T, N>& data, const UInt64 num = 1) const
+		bool read_elements(const std::span<T, N>& data, const UInt64 num = 1) const
 		{
+			if (!file_)
+				return false;
 			constexpr auto elements_size = sizeof(T);
 			assert(N >= num);
+#if LIBMMD_SYS_WINDOWS
+			if (DWORD bytesRead; !ReadFile(file_, data.data(), elements_size * num, &bytesRead, nullptr)
+				|| bytesRead != elements_size * num)
+			{
+				return false;
+			}
+			return true;
+#else
 			return fread(data.data(), elements_size, num, file_) != 0;
+#endif
 		}
 
 		/**
 		 * \brief Write a element{T} to file.
 		 * \tparam T Element type.
 		 * \param data Element to write.
-		 * \return If the file was successfully writed true, Otherwise false.
+		 * \return If the file was successfully write true, Otherwise false.
 		 */
 		template<typename T>
-		UInt64 write_element(const T& data) const
+		bool write_element(const T& data) const
 		{
-			return fwrite(&data, sizeof(T), 1, file_) != 0;
+			if (!file_)
+				return false;
+			constexpr auto elements_size = sizeof(T);
+#if LIBMMD_SYS_WINDOWS
+			if (DWORD bytesWritten; !WriteFile(file_, &data, elements_size, &bytesWritten, nullptr)
+				 || bytesWritten != elements_size)
+			{
+				return false;
+			}
+			return true;
+#else
+			return fwrite(&data, elements_size, 1, file_) != 0;
+#endif
 		}
 
 		/**
@@ -500,13 +520,25 @@ namespace libmmd
 		 * \tparam T Elements type.
 		 * \param data Elements to write.
 		 * \param num Elements number.
-		 * \return If the file was successfully writed true, Otherwise false.
+		 * \return If the file was successfully write true, Otherwise false.
 		 */
 		template<typename T, size_t N>
-		UInt64 write_elements(const std::span<T, N> data, const UInt64 num = 1) const
+		bool write_elements(const std::span<T, N> data, const UInt64 num = 1) const
 		{
+			if (!file_)
+				return false;
 			assert(N >= num);
-			return fwrite(data.data(), sizeof(T), num, file_) != 0;
+			constexpr auto elements_size = sizeof(T);
+#if LIBMMD_SYS_WINDOWS
+			if (DWORD bytesWritten; !WriteFile(file_, data.data(), elements_size * num, &bytesWritten, nullptr)
+				 || bytesWritten != elements_size * num)
+			{
+				return false;
+			}
+			return true;
+#else
+			return fwrite(data.data(), elements_size, num, file_) != 0;
+#endif
 		}
 
 		/**
@@ -517,11 +549,49 @@ namespace libmmd
 		 */
 		bool seek(const Int64 pos, seek_mode mode = seek_mode::RELATIVE_) const
 		{
-			if(_fseeki64(file_, pos, static_cast<int>(mode)) != 0)
+			if (!file_)
+				return false;
+#if LIBMMD_SYS_WINDOWS
+			LARGE_INTEGER liDistanceToMove;
+			liDistanceToMove.QuadPart = pos;
+
+			DWORD dwMoveMethod;
+			switch (mode)
+			{
+			case seek_mode::START:
+				dwMoveMethod = FILE_BEGIN;
+				break;
+			case seek_mode::RELATIVE_:
+				dwMoveMethod = FILE_CURRENT;
+				break;
+			default:
+				// Handle unexpected mode value.
+				return false;
+			}
+
+			LARGE_INTEGER liNewFilePointer;
+			if (!SetFilePointerEx(file_, liDistanceToMove, &liNewFilePointer, dwMoveMethod))
 			{
 				return false;
 			}
+
 			return true;
+#else
+			int c_mode;
+			switch (mode)
+			{
+			case seek_mode::START:
+				c_mode = SEEK_SET;
+				break;
+			case seek_mode::RELATIVE_:
+				c_mode = SEEK_CUR;
+				break;
+			default:
+				// Handle unexpected mode value.
+				return false;
+			}
+			return _fseeki64(file_, pos, c_mode) == 0;
+#endif
 		}
 
 
@@ -531,7 +601,20 @@ namespace libmmd
 		 */
 		UInt64 get_position() const
 		{
+			if (!file_)
+				return false;
+#if LIBMMD_SYS_WINDOWS
+			constexpr LARGE_INTEGER liZero = {};
+			LARGE_INTEGER liNewFilePointer;
+			if (!SetFilePointerEx(file_, liZero, &liNewFilePointer, FILE_CURRENT))
+			{
+				// Handle error or return some sentinel/error value.
+				return static_cast<UInt64>(-1);
+			}
+			return liNewFilePointer.QuadPart;
+#else
 			return _ftelli64(file_);
+#endif
 		}
 
 		/**
@@ -549,7 +632,13 @@ namespace libmmd
 		 */
 		int get_error() const
 		{
+			if (!file_)
+				return false;
+#if LIBMMD_SYS_WINDOWS
+			return GetLastError();
+#else
 			return ferror(file_);
+#endif
 		}
 
 	private:
@@ -564,3 +653,24 @@ namespace libmmd
 	};
 }
 
+#if LIBMMD_SYS_WINDOWS
+#undef WIN32_LEAN_AND_MEAN 1
+
+// Undef potentially problematic macros
+#undef min
+#undef max
+#undef small
+#undef DELETE
+#undef ERROR
+#undef NO_ERROR
+#undef CreateWindow
+#undef LoadImage
+#undef TextOut
+#undef DrawText
+#undef TranslateMessage
+#undef DispatchMessage
+#undef IN
+#undef OUT
+#undef FAR
+
+#endif
