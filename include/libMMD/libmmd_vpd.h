@@ -26,11 +26,11 @@ namespace libmmd
 
 		LIBMMD_NODISCARD virtual uint64_t size() const = 0;
 
-		LIBMMD_NODISCARD virtual const vpd_element_type& operator[](int32_t index) const = 0;
-        virtual vpd_element_type& operator[](int32_t index) = 0;
+		LIBMMD_NODISCARD virtual const vpd_element_type& operator[](uint64_t index) const = 0;
+        virtual vpd_element_type& operator[](uint64_t index) = 0;
 
         virtual vpd_element_type& add() = 0;
-        virtual bool remove(int32_t index, uint32_t count = 1) = 0;
+        virtual bool remove(uint64_t index, uint64_t count = 1) = 0;
     };
 
     class LIBMMD_API vpd_bone_post

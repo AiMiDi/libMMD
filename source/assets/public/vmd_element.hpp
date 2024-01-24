@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2023-present, Aimidi libmmd contributors.
 Author:			Aimidi
@@ -119,19 +119,19 @@ namespace libmmd
 		{
 			return array_.size();
 		}
-		const InterfaceClass& operator[](int32_t index) const override
+		const InterfaceClass& operator[](uint64_t index) const override
 		{
 			return array_[index];
 		}
-		InterfaceClass& operator[](int32_t index) override
+		InterfaceClass& operator[](uint64_t index) override
 		{
 			return array_[index];
 		}
-		int32_t add(const ImplementationClass& element)
+		uint64_t add(const ImplementationClass& element)
 		{
 			return array_.add(element);
 		}
-		int32_t add(ImplementationClass&& element)
+		uint64_t add(ImplementationClass&& element)
 		{
 			return array_.add(std::move(element));
 		}
@@ -143,7 +143,7 @@ namespace libmmd
 		{
 			return array_.add();
 		}
-		bool remove(int32_t index, uint32_t count) override
+		bool remove(uint64_t index, uint64_t count) override
 		{
 			return array_.remove(index, count);
 		}

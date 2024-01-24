@@ -121,23 +121,23 @@ namespace libmmd
 		{
 			return data_.size();
 		}
-		const file_element_type& operator[](int32_t index) const
+		const file_element_type& operator[](uint64_t index) const
 		{
 			return data_[index];
 		}
-		file_element_type& operator[](int32_t index)
+		file_element_type& operator[](uint64_t index)
 		{
 			return data_[index];
 		}
-		int32_t add(const file_element_type& element)
+		uint64_t add(const file_element_type& element)
 		{
 			data_.push_back(element);
-			return data_.size() - 1;
+			return data_.size() - 1ULL;
 		}
-		int32_t add(file_element_type&& element)
+		uint64_t add(file_element_type&& element)
 		{
 			data_.push_back(std::move(element));
-			return data_.size() - 1;
+			return data_.size() - 1ULL;
 		}
 		file_element_type& add()
 		{
@@ -145,7 +145,7 @@ namespace libmmd
 			return data_[data_.size() - 1];
 		}
 
-		bool remove(int32_t index, uint32_t count)
+		bool remove(uint64_t index, uint64_t count)
 		{
 			if (index + count > data_.size())
 				return false;
