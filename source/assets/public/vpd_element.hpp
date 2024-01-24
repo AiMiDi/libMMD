@@ -42,11 +42,11 @@ namespace libmmd
 		{
 			return array_.size();
 		}
-		const InterfaceClass& operator[](int32_t index) const override
+		const InterfaceClass& operator[](uint64_t index) const override
 		{
 			return array_[index];
 		}
-		InterfaceClass& operator[](int32_t index) override
+		InterfaceClass& operator[](uint64_t index) override
 		{
 			return array_[index];
 		}
@@ -55,12 +55,12 @@ namespace libmmd
 			array_.push_back(ImplementationClass{});
 			return array_.back();
 		}
-		int32_t add_impl(const ImplementationClass& element)
+		uint64_t add_impl(const ImplementationClass& element)
 		{
 			array_.push_back(element);
 			return array_.size();
 		}
-		int32_t add_impl(ImplementationClass&& element)
+		uint64_t add_impl(ImplementationClass&& element)
 		{
 			array_.push_back(std::move(element));
 			return array_.size();
@@ -70,7 +70,7 @@ namespace libmmd
 			array_.push_back(ImplementationClass{});
 			return array_.back();
 		}
-		bool remove(int32_t index, uint32_t count) override
+		bool remove(uint64_t index, uint64_t count) override
 		{
 			if (index + count > array_.size())
 				return false;
