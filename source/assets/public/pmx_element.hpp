@@ -63,7 +63,10 @@ namespace libmmd
 		/**
 		 * \brief Default constructor function
 		 */
-		explicit pmx_element_array_impl(const pmx_model_description* pmx_model_info) : array_(pmx_model_info) {}
+		explicit pmx_element_array_impl(const pmx_model_description* pmx_model_info, const Int32 data_number_coefficient = 1) : array_(pmx_model_info)
+		{
+			array_.set_data_number_coefficient(data_number_coefficient);
+		}
 		/**
 		 * \brief Destructor function
 		 */

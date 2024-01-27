@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 
 Copyright:Copyright(c) 2022-present, Aimidi & Walter White & CMT contributors.
 Author:			Aimidi
@@ -486,7 +486,6 @@ namespace libmmd
 		display_panel_type display_panel_type_ = display_panel_type::OTHER;
 		// Morph Type
 		morph_type morph_type_ = morph_type::GROUP;
-		// Offset data
 
 	public:
 		using pmx_group_morph_array_impl = pmx_element_array_impl<pmx_morph_offset, pmx_group_morph_offset_impl>;
@@ -498,7 +497,6 @@ namespace libmmd
 		using pmx_impulse_morph_array_impl = pmx_element_array_impl<pmx_morph_offset, pmx_impulse_morph_offset_impl>;
 
 		using offset_impl_type = std::variant<
-
 			pmx_group_morph_array_impl,
 			pmx_vertex_morph_array_impl,
 			pmx_bone_morph_array_impl,
@@ -509,7 +507,58 @@ namespace libmmd
 
 	private:
 
-		offset_impl_type offset_data_ = pmx_group_morph_array_impl{ model_description_ };
+		struct morph_offset_read_visit_package
+		{
+			Int32 offset_count_ = 0;
+			const file* file_;
+
+			morph_offset_read_visit_package(const Int32 offset_count, const file* file);
+
+			template<typename T>
+			bool read(T& offset_data) const
+			{
+				offset_data.clear();
+				for (Int32 offset_index = 0; offset_index < offset_count_; offset_index++)
+				{
+					if (auto& offset = offset_data.add_impl(); !offset.read_from_file(*file_))
+						return false;
+				}
+				return true;
+			}
+
+			bool operator()(pmx_group_morph_array_impl& offset_data) const;
+			bool operator()(pmx_vertex_morph_array_impl& offset_data) const;
+			bool operator()(pmx_bone_morph_array_impl& offset_data) const;
+			bool operator()(pmx_uv_morph_array_impl& offset_data) const;
+			bool operator()(pmx_material_morph_array_impl& offset_data) const;
+			bool operator()(pmx_flip_morph_array_impl& offset_data) const;
+			bool operator()(pmx_impulse_morph_array_impl& offset_data) const;
+		};
+
+		struct morph_offset_get_visit_package
+		{
+			const pmx_morph_offset_array& operator()(const pmx_group_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_vertex_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_bone_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_uv_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_material_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_flip_morph_array_impl& offset_data) const;
+			const pmx_morph_offset_array& operator()(const pmx_impulse_morph_array_impl& offset_data) const;
+		};
+
+		struct morph_offset_mutable_visit_package
+		{
+			pmx_morph_offset_array& operator()(pmx_group_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_vertex_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_bone_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_uv_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_material_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_flip_morph_array_impl& offset_data) const;
+			pmx_morph_offset_array& operator()(pmx_impulse_morph_array_impl& offset_data) const;
+		};
+
+		// Offset data
+		offset_impl_type offset_data_ = pmx_vertex_morph_array_impl{ model_description_ };
 		
 	public:
 		/**

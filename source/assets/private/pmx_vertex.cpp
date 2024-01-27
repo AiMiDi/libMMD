@@ -97,6 +97,7 @@ namespace libmmd
 			{
 				ELOGE << "pmx_vertex_impl::read_from_file: Can't cast skinning to BDEF1 skinning";
 			}
+			break;
 		case pmx_vertex_skinning::skinning_type::BDEF2:
 			if (const auto skinning_ptr = std::dynamic_pointer_cast<pmx_vertex_skinning_BDEF2_impl>(skinning_); skinning_ptr) [[likely]]
 			{
@@ -106,6 +107,7 @@ namespace libmmd
 			{
 				ELOGE << "pmx_vertex_impl::read_from_file: Can't cast skinning to BDEF2 skinning";
 			}
+			break;
 		case pmx_vertex_skinning::skinning_type::BDEF4:
 			if (const auto skinning_ptr = std::dynamic_pointer_cast<pmx_vertex_skinning_BDEF4_impl>(skinning_); skinning_ptr) [[likely]]
 			{
@@ -115,6 +117,7 @@ namespace libmmd
 			{
 				ELOGE << "pmx_vertex_impl::read_from_file: Can't cast skinning to BDEF4 skinning";
 			}
+			break;
 		case pmx_vertex_skinning::skinning_type::SDEF:
 			if (const auto skinning_ptr = std::dynamic_pointer_cast<pmx_vertex_skinning_SDEF_impl>(skinning_); skinning_ptr) [[likely]]
 			{
@@ -124,6 +127,7 @@ namespace libmmd
 			{
 				ELOGE << "pmx_vertex_impl::read_from_file: Can't cast skinning to SDEF skinning";
 			}
+			break;
 		case pmx_vertex_skinning::skinning_type::QDEF:
 			if (const auto skinning_ptr = std::dynamic_pointer_cast<pmx_vertex_skinning_QDEF_impl>(skinning_); skinning_ptr) [[likely]]
 			{
@@ -133,6 +137,7 @@ namespace libmmd
 			{
 				ELOGE << "pmx_vertex_impl::read_from_file: Can't cast skinning to QDEF skinning";
 			}
+			break;
 		}
 
 		if (!file.read_element(edge_scale_))

@@ -25,16 +25,20 @@ namespace libmmd
 		// text字符串最大长度
 		Int32 text_length = 0;
 		file.read_element(text_length);
-		if (text_length > 0) {
+		if (text_length > 0)
+		{
 			if (text_encoding_ == false)
 			{
-				std::basic_string utf16_string(text_length, u'\0');
-				file.read_elements(std::span(utf16_string.begin(), utf16_string.end()), text_length);
+				// text_length is in bytes
+				std::u16string utf16_string(text_length, u'\0');
+				if(!file.read_elements(std::span(reinterpret_cast<char*>(utf16_string.data()), text_length), text_length))
+					return false;
 				out_string = code_converter::utf16_le_to_utf8(utf16_string);
 				return true;
 			}
 			out_string.resize(text_length, '\0');
-			file.read_elements(std::span(out_string.begin(), out_string.end()), text_length);
+			if (!file.read_elements(std::span(out_string.begin(), out_string.end()), text_length))
+				return false;
 			return true;
 		}
 		out_string.clear();
