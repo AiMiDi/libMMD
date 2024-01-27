@@ -403,6 +403,101 @@ namespace libmmd
 		return false;
 	}
 
+	pmx_morph_impl::morph_offset_read_visit_package::morph_offset_read_visit_package(const Int32 offset_count,
+		const file* file): offset_count_(offset_count), file_(file)
+	{}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_group_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_vertex_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_bone_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_uv_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_material_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_flip_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	bool pmx_morph_impl::morph_offset_read_visit_package::operator()(pmx_impulse_morph_array_impl& offset_data) const
+	{
+		return read(offset_data);
+	}
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_group_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_vertex_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_bone_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_uv_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_material_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_flip_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_get_visit_package::operator()(
+		const pmx_impulse_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_group_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_vertex_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_bone_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_uv_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_material_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_flip_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
+	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::morph_offset_mutable_visit_package::operator()(
+		pmx_impulse_morph_array_impl& offset_data) const
+	{ return offset_data; }
+
 	constexpr size_t mapping_morph_type(pmx_morph::morph_type morph_type)
 	{
 		const auto result = static_cast<size_t>(morph_type);
@@ -452,11 +547,8 @@ namespace libmmd
 		return morph_type_;
 	}
 
-	void pmx_morph_impl::set_morph_offset_type(const morph_type type)
+	void pmx_morph_impl::set_morph_offset_type(morph_type type)
 	{
-		if(morph_type_ == type)
-			return;
-
 		morph_type_ = type;
 		switch (morph_type_)
 		{
@@ -511,128 +603,12 @@ namespace libmmd
 
 	const pmx_morph::pmx_morph_offset_array& pmx_morph_impl::get_morph_offset_array() const
 	{
-		switch (morph_type_)
-		{
-		case morph_type::GROUP:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::GROUP); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::VERTEX:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::VERTEX); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::BONE:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::BONE); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::UV0:
-		case morph_type::UV1:
-		case morph_type::UV2:
-		case morph_type::UV3:
-		case morph_type::UV4:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::UV0); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::MATERIAL:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::MATERIAL); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::FLIP:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::FLIP); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::IMPULSE:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::IMPULSE); offset_data_.index() == 0)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		}
-		// It shouldn't run here.
-		ELOGE << "pmx_morph_impl::get_morph_offset_array: Can't cast offset_data by type!";
-		return std::get<0>(offset_data_);
+		return std::visit(morph_offset_get_visit_package(), offset_data_);
 	}
 
 	pmx_morph::pmx_morph_offset_array& pmx_morph_impl::mutable_morph_offset_array()
 	{
-		switch (morph_type_)
-		{
-		case morph_type::GROUP:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::GROUP); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::VERTEX:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::VERTEX); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::BONE:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::BONE); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::UV0:
-		case morph_type::UV1:
-		case morph_type::UV2:
-		case morph_type::UV3:
-		case morph_type::UV4:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::UV0); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::MATERIAL:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::MATERIAL); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::FLIP:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::FLIP); offset_data_.index() == morph_type_id)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		case morph_type::IMPULSE:
-		{
-			if (constexpr auto morph_type_id = mapping_morph_type(morph_type::IMPULSE); offset_data_.index() == 0)
-			{
-				return std::get<morph_type_id>(offset_data_);
-			}
-		}
-		}
-		// It shouldn't run here.
-		ELOGE << "pmx_morph_impl::mutable_morph_offset_array: Can't cast offset_data by type!";
-		return std::get<0>(offset_data_);
+		return std::visit(morph_offset_mutable_visit_package(), offset_data_);
 	}
 
 	bool pmx_morph_impl::read_from_file(const file& file)
@@ -643,8 +619,10 @@ namespace libmmd
 			return false;
 		if (!file.read_element(display_panel_type_))
 			return false;
+
 		if (!file.read_element(morph_type_))
 			return false;
+
 		set_morph_offset_type(morph_type_);
 
 		auto offset_count = Int32();
@@ -653,97 +631,8 @@ namespace libmmd
 		if(offset_count == 0)
 			return true;
 
-		switch (morph_type_)
-		{
-		case morph_type::GROUP:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::GROUP);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::VERTEX:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::VERTEX);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::BONE:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::BONE);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::UV0:
-		case morph_type::UV1:
-		case morph_type::UV2:
-		case morph_type::UV3:
-		case morph_type::UV4:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::UV0);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::MATERIAL:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::MATERIAL);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::FLIP:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::FLIP);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		case morph_type::IMPULSE:
-		{
-			constexpr auto morph_type_id = mapping_morph_type(morph_type::IMPULSE);
-			auto& offset_data = std::get<morph_type_id>(offset_data_);
-			offset_data.clear();
-			for (Int32 offset_index = 0; offset_index < offset_count; offset_index++)
-			{
-				if (auto& offset = offset_data.add_impl(); !offset.read_from_file(file))
-					return false;
-			}
-			break;
-		}
-		}
+		std::visit(morph_offset_read_visit_package(offset_count, &file), offset_data_);
+
 		return true;
 	}
 

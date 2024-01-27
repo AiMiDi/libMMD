@@ -32,7 +32,7 @@ namespace libmmd
 		// 顶点数据
 		pmx_element_array_impl<pmx_vertex, pmx_vertex_impl>					vertex_data_{ &model_description_ };
 		// 面数据  
-		pmx_element_array_impl<pmx_surface, pmx_surface_impl>				surface_data_{ &model_description_ };
+		pmx_element_array_impl<pmx_surface, pmx_surface_impl>				surface_data_{ &model_description_, 3 };
 		// 贴图数据 
 		pmx_element_array_impl<pmx_texture, pmx_texture_impl>				texture_data_{ &model_description_ };
 		// 材质数据 
