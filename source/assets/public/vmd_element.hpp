@@ -77,7 +77,7 @@ namespace libmmd
 		a < b;
 	};
 
-	template <class InterfaceClass, class ImplementationClass>
+	template <class InterfaceClass, class ImplementationClass, size_t RWCoefficient = 1>
 		requires
 		(is_file_element<ImplementationClass>&&
 		is_vmd_element<ImplementationClass>&&
@@ -85,7 +85,7 @@ namespace libmmd
 		have_compare<ImplementationClass>
 	class vmd_element_array_impl final : public vmd_element_array<InterfaceClass>
 	{
-		file_element_array<ImplementationClass> array_;
+		file_element_array<ImplementationClass, RWCoefficient> array_;
 	public:
 		/**
 		 * \brief Default constructor function

@@ -51,22 +51,19 @@ namespace libmmd
 	// Class must base of and not same pmx_element_impl.
 	concept is_pmx_element = is_base_of_and_not_same<pmx_element_impl, T>;
 
-	template <class InterfaceClass, class ImplementationClass>
+	template <class InterfaceClass, class ImplementationClass, size_t RWCoefficient = 1>
 	requires
 		is_file_element<ImplementationClass> &&
 		is_pmx_element<ImplementationClass> && 
 		is_base_of_and_not_same<InterfaceClass, ImplementationClass>
 	class pmx_element_array_impl final : public pmx_element_array<InterfaceClass>
 	{
-		file_element_array<ImplementationClass, const pmx_model_description*> array_;
+		file_element_array<ImplementationClass, RWCoefficient, const pmx_model_description*> array_;
 	public:
 		/**
 		 * \brief Default constructor function
 		 */
-		explicit pmx_element_array_impl(const pmx_model_description* pmx_model_info, const Int32 data_number_coefficient = 1) : array_(pmx_model_info)
-		{
-			array_.set_data_number_coefficient(data_number_coefficient);
-		}
+		explicit pmx_element_array_impl(const pmx_model_description* pmx_model_info) : array_(pmx_model_info) {}
 		/**
 		 * \brief Destructor function
 		 */

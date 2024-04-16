@@ -62,11 +62,16 @@ namespace libmmd
 	// T must have read_from_file() and write_to_file()
 	concept is_file_element = is_base_of_and_not_same<file_element_impl, T>;
 
-	template<typename T, typename... Args> requires is_file_element<T>
+	/**
+	 * \brief File element array class
+	 * \tparam T File element type
+	 * \tparam RWCoefficient R/W data number coefficient
+	 * \tparam Args Default construction arguments
+	 */
+	template<typename T, size_t RWCoefficient = 1, typename... Args> requires is_file_element<T>
 	class file_element_array final
 	{
 		using file_element_type = T;
-		Int32 data_number_coefficient_ = 0;
 		std::tuple<Args...> default_construction_args_;
 	protected:
 		std::vector<file_element_type> data_;
@@ -79,15 +84,6 @@ namespace libmmd
 		file_element_array& operator=(file_element_array&&) = default;
 
 		/**
-		 * \brieff Set data number coefficient
-		 * \param coefficient The coefficient
-		 */
-		void set_data_number_coefficient(const Int32 coefficient)
-		{
-			data_number_coefficient_ = coefficient;
-		}
-
-		/**
 		 * \brief Read from a file
 		 * \param file The file
 		 * \return Successful TRUE, other FALSE.
@@ -97,7 +93,7 @@ namespace libmmd
 			auto data_number = Int32();
 			if (!file.read_element(data_number))
 				return false;
-			data_number /= data_number_coefficient_;
+			data_number /= RWCoefficient;
 			data_.resize(data_number, std::make_from_tuple<file_element_type>(default_construction_args_));
 			for (auto data_index = decltype(data_number){}; data_index < data_number; ++data_index)
 			{
@@ -115,7 +111,7 @@ namespace libmmd
 		 */
 		bool write_to_file(const file& file) const
 		{
-			const auto data_number = static_cast<Int32>(data_.size()) * data_number_coefficient_;
+			const auto data_number = static_cast<Int32>(data_.size()) * RWCoefficient;
 			if (!file.write_element(data_number))
 				return false;
 			for (auto data_index = decltype(data_number){}; data_index < data_number; ++data_index)
