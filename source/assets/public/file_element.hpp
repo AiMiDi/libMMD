@@ -65,10 +65,11 @@ namespace libmmd
 	/**
 	 * \brief File element array class
 	 * \tparam T File element type
+	 * \tparam C File element number type
 	 * \tparam RWCoefficient R/W data number coefficient
 	 * \tparam Args Default construction arguments
 	 */
-	template<typename T, size_t RWCoefficient = 1, typename... Args> requires is_file_element<T>
+	template<typename T, typename C, C RWCoefficient = 1, typename... Args> requires is_file_element<T>
 	class file_element_array final
 	{
 		using file_element_type = T;
@@ -90,7 +91,7 @@ namespace libmmd
 		 */
 		bool read_from_file(const file& file)
 		{
-			auto data_number = Int32();
+			auto data_number = C();
 			if (!file.read_element(data_number))
 				return false;
 			data_number /= RWCoefficient;
@@ -111,7 +112,7 @@ namespace libmmd
 		 */
 		bool write_to_file(const file& file) const
 		{
-			const auto data_number = static_cast<Int32>(data_.size()) * RWCoefficient;
+			const auto data_number = static_cast<C>(data_.size()) * RWCoefficient;
 			if (!file.write_element(data_number))
 				return false;
 			for (auto data_index = decltype(data_number){}; data_index < data_number; ++data_index)

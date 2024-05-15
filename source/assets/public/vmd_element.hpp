@@ -85,7 +85,7 @@ namespace libmmd
 		have_compare<ImplementationClass>
 	class vmd_element_array_impl final : public vmd_element_array<InterfaceClass>
 	{
-		file_element_array<ImplementationClass, RWCoefficient> array_;
+		file_element_array<ImplementationClass, uint32_t, RWCoefficient> array_;
 	public:
 		/**
 		 * \brief Default constructor function

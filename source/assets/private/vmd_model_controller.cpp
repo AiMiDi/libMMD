@@ -40,10 +40,8 @@ namespace libmmd
 			return false;
 		if (!file.read_element(model_show_))
 			return false;
-		UInt32 IK_controller_number = 0;
-		if (!file.read_element(IK_controller_number))
+		if (!IK_controller_array.read_from_file(file))
 			return false;
-		IK_controller_array.read_from_file(file);
 		return true;
 	}
 

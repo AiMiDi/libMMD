@@ -58,7 +58,7 @@ namespace libmmd
 		is_base_of_and_not_same<InterfaceClass, ImplementationClass>
 	class pmx_element_array_impl final : public pmx_element_array<InterfaceClass>
 	{
-		file_element_array<ImplementationClass, RWCoefficient, const pmx_model_description*> array_;
+		file_element_array<ImplementationClass, int32_t, RWCoefficient, const pmx_model_description*> array_;
 	public:
 		/**
 		 * \brief Default constructor function
