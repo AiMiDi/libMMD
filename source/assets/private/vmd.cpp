@@ -68,7 +68,9 @@ namespace libmmd
 		if (!shadow_frames_.read_from_file(file))
 			return false;
 		if (!model_controller_frames_.read_from_file(file))
-			return false;
+		{
+			// TODO: Logs that VMD does not have model controller frames
+		}
 		return true;
 	}
 
