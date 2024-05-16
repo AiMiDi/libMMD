@@ -1,0 +1,14 @@
+[requires]
+icu/73.2
+
+[options]
+icu:shared=False
+icu:with_icuio=False
+icu:with_extras=False
+icu:dat_package_file=@CMAKE_CURRENT_LIST_DIR@/icu_data/icudt73l.dat
+
+[generators]
+cmake_find_package_multi
+
+[imports]
+lib/, *.lib* -> ./lib
