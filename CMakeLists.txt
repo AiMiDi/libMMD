@@ -11,8 +11,7 @@ set(LIBMMD_VERSION 0.1.0)
 include("cmake/conan.cmake")
 include("cmake/utlis.cmake")
 
-set(ENV{ICU_DATA_FILTER_FILE} ${CMAKE_CURRENT_LIST_DIR}/icu_filters.json)
-#configure_file(conanfile.txt.in ${CMAKE_CURRENT_LIST_DIR}/conanfile.txt @ONLY)
+configure_file(conanfile.txt.in ${CMAKE_CURRENT_LIST_DIR}/conanfile.txt @ONLY)
 
 if(NOT CMAKE_BUILD_TYPE)
   foreach(BUILD_TYPE ${CMAKE_CONFIGURATION_TYPES})
