@@ -30,10 +30,14 @@ namespace libmmd
 		LIBMMD_NODISCARD virtual const vmd_element_type& operator[](uint64_t index) const = 0;
 		virtual vmd_element_type& operator[](uint64_t index) = 0;
 
-		virtual vmd_element_type& add() = 0;
-		virtual bool remove(uint64_t index, uint64_t count = 1) = 0;
+		virtual vmd_element_type& add_element() = 0;
+		virtual bool add_elements(uint64_t count) = 0;
 
+		virtual bool remove(uint64_t index, uint64_t count = 1) = 0;
 		virtual void sort() = 0;
+
+		virtual std::vector<vmd_element_type*> mutable_elements_ptr() = 0;
+		virtual std::vector<const vmd_element_type*> readonly_elements_ptr() const = 0;
 	};
 
 	class LIBMMD_API vmd_interpolator

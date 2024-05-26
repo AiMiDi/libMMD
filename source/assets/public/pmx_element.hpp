@@ -100,6 +100,28 @@ namespace libmmd
 		{
 			return array_[index];
 		}
+		std::vector<InterfaceClass*> mutable_elements_ptr() override
+		{
+			std::vector<InterfaceClass*> result;
+
+			for (ImplementationClass& element : array_.mutable_data())
+			{
+				result.push_back(static_cast<InterfaceClass*>(&element));
+			}
+
+			return result;
+		}
+		std::vector<const InterfaceClass*> readonly_elements_ptr() const override
+		{
+			std::vector<const InterfaceClass*> result;
+
+			for (const ImplementationClass& element : array_.readonly_data())
+			{
+				result.push_back(static_cast<const InterfaceClass*>(&element));
+			}
+
+			return result;
+		}
 		uint64_t add(const ImplementationClass& element)
 		{
 			return array_.add(element);
@@ -108,9 +130,13 @@ namespace libmmd
 		{
 			return array_.add(std::move(element));
 		}
-		InterfaceClass& add() override
+		InterfaceClass& add_element() override
 		{
 			return array_.add();
+		}
+		bool add_elements(uint64_t count) override
+		{
+			return array_.add_elements(count);
 		}
 		ImplementationClass& add_impl()
 		{

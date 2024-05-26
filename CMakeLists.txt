@@ -3,7 +3,7 @@
 cmake_minimum_required (VERSION 3.14)
 
 project("libMMD" 
-        VERSION 0.0.2
+        VERSION 0.0.3
         HOMEPAGE_URL "https://github.com/AiMiDi/libMMD"
         LANGUAGES CXX)
 
@@ -125,6 +125,10 @@ target_include_directories(${TARGET_NAME} PRIVATE "source/assets/public")
 # add precompile header
 target_precompile_headers(${TARGET_NAME} PRIVATE "source/pch.h")
 
+if(MSVC)
+  string(REGEX REPLACE "/W[0-4]" "/W0" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4250")
+endif()
 
 # ----- Install -----
 if(LIBMMD_INSTALL)

@@ -129,14 +129,27 @@ namespace libmmd
 		{
 			return data_.size();
 		}
+
 		const file_element_type& operator[](uint64_t index) const
 		{
 			return data_[index];
 		}
+
 		file_element_type& operator[](uint64_t index)
 		{
 			return data_[index];
 		}
+
+		const std::vector<file_element_type>& readonly_data() const
+		{
+			return data_;
+		}
+
+		std::vector<file_element_type>& mutable_data() 
+		{
+			return data_;
+		}
+
 		uint64_t add(const file_element_type& element)
 		{
 			data_.push_back(element);
@@ -151,6 +164,18 @@ namespace libmmd
 		{
 			data_.push_back(std::make_from_tuple<file_element_type>(default_construction_args_));
 			return data_[data_.size() - 1];
+		}
+
+		bool add_elements(uint64_t count)
+		{
+			try
+			{
+				data_.resize(data_.size() + count, std::make_from_tuple<file_element_type>(default_construction_args_));
+				return true;
+			}
+			catch (const std::bad_alloc&) {
+				return false;
+			}
 		}
 
 		bool remove(uint64_t index, uint64_t count)
