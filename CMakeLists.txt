@@ -108,6 +108,9 @@ if (NOT LIBMMD_BUILD_SHARED)
   combine_icu_static_libraries(${TARGET_NAME})
 endif()
 
+# add yalantinglibs::easylog dependencies.
+target_include_directories(${TARGET_NAME} PRIVATE "thirdparty/spdlog/include")
+
 # set compile feature C++20
 target_compile_features(${TARGET_NAME} PRIVATE cxx_std_20)
 
