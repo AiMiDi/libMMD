@@ -555,6 +555,11 @@ namespace saba
 			return false;
 		}
 
+		m_modelName = pmx.m_info.m_modelName;
+		m_englishModelName = pmx.m_info.m_englishModelName;
+		m_comment = pmx.m_info.m_comment;
+		m_englishComment = pmx.m_info.m_englishComment;
+
 		std::string dirPath = PathUtil::GetDirectoryName(filepath);
 
 		// Pre-allocate memory

@@ -364,6 +364,30 @@ namespace saba
 		virtual MMDPhysics* GetMMDPhysics() = 0;
 
 		/**
+		 * @brief Get the model name.
+		 * @return The model name.
+		 */
+		std::string GetModelName() const { return m_modelName; }
+
+		/**
+		 * @brief Get the English model name.
+		 * @return The English model name.
+		 */
+		std::string GetEnglishModelName() const { return m_englishModelName; }
+
+		/**
+		 * @brief Get the model comment.
+		 * @return The model comment.
+		 */
+		std::string GetComment() const { return m_comment; }
+
+		/**
+		 * @brief Get the English model comment.
+		 * @return The English model comment.
+		 */
+		std::string GetEnglishComment() const { return m_englishComment; }
+
+		/**
 		 * @brief Initialize the animation.
 		 */
 		virtual void InitializeAnimation() = 0;
@@ -450,6 +474,11 @@ namespace saba
 		void LoadPose(const VPDFile& vpd, int frameCount = 30);
 
 	protected:
+		std::string m_modelName{};
+		std::string m_englishModelName{};
+		std::string m_comment{};
+		std::string m_englishComment{};
+
 		template <typename NodeType>
 		class MMDNodeManagerT final : public MMDNodeManager
 		{

@@ -299,6 +299,14 @@ namespace saba
 			return false;
 		}
 
+		m_modelName = pmd.m_header.m_modelName.ToUtf8String();
+		m_comment = pmd.m_header.m_comment.ToUtf8String();
+		if(pmd.m_header.m_haveEnglishNameExt)
+		{
+			m_englishModelName = pmd.m_header.m_englishModelNameExt.ToUtf8String();
+			m_englishComment = pmd.m_header.m_englishCommentExt.ToUtf8String();
+		}
+
 		std::string dirPath = PathUtil::GetDirectoryName(filepath);
 
 		size_t vertexCount = pmd.m_vertices.size();
