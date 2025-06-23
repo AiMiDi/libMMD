@@ -379,7 +379,7 @@ namespace saba
 
 	MMDRigidBody::~MMDRigidBody() = default;
 
-	bool MMDRigidBody::Create(const PMDRigidBodyExt& pmdRigidBody, MMDModel* model, MMDNode* node)
+	bool MMDRigidBody::Create(const PMDRigidBodyExt& pmdRigidBody, MMDModelWithoutBuffed* model, MMDNode* node)
 	{
 		Destroy();
 
@@ -505,7 +505,7 @@ namespace saba
 		return true;
 	}
 
-	bool MMDRigidBody::Create(const PMXRigidbody & pmxRigidBody, MMDModel* model, MMDNode * node)
+	bool MMDRigidBody::Create(const PMXRigidbody & pmxRigidBody, MMDModelWithoutBuffed* model, MMDNode * node)
 	{
 		Destroy();
 

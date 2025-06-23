@@ -244,10 +244,10 @@ namespace saba
 	/**
 	 * @brief Represents an MMD model.
 	 */
-	class MMDModel
+	class MMDModelWithoutBuffed
 	{
 	public:
-		virtual ~MMDModel() = default;
+		virtual ~MMDModelWithoutBuffed() = default;
 
 		/**
 		 * @brief Get the node manager.
@@ -272,66 +272,6 @@ namespace saba
 		 * @return A pointer to the physics manager.
 		 */
 		virtual MMDPhysicsManager* GetPhysicsManager() = 0;
-
-		/**
-		 * @brief Get the number of vertices.
-		 * @return The number of vertices.
-		 */
-		virtual size_t GetVertexCount() const = 0;
-
-		/**
-		 * @brief Get the positions of the vertices.
-		 * @return A pointer to the positions of the vertices.
-		 */
-		virtual const glm::vec3* GetPositions() const = 0;
-
-		/**
-		 * @brief Get the normals of the vertices.
-		 * @return A pointer to the normals of the vertices.
-		 */
-		virtual const glm::vec3* GetNormals() const = 0;
-
-		/**
-		 * @brief Get the UV coordinates of the vertices.
-		 * @return A pointer to the UV coordinates of the vertices.
-		 */
-		virtual const glm::vec2* GetUVs() const = 0;
-
-		/**
-		 * @brief Get the updated positions of the vertices.
-		 * @return A pointer to the updated positions of the vertices.
-		 */
-		virtual const glm::vec3* GetUpdatePositions() const = 0;
-
-		/**
-		 * @brief Get the updated normals of the vertices.
-		 * @return A pointer to the updated normals of the vertices.
-		 */
-		virtual const glm::vec3* GetUpdateNormals() const = 0;
-
-		/**
-		 * @brief Get the updated UV coordinates of the vertices.
-		 * @return A pointer to the updated UV coordinates of the vertices.
-		 */
-		virtual const glm::vec2* GetUpdateUVs() const = 0;
-
-		/**
-		 * @brief Get the size of the index elements.
-		 * @return The size of the index elements.
-		 */
-		virtual size_t GetIndexElementSize() const = 0;
-
-		/**
-		 * @brief Get the number of indices.
-		 * @return The number of indices.
-		 */
-		virtual size_t GetIndexCount() const = 0;
-
-		/**
-		 * @brief Get the indices.
-		 * @return A pointer to the indices.
-		 */
-		virtual const void* GetIndices() const = 0;
 
 		/**
 		 * @brief Get the number of materials.
@@ -420,7 +360,7 @@ namespace saba
 		/**
 		 * @brief Update the morph animation.
 		 */
-		virtual void UpdateMorphAnimation() = 0;
+		virtual void UpdateMorphAnimation(){}
 
 		/**
 		 * @brief Update the node animation.
@@ -438,17 +378,6 @@ namespace saba
 		 * @param elapsed The elapsed time.
 		 */
 		virtual void UpdatePhysicsAnimation(float elapsed) = 0;
-
-		/**
-		 * @brief Update the vertices.
-		 */
-		virtual void Update() = 0;
-
-		/**
-		 * @brief Set the parallel update hint.
-		 * @param parallelCount The number of parallel updates.
-		 */
-		virtual void SetParallelUpdateHint(uint32_t parallelCount) = 0;
 
 		/**
 		 * @brief Load a PMX/PMD model from the specified file path.
@@ -692,6 +621,81 @@ namespace saba
 		private:
 			std::vector<MorphPtr>	m_morphs;
 		};
+	};
+
+	class MMDModel : virtual public MMDModelWithoutBuffed
+	{
+	public:
+		/**
+		 * @brief Get the number of vertices.
+		 * @return The number of vertices.
+		 */
+		virtual size_t GetVertexCount() const = 0;
+
+		/**
+		 * @brief Get the positions of the vertices.
+		 * @return A pointer to the positions of the vertices.
+		 */
+		virtual const glm::vec3* GetPositions() const = 0;
+
+		/**
+		 * @brief Get the normals of the vertices.
+		 * @return A pointer to the normals of the vertices.
+		 */
+		virtual const glm::vec3* GetNormals() const = 0;
+
+		/**
+		 * @brief Get the UV coordinates of the vertices.
+		 * @return A pointer to the UV coordinates of the vertices.
+		 */
+		virtual const glm::vec2* GetUVs() const = 0;
+
+		/**
+		 * @brief Get the updated positions of the vertices.
+		 * @return A pointer to the updated positions of the vertices.
+		 */
+		virtual const glm::vec3* GetUpdatePositions() const = 0;
+
+		/**
+		 * @brief Get the updated normals of the vertices.
+		 * @return A pointer to the updated normals of the vertices.
+		 */
+		virtual const glm::vec3* GetUpdateNormals() const = 0;
+
+		/**
+		 * @brief Get the updated UV coordinates of the vertices.
+		 * @return A pointer to the updated UV coordinates of the vertices.
+		 */
+		virtual const glm::vec2* GetUpdateUVs() const = 0;
+
+		/**
+		 * @brief Get the size of the index elements.
+		 * @return The size of the index elements.
+		 */
+		virtual size_t GetIndexElementSize() const = 0;
+
+		/**
+		 * @brief Get the number of indices.
+		 * @return The number of indices.
+		 */
+		virtual size_t GetIndexCount() const = 0;
+
+		/**
+		 * @brief Get the indices.
+		 * @return A pointer to the indices.
+		 */
+		virtual const void* GetIndices() const = 0;
+
+		/**
+		 * @brief Update the vertices.
+		 */
+		virtual void Update() = 0;
+
+		/**
+		 * @brief Set the parallel update hint.
+		 * @param parallelCount The number of parallel updates.
+		 */
+		virtual void SetParallelUpdateHint(uint32_t parallelCount) = 0;
 	};
 }
 

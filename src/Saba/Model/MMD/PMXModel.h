@@ -17,6 +17,7 @@
 
 namespace saba
 {
+	struct PMXFile;
 	/**
 	 * @brief PMXNode class represents a node in the PMX model.
 	 */
@@ -145,11 +146,11 @@ namespace saba
 	/**
 	 * @brief PMXModel class represents a PMX model.
 	 */
-	class PMXModel final : public MMDModel
+	class PMXModelWithoutBuffed : public MMDModelWithoutBuffed
 	{
 	public:
-		PMXModel();
-		~PMXModel() override;
+		PMXModelWithoutBuffed();
+		~PMXModelWithoutBuffed() override;
 
 		/**
 		 * @brief Get the node manager.
@@ -174,6 +175,143 @@ namespace saba
 		 * @return Pointer to the physics manager.
 		 */
 		MMDPhysicsManager* GetPhysicsManager() override { return &m_physicsMan; }
+
+		/**
+		 * @brief Get the material count.
+		 * @return Material count.
+		 */
+		size_t GetMaterialCount() const override { return m_materials.size(); }
+
+		/**
+		 * @brief Get the materials.
+		 * @return Pointer to the materials array.
+		 */
+		const MMDMaterial* GetMaterials() const override { return &m_materials[0]; }
+
+		/**
+		 * @brief Get the sub-mesh count.
+		 * @return Sub-mesh count.
+		 */
+		size_t GetSubMeshCount() const override { return m_subMeshes.size(); }
+
+		/**
+		 * @brief Get the sub-meshes.
+		 * @return Pointer to the sub-meshes array.
+		 */
+		const MMDSubMesh* GetSubMeshes() const override { return &m_subMeshes[0]; }
+
+		/**
+		 * @brief Get the MMD physics.
+		 * @return Pointer to the MMD physics.
+		 */
+		MMDPhysics* GetMMDPhysics() override { return m_physicsMan.GetMMDPhysics(); }
+
+		/**
+		 * @brief Initialize the animation.
+		 */
+		void InitializeAnimation() override;
+
+		/**
+		 * @brief Begin the animation.
+		 */
+		void BeginAnimation() override;
+
+		/**
+		 * @brief End the animation.
+		 */
+		void EndAnimation() override;
+
+		/**
+		 * @brief Update the node animation.
+		 * @param afterPhysicsAnim True if updating after physics animation.
+		 */
+		void UpdateNodeAnimation(bool afterPhysicsAnim) override;
+
+		/**
+		 * @brief Reset the physics.
+		 */
+		void ResetPhysics() override;
+
+		/**
+		 * @brief Update the physics animation.
+		 * @param elapsed Elapsed time.
+		 */
+		void UpdatePhysicsAnimation(float elapsed) override;
+
+		/**
+		 * @brief Load the PMX model from a file.
+		 * @param filepath Path to the PMX file.
+		 * @param mmdDataDir Directory containing MMD data.
+		 * @return True if loading is successful, false otherwise.
+		 */
+		bool Load(const std::string& filepath, const std::string& mmdDataDir) override;
+
+		/**
+		 * @brief Load model data from a PMX file.
+		 * @param file A constant reference to the PMX file object.
+		 * @param dirPath The directory path where the PMX file is located.
+		 * @param mmdDataDir The directory path containing MMD data.
+		 * @return Returns true if the loading is successful, otherwise false.
+		 */
+		virtual bool LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir);
+
+		/**
+		 * @brief Destroy the PMX model.
+		 */
+		virtual void Destroy();
+
+		enum class SkinningType
+		{
+			Weight1,
+			Weight2,
+			Weight4,
+			SDEF,
+			DualQuaternion,
+		};
+
+		struct VertexBoneInfo
+		{
+			SkinningType	m_skinningType;
+			union
+			{
+				struct
+				{
+					int32_t	m_boneIndex[4];
+					float	m_boneWeight[4];
+				};
+				struct
+				{
+					int32_t	m_boneIndex[2];
+					float	m_boneWeight;
+
+					glm::vec3	m_sdefC;
+					glm::vec3	m_sdefR0;
+					glm::vec3	m_sdefR1;
+				} m_sdef;
+			};
+		};
+
+	protected:
+		enum class MorphType;
+		class PMXMorph;
+
+		std::vector<MMDMaterial>	m_materials;
+		std::vector<MMDSubMesh>		m_subMeshes;
+		std::vector<PMXNode*>		m_sortedNodes;
+
+		MMDNodeManagerT<PMXNode>	m_nodeMan;
+		MMDIKManagerT<MMDIkSolver>	m_ikSolverMan;
+		MMDMorphManagerT<PMXMorph>	m_morphMan;
+		MMDPhysicsManager			m_physicsMan;
+
+		virtual void LoadMorph(const PMXFile& file);
+	};
+
+	class PMXModel final : public PMXModelWithoutBuffed, public MMDModel
+	{
+	public:
+		PMXModel();
+		~PMXModel() override;
 
 		/**
 		 * @brief Get the vertex count.
@@ -236,71 +374,14 @@ namespace saba
 		const void* GetIndices() const override { return &m_indices[0]; }
 
 		/**
-		 * @brief Get the material count.
-		 * @return Material count.
-		 */
-		size_t GetMaterialCount() const override { return m_materials.size(); }
-
-		/**
-		 * @brief Get the materials.
-		 * @return Pointer to the materials array.
-		 */
-		const MMDMaterial* GetMaterials() const override { return &m_materials[0]; }
-
-		/**
-		 * @brief Get the sub-mesh count.
-		 * @return Sub-mesh count.
-		 */
-		size_t GetSubMeshCount() const override { return m_subMeshes.size(); }
-
-		/**
-		 * @brief Get the sub-meshes.
-		 * @return Pointer to the sub-meshes array.
-		 */
-		const MMDSubMesh* GetSubMeshes() const override { return &m_subMeshes[0]; }
-
-		/**
-		 * @brief Get the MMD physics.
-		 * @return Pointer to the MMD physics.
-		 */
-		MMDPhysics* GetMMDPhysics() override { return m_physicsMan.GetMMDPhysics(); }
-
-		/**
-		 * @brief Initialize the animation.
-		 */
-		void InitializeAnimation() override;
-
-		/**
 		 * @brief Begin the animation.
 		 */
 		void BeginAnimation() override;
 
 		/**
-		 * @brief End the animation.
-		 */
-		void EndAnimation() override;
-
-		/**
 		 * @brief Update the morph animation.
 		 */
 		void UpdateMorphAnimation() override;
-
-		/**
-		 * @brief Update the node animation.
-		 * @param afterPhysicsAnim True if updating after physics animation.
-		 */
-		void UpdateNodeAnimation(bool afterPhysicsAnim) override;
-
-		/**
-		 * @brief Reset the physics.
-		 */
-		void ResetPhysics() override;
-
-		/**
-		 * @brief Update the physics animation.
-		 * @param elapsed Elapsed time.
-		 */
-		void UpdatePhysicsAnimation(float elapsed) override;
 
 		/**
 		 * @brief Update the model.
@@ -314,6 +395,11 @@ namespace saba
 		void SetParallelUpdateHint(uint32_t parallelCount) override;
 
 		/**
+		 * @brief Destroy the PMX model.
+		 */
+		void Destroy() override;
+
+		/**
 		 * @brief Load the PMX model from a file.
 		 * @param filepath Path to the PMX file.
 		 * @param mmdDataDir Directory containing MMD data.
@@ -322,9 +408,13 @@ namespace saba
 		bool Load(const std::string& filepath, const std::string& mmdDataDir) override;
 
 		/**
-		 * @brief Destroy the PMX model.
+		 * @brief Load model data from a PMX file.
+		 * @param file A constant reference to the PMX file object.
+		 * @param dirPath The directory path where the PMX file is located.
+		 * @param mmdDataDir The directory path containing MMD data.
+		 * @return Returns true if the loading is successful, otherwise false.
 		 */
-		void Destroy();
+		bool LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir) override;
 
 		/**
 		 * @brief Get the bounding box minimum coordinates.
@@ -338,38 +428,22 @@ namespace saba
 		 */
 		const glm::vec3& GetBBoxMax() const { return m_bboxMax; }
 
-		enum class SkinningType
-		{
-			Weight1,
-			Weight2,
-			Weight4,
-			SDEF,
-			DualQuaternion,
-		};
-
-		struct VertexBoneInfo
-		{
-			SkinningType	m_skinningType;
-			union
-			{
-				struct
-				{
-					int32_t	m_boneIndex[4];
-					float	m_boneWeight[4];
-				};
-				struct
-				{
-					int32_t	m_boneIndex[2];
-					float	m_boneWeight;
-
-					glm::vec3	m_sdefC;
-					glm::vec3	m_sdefR0;
-					glm::vec3	m_sdefR1;
-				} m_sdef;
-			};
-		};
-
 	private:
+		std::vector<glm::vec3>	m_positions;
+		std::vector<glm::vec3>	m_normals;
+		std::vector<glm::vec2>	m_uvs;
+		std::vector<VertexBoneInfo>	m_vertexBoneInfos;
+		std::vector<glm::vec3>	m_updatePositions;
+		std::vector<glm::vec3>	m_updateNormals;
+		std::vector<glm::vec2>	m_updateUVs;
+
+		std::vector<char>	m_indices;
+		size_t				m_indexCount;
+		size_t				m_indexElementSize;
+
+		glm::vec3		m_bboxMin;
+		glm::vec3		m_bboxMax;
+
 		struct PositionMorph;
 		struct PositionMorphData;
 		struct UVMorph;
@@ -379,12 +453,10 @@ namespace saba
 		struct BoneMorphElement;
 		struct BoneMorphData;
 		struct GroupMorphData;
-		enum class MorphType;
-		class PMXMorph;
 		struct UpdateRange;
 
-		void SetupParallelUpdate();
 		void Update(const UpdateRange& range);
+		void SetupParallelUpdate();
 		void Morph(const PMXMorph* morph, float weight);
 		void MorphPosition(const PositionMorphData& morphData, float weight);
 		void MorphUV(const UVMorphData& morphData, float weight);
@@ -392,19 +464,9 @@ namespace saba
 		void EndMorphMaterial();
 		void MorphMaterial(const MaterialMorphData& morphData, float weight);
 		static void MorphBone(const BoneMorphData& morphData, float weight);
+		void LoadMorph(const PMXFile& file) override;
 
-		std::vector<glm::vec3>	m_positions;
-		std::vector<glm::vec3>	m_normals;
-		std::vector<glm::vec2>	m_uvs;
-		std::vector<VertexBoneInfo>	m_vertexBoneInfos;
-		std::vector<glm::vec3>	m_updatePositions;
-		std::vector<glm::vec3>	m_updateNormals;
-		std::vector<glm::vec2>	m_updateUVs;
 		std::vector<glm::mat4>	m_transforms;
-
-		std::vector<char>	m_indices;
-		size_t				m_indexCount;
-		size_t				m_indexElementSize;
 
 		std::vector<PositionMorphData>	m_positionMorphDatas;
 		std::vector<UVMorphData>		m_uvMorphDatas;
@@ -420,18 +482,6 @@ namespace saba
 		std::vector<MMDMaterial>	m_initMaterials;
 		std::vector<MaterialFactor>	m_mulMaterialFactors;
 		std::vector<MaterialFactor>	m_addMaterialFactors;
-
-		glm::vec3		m_bboxMin;
-		glm::vec3		m_bboxMax;
-
-		std::vector<MMDMaterial>	m_materials;
-		std::vector<MMDSubMesh>		m_subMeshes;
-		std::vector<PMXNode*>		m_sortedNodes;
-
-		MMDNodeManagerT<PMXNode>	m_nodeMan;
-		MMDIKManagerT<MMDIkSolver>	m_ikSolverMan;
-		MMDMorphManagerT<PMXMorph>	m_morphMan;
-		MMDPhysicsManager			m_physicsMan;
 
 		uint32_t							m_parallelUpdateCount;
 		std::vector<UpdateRange>			m_updateRanges;

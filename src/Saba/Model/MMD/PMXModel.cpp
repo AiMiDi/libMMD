@@ -14,9 +14,7 @@
 #include <Saba/Base/Log.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/norm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/dual_quaternion.hpp>
 #include <limits>
 #include <algorithm>
 #include <sstream>
@@ -26,6 +24,469 @@
 
 namespace saba
 {
+	enum class PMXModelWithoutBuffed::MorphType
+	{
+		None,
+		Position,
+		UV,
+		Material,
+		Bone,
+		Group,
+	};
+
+	class PMXModelWithoutBuffed::PMXMorph : public MMDMorph
+	{
+	public:
+		MorphType	m_morphType{MorphType::None};
+		size_t		m_dataIndex{};
+	};
+
+	PMXModelWithoutBuffed::PMXModelWithoutBuffed() = default;
+
+	PMXModelWithoutBuffed::~PMXModelWithoutBuffed()
+	{
+		m_materials.clear();
+		m_subMeshes.clear();
+		m_nodeMan.GetNodes()->clear();
+	}
+
+	void PMXModelWithoutBuffed::InitializeAnimation()
+	{
+		ClearBaseAnimation();
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			node->SetAnimationTranslate(glm::vec3(0));
+			node->SetAnimationRotate(glm::quat(1, 0, 0, 0));
+		}
+
+		BeginAnimation();
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			node->UpdateLocalTransform();
+		}
+
+		for (const auto& morph : *m_morphMan.GetMorphs())
+		{
+			morph->SetWeight(0);
+		}
+
+		for (const auto& ikSolver : *m_ikSolverMan.GetIKSolvers())
+		{
+			ikSolver->Enable(true);
+		}
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			if (node->GetParent() == nullptr)
+			{
+				node->UpdateGlobalTransform();
+			}
+		}
+
+		for (const auto pmxNode : m_sortedNodes)
+		{
+			if (pmxNode->GetAppendNode() != nullptr)
+			{
+				pmxNode->UpdateAppendTransform();
+				pmxNode->UpdateGlobalTransform();
+			}
+			if (pmxNode->GetIKSolver() != nullptr)
+			{
+				const auto ikSolver = pmxNode->GetIKSolver();
+				ikSolver->Solve();
+				pmxNode->UpdateGlobalTransform();
+			}
+		}
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			if (node->GetParent() == nullptr)
+			{
+				node->UpdateGlobalTransform();
+			}
+		}
+
+		EndAnimation();
+
+		ResetPhysics();
+	}
+
+	void PMXModelWithoutBuffed::BeginAnimation()
+	{
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			node->BeginUpdateTransform();
+		}
+	}
+
+	void PMXModelWithoutBuffed::EndAnimation()
+	{
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			node->EndUpdateTransform();
+		}
+	}
+
+	void PMXModelWithoutBuffed::UpdateNodeAnimation(const bool afterPhysicsAnim)
+	{
+		for (const auto pmxNode : m_sortedNodes)
+		{
+			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
+			{
+				continue;
+			}
+
+			pmxNode->UpdateLocalTransform();
+		}
+
+		for (const auto pmxNode : m_sortedNodes)
+		{
+			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
+			{
+				continue;
+			}
+
+			if (pmxNode->GetParent() == nullptr)
+			{
+				pmxNode->UpdateGlobalTransform();
+			}
+		}
+
+		for (const auto pmxNode : m_sortedNodes)
+		{
+			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
+			{
+				continue;
+			}
+
+			if (pmxNode->GetAppendNode() != nullptr)
+			{
+				pmxNode->UpdateAppendTransform();
+				pmxNode->UpdateGlobalTransform();
+			}
+			if (pmxNode->GetIKSolver() != nullptr)
+			{
+				const auto ikSolver = pmxNode->GetIKSolver();
+				ikSolver->Solve();
+				pmxNode->UpdateGlobalTransform();
+			}
+		}
+
+		for (const auto pmxNode : m_sortedNodes)
+		{
+			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
+			{
+				continue;
+			}
+
+			if (pmxNode->GetParent() == nullptr)
+			{
+				pmxNode->UpdateGlobalTransform();
+			}
+		}
+	}
+
+	void PMXModelWithoutBuffed::ResetPhysics()
+	{
+		MMDPhysicsManager* physicsMan = GetPhysicsManager();
+		const auto physics = physicsMan->GetMMDPhysics();
+
+		if (physics == nullptr)
+		{
+			return;
+		}
+
+		const auto rigidbodys = physicsMan->GetRigidBodys();
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->SetActivation(false);
+			rb->ResetTransform();
+		}
+
+		physics->Update(1.0f / 60.0f);
+
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->ReflectGlobalTransform();
+		}
+
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->CalcLocalTransform();
+		}
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			if (node->GetParent() == nullptr)
+			{
+				node->UpdateGlobalTransform();
+			}
+		}
+
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->Reset(physics);
+		}
+	}
+
+	void PMXModelWithoutBuffed::UpdatePhysicsAnimation(const float elapsed)
+	{
+		MMDPhysicsManager* physicsMan = GetPhysicsManager();
+		const auto physics = physicsMan->GetMMDPhysics();
+
+		if (physics == nullptr)
+		{
+			return;
+		}
+
+		const auto rigidbodys = physicsMan->GetRigidBodys();
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->SetActivation(true);
+		}
+
+		physics->Update(elapsed);
+
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->ReflectGlobalTransform();
+		}
+
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->CalcLocalTransform();
+		}
+
+		for (const auto& node : *m_nodeMan.GetNodes())
+		{
+			if (node->GetParent() == nullptr)
+			{
+				node->UpdateGlobalTransform();
+			}
+		}
+	}
+
+	void PMXModelWithoutBuffed::Destroy()
+	{
+		m_materials.clear();
+		m_subMeshes.clear();
+		m_nodeMan.GetNodes()->clear();
+	}
+
+	bool PMXModelWithoutBuffed::Load(const std::string& filepath, const std::string& mmdDataDir)
+	{
+		Destroy();
+
+		PMXFile pmx;
+		if (!ReadPMXFile(&pmx, filepath.c_str()))
+		{
+			return false;
+		}
+
+		std::string dirPath = PathUtil::GetDirectoryName(filepath);
+		if (!LoadPMX(pmx, dirPath, mmdDataDir))
+		{
+			return false;
+		}
+
+		LoadMorph(pmx);
+
+		return true;
+	}
+
+	bool PMXModelWithoutBuffed::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	{
+		m_modelName = file.m_info.m_modelName;
+		m_englishModelName = file.m_info.m_englishModelName;
+		m_comment = file.m_info.m_comment;
+		m_englishComment = file.m_info.m_englishComment;
+
+		// Load materials
+		for (const auto& pmxMat : file.m_materials)
+		{
+			MMDMaterial mat;
+			mat.m_diffuse = glm::vec3(pmxMat.m_diffuse.r, pmxMat.m_diffuse.g, pmxMat.m_diffuse.b);
+			mat.m_alpha = pmxMat.m_diffuse.a;
+			mat.m_specular = glm::vec3(pmxMat.m_specular.r, pmxMat.m_specular.g, pmxMat.m_specular.b);
+			mat.m_specularPower = pmxMat.m_specularPower;
+			mat.m_ambient = glm::vec3(pmxMat.m_ambient.r, pmxMat.m_ambient.g, pmxMat.m_ambient.b);
+			mat.m_bothFace = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::BothFace));
+			mat.m_edgeFlag = (static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::DrawEdge)) == 0 ? 0 : 1;
+			mat.m_edgeSize = pmxMat.m_edgeSize;
+			mat.m_edgeColor = pmxMat.m_edgeColor;
+			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
+
+			// Process textures
+			if (pmxMat.m_textureIndex != -1)
+			{
+				mat.m_texture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_textureIndex].m_textureName);
+			}
+
+			// Process sphere textures
+			if (pmxMat.m_sphereTextureIndex != -1)
+			{
+				mat.m_spTexture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_sphereTextureIndex].m_textureName);
+				if (pmxMat.m_sphereMode == PMXSphereMode::Mul)
+				{
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
+				}
+				else if (pmxMat.m_sphereMode == PMXSphereMode::Add)
+				{
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
+				}
+			}
+
+			// Process Toon textures
+			if (pmxMat.m_toonMode == PMXToonMode::Common)
+			{
+				if (pmxMat.m_toonTextureIndex != -1)
+				{
+					std::stringstream ss;
+					ss << "toon" << std::setfill('0') << std::setw(2) << pmxMat.m_toonTextureIndex + 1 << ".bmp";
+					mat.m_toonTexture = PathUtil::Combine(mmdDataDir, ss.str());
+				}
+			}
+			else if (pmxMat.m_toonMode == PMXToonMode::Separate)
+			{
+				if (pmxMat.m_toonTextureIndex != -1)
+				{
+					mat.m_toonTexture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_toonTextureIndex].m_textureName);
+				}
+			}
+
+			// Set other flags
+			mat.m_groundShadow = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::GroundShadow));
+			mat.m_shadowCaster = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::CastSelfShadow));
+			mat.m_shadowReceiver = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::RecieveSelfShadow));
+
+			m_materials.emplace_back(std::move(mat));
+		}
+
+		// Create bone nodes
+		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
+		for (const auto& bone : file.m_bones)
+		{
+			auto* node = m_nodeMan.AddNode();
+			node->SetName(bone.m_name);
+		}
+
+		// Set bone hierarchy and transforms
+		for (size_t i = 0; i < file.m_bones.size(); i++)
+		{
+			const auto& bone = file.m_bones[i];
+			auto* node = static_cast<PMXNode*>(m_nodeMan.GetNode(i));
+
+			// Set parent-child relationships
+			if (bone.m_parentBoneIndex != -1)
+			{
+				auto* parentNode = m_nodeMan.GetNode(bone.m_parentBoneIndex);
+				parentNode->AddChild(node);
+			}
+
+			// Set initial transforms
+			node->SetTranslate(bone.m_position);
+			glm::mat4 init = translate(glm::mat4(1), bone.m_position);
+			node->SetGlobalTransform(init);
+			node->CalculateInverseInitTransform();
+			node->SaveInitialTRS();
+
+			// Set other properties
+			node->SetDeformDepth(bone.m_deformDepth);
+			node->EnableDeformAfterPhysics(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::DeformAfterPhysics)));
+
+			// Process append transforms
+			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate) ||
+				static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate))
+			{
+				if (bone.m_appendBoneIndex != -1)
+				{
+					auto* appendNode = static_cast<PMXNode*>(m_nodeMan.GetNode(bone.m_appendBoneIndex));
+					node->SetAppendNode(appendNode);
+					node->EnableAppendRotate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate)));
+					node->EnableAppendTranslate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate)));
+					node->EnableAppendLocal(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendLocal)));
+					node->SetAppendWeight(bone.m_appendWeight);
+				}
+			}
+
+			// Process IK
+			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::IK))
+			{
+				auto* ikSolver = m_ikSolverMan.AddIKSolver();
+				ikSolver->SetIterateCount(bone.m_ikIterationCount);
+				ikSolver->SetLimitAngle(bone.m_ikLimit);
+				ikSolver->SetTargetNode(node);
+
+				for (const auto& ikLink : bone.m_ikLinks)
+				{
+					auto* ikNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
+					if (ikLink.m_enableLimit != 0)
+					{
+						ikSolver->AddIKChain(ikNode, true, ikLink.m_limitMin, ikLink.m_limitMax);
+					}
+					else
+					{
+						ikSolver->AddIKChain(ikNode, false, glm::vec3(0), glm::vec3(0));
+					}
+				}
+
+				node->SetIKSolver(ikSolver);
+			}
+		}
+
+		return true;
+	}
+
+	void PMXModelWithoutBuffed::LoadMorph(const PMXFile& file)
+	{
+		// Process morphs
+		for (const auto& morph : file.m_morphs)
+		{
+			auto* pmxMorph = static_cast<PMXMorph*>(m_morphMan.AddMorph());
+			pmxMorph->SetName(morph.m_name);
+			pmxMorph->SetWeight(0);
+			pmxMorph->m_dataIndex = -1;
+
+			switch (morph.m_morphType)
+			{
+			case PMXMorphType::Position:
+				{
+					pmxMorph->m_morphType = MorphType::Position;
+				}
+				break;
+			case PMXMorphType::UV:
+			case PMXMorphType::AddUV1:
+			case PMXMorphType::AddUV2:
+			case PMXMorphType::AddUV3:
+			case PMXMorphType::AddUV4:
+				{
+					pmxMorph->m_morphType = MorphType::UV;
+				}
+				break;
+			case PMXMorphType::Material:
+				{
+					pmxMorph->m_morphType = MorphType::Material;
+				}
+				break;
+			case PMXMorphType::Bone:
+				{
+					pmxMorph->m_morphType = MorphType::Bone;
+				}
+				break;
+			case PMXMorphType::Group:
+				{
+					pmxMorph->m_morphType = MorphType::Group;
+				}
+				break;
+			default:
+				SABA_ERROR("PMX Load Error: Unknown morph type");
+				break;
+			}
+		}
+	}
+
 	struct PMXModel::PositionMorph
 	{
 		explicit PositionMorph(uint32_t index = 0, const glm::vec3& position = glm::vec3{})
@@ -228,23 +689,6 @@ namespace saba
 		}
 	};
 
-	enum class PMXModel::MorphType
-	{
-		None,
-		Position,
-		UV,
-		Material,
-		Bone,
-		Group,
-	};
-
-	class PMXModel::PMXMorph : public MMDMorph
-	{
-	public:
-		MorphType	m_morphType{MorphType::None};
-		size_t		m_dataIndex{};
-	};
-
 	struct PMXModel::UpdateRange
 	{
 		explicit UpdateRange(size_t vertexOffset = 0, size_t vertexCount = 0)
@@ -254,98 +698,15 @@ namespace saba
 		size_t	m_vertexCount;
 	};
 
-	PMXModel::PMXModel()
-		: m_indexCount(0), m_indexElementSize(0), m_bboxMin(), m_bboxMax(), m_parallelUpdateCount(0)
-	{
-	}
-
-	PMXModel::~PMXModel()
-	{
-		Destroy();
-	}
-
-	void PMXModel::InitializeAnimation()
-	{
-		ClearBaseAnimation();
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			node->SetAnimationTranslate(glm::vec3(0));
-			node->SetAnimationRotate(glm::quat(1, 0, 0, 0));
-		}
-
-		BeginAnimation();
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			node->UpdateLocalTransform();
-		}
-
-		for (const auto& morph : *m_morphMan.GetMorphs())
-		{
-			morph->SetWeight(0);
-		}
-
-		for (const auto& ikSolver : *m_ikSolverMan.GetIKSolvers())
-		{
-			ikSolver->Enable(true);
-		}
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			if (node->GetParent() == nullptr)
-			{
-				node->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->GetAppendNode() != nullptr)
-			{
-				pmxNode->UpdateAppendTransform();
-				pmxNode->UpdateGlobalTransform();
-			}
-			if (pmxNode->GetIKSolver() != nullptr)
-			{
-				const auto ikSolver = pmxNode->GetIKSolver();
-				ikSolver->Solve();
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			if (node->GetParent() == nullptr)
-			{
-				node->UpdateGlobalTransform();
-			}
-		}
-
-		EndAnimation();
-
-		ResetPhysics();
-	}
-
 	void PMXModel::BeginAnimation()
 	{
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			node->BeginUpdateTransform();
-		}
+		PMXModelWithoutBuffed::BeginAnimation();
+
 		const size_t vtxCount = m_morphPositions.size();
 		for (size_t vtxIdx = 0; vtxIdx < vtxCount; vtxIdx++)
 		{
 			m_morphPositions[vtxIdx] = glm::vec3(0);
 			m_morphUVs[vtxIdx] = glm::vec4(0);
-		}
-	}
-
-	void PMXModel::EndAnimation()
-	{
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			node->EndUpdateTransform();
 		}
 	}
 
@@ -357,149 +718,10 @@ namespace saba
 		const auto& morphs = *m_morphMan.GetMorphs();
 		for (const auto & morph : morphs)
 		{
-				Morph(morph.get(), morph->GetWeight());
+			Morph(morph.get(), morph->GetWeight());
 		}
 
 		EndMorphMaterial();
-	}
-
-	void PMXModel::UpdateNodeAnimation(const bool afterPhysicsAnim)
-	{
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
-			pmxNode->UpdateLocalTransform();
-		}
-
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
-			if (pmxNode->GetParent() == nullptr)
-			{
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
-			if (pmxNode->GetAppendNode() != nullptr)
-			{
-				pmxNode->UpdateAppendTransform();
-				pmxNode->UpdateGlobalTransform();
-			}
-			if (pmxNode->GetIKSolver() != nullptr)
-			{
-				const auto ikSolver = pmxNode->GetIKSolver();
-				ikSolver->Solve();
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
-			if (pmxNode->GetParent() == nullptr)
-			{
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-	}
-
-	void PMXModel::ResetPhysics()
-	{
-		MMDPhysicsManager* physicsMan = GetPhysicsManager();
-		const auto physics = physicsMan->GetMMDPhysics();
-
-		if (physics == nullptr)
-		{
-			return;
-		}
-
-		const auto rigidbodys = physicsMan->GetRigidBodys();
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->SetActivation(false);
-			rb->ResetTransform();
-		}
-
-		physics->Update(1.0f / 60.0f);
-
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->ReflectGlobalTransform();
-		}
-
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->CalcLocalTransform();
-		}
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			if (node->GetParent() == nullptr)
-			{
-				node->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->Reset(physics);
-		}
-	}
-
-	void PMXModel::UpdatePhysicsAnimation(const float elapsed)
-	{
-		MMDPhysicsManager* physicsMan = GetPhysicsManager();
-		const auto physics = physicsMan->GetMMDPhysics();
-
-		if (physics == nullptr)
-		{
-			return;
-		}
-
-		const auto rigidbodys = physicsMan->GetRigidBodys();
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->SetActivation(true);
-		}
-
-		physics->Update(elapsed);
-
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->ReflectGlobalTransform();
-		}
-
-		for (const auto& rb : *rigidbodys)
-		{
-			rb->CalcLocalTransform();
-		}
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			if (node->GetParent() == nullptr)
-			{
-				node->UpdateGlobalTransform();
-			}
-		}
 	}
 
 	void PMXModel::Update()
@@ -540,30 +762,40 @@ namespace saba
 		}
 	}
 
-	void PMXModel::SetParallelUpdateHint(const uint32_t parallelCount)
+	void PMXModel::Destroy()
 	{
-		m_parallelUpdateCount = parallelCount;
+		m_positions.clear();
+		m_normals.clear();
+		m_uvs.clear();
+		m_vertexBoneInfos.clear();
+
+		m_indices.clear();
+		m_materials.clear();
+		m_subMeshes.clear();
+
+		m_nodeMan.GetNodes()->clear();
+
+		m_updateRanges.clear();
 	}
 
 	bool PMXModel::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
-		Destroy();
-
-		PMXFile pmx;
-		if (!ReadPMXFile(&pmx, filepath.c_str()))
-		{
+		if (!PMXModelWithoutBuffed::Load(filepath, mmdDataDir))
 			return false;
-		}
 
-		m_modelName = pmx.m_info.m_modelName;
-		m_englishModelName = pmx.m_info.m_englishModelName;
-		m_comment = pmx.m_info.m_comment;
-		m_englishComment = pmx.m_info.m_englishComment;
+		// Set default parallel update configuration
+		SetupParallelUpdate();
 
-		std::string dirPath = PathUtil::GetDirectoryName(filepath);
+		return true;
+	}
+
+	bool PMXModel::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	{
+		if (!PMXModelWithoutBuffed::LoadPMX(file, dirPath, mmdDataDir))
+			return false;
 
 		// Pre-allocate memory
-		const size_t vertexCount = pmx.m_vertices.size();
+		const size_t vertexCount = file.m_vertices.size();
 		m_positions.resize(vertexCount);
 		m_normals.resize(vertexCount);
 		m_uvs.resize(vertexCount);
@@ -580,7 +812,7 @@ namespace saba
 		// Read vertex data
 		for (size_t i = 0; i < vertexCount; i++)
 		{
-			const auto& vertex = pmx.m_vertices[i];
+			const auto& vertex = file.m_vertices[i];
 			m_positions[i] = vertex.m_position;
 			m_normals[i] = vertex.m_normal;
 			m_uvs[i] = vertex.m_uv;
@@ -641,12 +873,12 @@ namespace saba
 		}
 
 		// Process face data
-		const size_t faceCount = pmx.m_faces.size();
+		const size_t faceCount = file.m_faces.size();
 		m_indexCount = faceCount * 3;
 		m_indices.resize(m_indexCount);
 
 		// Handle face data based on index size
-		switch (pmx.m_header.m_vertexIndexSize)
+		switch (file.m_header.m_vertexIndexSize)
 		{
 		case 1:
 			{
@@ -654,7 +886,7 @@ namespace saba
 				{
 					for (int j = 0; j < 3; ++j)
 					{
-						m_indices[i * 3 + j] = static_cast<uint32_t>(pmx.m_faces[i].m_vertices[j]);
+						m_indices[i * 3 + j] = static_cast<uint32_t>(file.m_faces[i].m_vertices[j]);
 					}
 				}
 			}
@@ -665,7 +897,7 @@ namespace saba
 				{
 					for (int j = 0; j < 3; ++j)
 					{
-						m_indices[i * 3 + j] = static_cast<uint32_t>(pmx.m_faces[i].m_vertices[j]);
+						m_indices[i * 3 + j] = static_cast<uint32_t>(file.m_faces[i].m_vertices[j]);
 					}
 				}
 			}
@@ -676,153 +908,46 @@ namespace saba
 				{
 					for (int j = 0; j < 3; ++j)
 					{
-						m_indices[i * 3 + j] = pmx.m_faces[i].m_vertices[j];
+						m_indices[i * 3 + j] = file.m_faces[i].m_vertices[j];
 					}
 				}
 			}
 			break;
 		default:
-			SABA_ERROR("PMX Load Error: Unknown vertex index size [{}]", pmx.m_header.m_vertexIndexSize);
+			SABA_ERROR("PMX Load Error: Unknown vertex index size [{}]", file.m_header.m_vertexIndexSize);
 			return false;
 		}
 
-		m_indexElementSize = pmx.m_header.m_vertexIndexSize;
+		m_indexElementSize = file.m_header.m_vertexIndexSize;
 
-		// Load materials
-		for (const auto& pmxMat : pmx.m_materials)
-		{
-			MMDMaterial mat;
-			mat.m_diffuse = glm::vec3(pmxMat.m_diffuse.r, pmxMat.m_diffuse.g, pmxMat.m_diffuse.b);
-			mat.m_alpha = pmxMat.m_diffuse.a;
-			mat.m_specular = glm::vec3(pmxMat.m_specular.r, pmxMat.m_specular.g, pmxMat.m_specular.b);
-			mat.m_specularPower = pmxMat.m_specularPower;
-			mat.m_ambient = glm::vec3(pmxMat.m_ambient.r, pmxMat.m_ambient.g, pmxMat.m_ambient.b);
-			mat.m_bothFace = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::BothFace));
-			mat.m_edgeFlag = (static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::DrawEdge)) == 0 ? 0 : 1;
-			mat.m_edgeSize = pmxMat.m_edgeSize;
-			mat.m_edgeColor = pmxMat.m_edgeColor;
-			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
+		return true;
+	}
 
-			// Process textures
-			if (pmxMat.m_textureIndex != -1)
-			{
-				mat.m_texture = PathUtil::Combine(dirPath, pmx.m_textures[pmxMat.m_textureIndex].m_textureName);
-			}
+	PMXModel::~PMXModel()
+	{
+		m_positions.clear();
+		m_normals.clear();
+		m_uvs.clear();
+		m_vertexBoneInfos.clear();
 
-			// Process sphere textures
-			if (pmxMat.m_sphereTextureIndex != -1)
-			{
-				mat.m_spTexture = PathUtil::Combine(dirPath, pmx.m_textures[pmxMat.m_sphereTextureIndex].m_textureName);
-				if (pmxMat.m_sphereMode == PMXSphereMode::Mul)
-				{
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
-				}
-				else if (pmxMat.m_sphereMode == PMXSphereMode::Add)
-				{
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
-				}
-			}
+		m_indices.clear();
+		m_materials.clear();
+		m_subMeshes.clear();
 
-			// Process Toon textures
-			if (pmxMat.m_toonMode == PMXToonMode::Common)
-			{
-				if (pmxMat.m_toonTextureIndex != -1)
-				{
-					std::stringstream ss;
-					ss << "toon" << std::setfill('0') << std::setw(2) << pmxMat.m_toonTextureIndex + 1 << ".bmp";
-					mat.m_toonTexture = PathUtil::Combine(mmdDataDir, ss.str());
-				}
-			}
-			else if (pmxMat.m_toonMode == PMXToonMode::Separate)
-			{
-				if (pmxMat.m_toonTextureIndex != -1)
-				{
-					mat.m_toonTexture = PathUtil::Combine(dirPath, pmx.m_textures[pmxMat.m_toonTextureIndex].m_textureName);
-				}
-			}
+		m_nodeMan.GetNodes()->clear();
 
-			// Set other flags
-			mat.m_groundShadow = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::GroundShadow));
-			mat.m_shadowCaster = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::CastSelfShadow));
-			mat.m_shadowReceiver = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::RecieveSelfShadow));
+		m_updateRanges.clear();
+	}
 
-			m_materials.emplace_back(std::move(mat));
-		}
+	void PMXModel::SetParallelUpdateHint(const uint32_t parallelCount)
+	{
+		m_parallelUpdateCount = parallelCount;
+	}
 
-		// Create bone nodes
-		m_nodeMan.GetNodes()->reserve(pmx.m_bones.size());
-		for (const auto& bone : pmx.m_bones)
-		{
-			auto* node = m_nodeMan.AddNode();
-			node->SetName(bone.m_name);
-		}
-
-		// Set bone hierarchy and transforms
-		for (size_t i = 0; i < pmx.m_bones.size(); i++)
-		{
-			const auto& bone = pmx.m_bones[i];
-			auto* node = static_cast<PMXNode*>(m_nodeMan.GetNode(i));
-
-			// Set parent-child relationships
-			if (bone.m_parentBoneIndex != -1)
-			{
-				auto* parentNode = m_nodeMan.GetNode(bone.m_parentBoneIndex);
-				parentNode->AddChild(node);
-			}
-
-			// Set initial transforms
-			node->SetTranslate(bone.m_position);
-			glm::mat4 init = translate(glm::mat4(1), bone.m_position);
-			node->SetGlobalTransform(init);
-			node->CalculateInverseInitTransform();
-			node->SaveInitialTRS();
-
-			// Set other properties
-			node->SetDeformDepth(bone.m_deformDepth);
-			node->EnableDeformAfterPhysics(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::DeformAfterPhysics)));
-
-			// Process append transforms
-			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate) ||
-				static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate))
-			{
-				if (bone.m_appendBoneIndex != -1)
-				{
-					auto* appendNode = static_cast<PMXNode*>(m_nodeMan.GetNode(bone.m_appendBoneIndex));
-					node->SetAppendNode(appendNode);
-					node->EnableAppendRotate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate)));
-					node->EnableAppendTranslate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate)));
-					node->EnableAppendLocal(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendLocal)));
-					node->SetAppendWeight(bone.m_appendWeight);
-				}
-			}
-
-			// Process IK
-			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::IK))
-			{
-				auto* ikSolver = m_ikSolverMan.AddIKSolver();
-				ikSolver->SetIterateCount(bone.m_ikIterationCount);
-				ikSolver->SetLimitAngle(bone.m_ikLimit);
-				ikSolver->SetTargetNode(node);
-
-				for (const auto& ikLink : bone.m_ikLinks)
-				{
-					auto* ikNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
-					if (ikLink.m_enableLimit != 0)
-					{
-						ikSolver->AddIKChain(ikNode, true, ikLink.m_limitMin, ikLink.m_limitMax);
-					}
-					else
-					{
-						ikSolver->AddIKChain(ikNode, false, glm::vec3(0), glm::vec3(0));
-					}
-				}
-
-				node->SetIKSolver(ikSolver);
-			}
-		}
-
+	void PMXModel::LoadMorph(const PMXFile& file)
+	{
 		// Process morphs
-		for (const auto& morph : pmx.m_morphs)
+		for (const auto& morph : file.m_morphs)
 		{
 			auto* pmxMorph = static_cast<PMXMorph*>(m_morphMan.AddMorph());
 			pmxMorph->SetName(morph.m_name);
@@ -895,28 +1020,6 @@ namespace saba
 				break;
 			}
 		}
-
-		// Set default parallel update configuration
-		SetupParallelUpdate();
-
-		return true;
-	}
-
-	void PMXModel::Destroy()
-	{
-		m_materials.clear();
-		m_subMeshes.clear();
-
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_vertexBoneInfos.clear();
-
-		m_indices.clear();
-
-		m_nodeMan.GetNodes()->clear();
-
-		m_updateRanges.clear();
 	}
 
 	void PMXModel::SetupParallelUpdate()
@@ -926,7 +1029,7 @@ namespace saba
 			// Get CPU core count as default thread count
 			m_parallelUpdateCount = std::max(1u, std::thread::hardware_concurrency());
 		}
-		
+
 		// Limit maximum thread count
 		constexpr size_t maxParallelCount = 32;
 		if (m_parallelUpdateCount > maxParallelCount)
@@ -943,13 +1046,13 @@ namespace saba
 		// Optimize task allocation strategy
 		const size_t vertexCount = m_positions.size();
 		constexpr size_t minVerticesPerThread = 1000; // Minimum vertices per thread
-		
+
 		if (vertexCount < m_updateRanges.size() * minVerticesPerThread)
 		{
 			// If vertex count is small, reduce thread count to avoid thread switching overhead
 			const size_t numRanges = (vertexCount + minVerticesPerThread - 1) / minVerticesPerThread;
 			const size_t verticesPerRange = (vertexCount + numRanges - 1) / numRanges;
-			
+
 			for (size_t rangeIdx = 0; rangeIdx < m_updateRanges.size(); rangeIdx++)
 			{
 				auto& range = m_updateRanges[rangeIdx];
@@ -965,17 +1068,16 @@ namespace saba
 				}
 			}
 		}
-		else 
+		else
 		{
 			// For large vertex counts, distribute evenly across all threads
 			const size_t verticesPerThread = vertexCount / m_updateRanges.size();
 			size_t remainingVertices = vertexCount % m_updateRanges.size();
 			size_t currentOffset = 0;
 
-			for (size_t rangeIdx = 0; rangeIdx < m_updateRanges.size(); rangeIdx++)
+			for (auto& range : m_updateRanges)
 			{
-				auto& range = m_updateRanges[rangeIdx];
-				range.m_vertexOffset = currentOffset;
+					range.m_vertexOffset = currentOffset;
 				range.m_vertexCount = verticesPerThread + (remainingVertices > 0 ? 1 : 0);
 				currentOffset += range.m_vertexCount;
 				if (remainingVertices > 0) remainingVertices--;
@@ -1289,6 +1391,10 @@ namespace saba
 			glm::quat q = slerp(node->GetRotate(), m_rotate, weight);
 			node->SetRotate(q);
 		}
+	}
+
+	PMXModel::PMXModel(): m_indexCount(0), m_indexElementSize(0), m_bboxMin(0), m_bboxMax(0), m_parallelUpdateCount(0)
+	{
 	}
 
 	PMXNode::PMXNode()

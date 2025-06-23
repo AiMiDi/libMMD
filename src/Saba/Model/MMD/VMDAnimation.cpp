@@ -309,7 +309,7 @@ namespace saba
 	{
 	}
 
-	bool VMDAnimation::Create(const std::shared_ptr<MMDModel>& model)
+	bool VMDAnimation::Create(const std::shared_ptr<MMDModelWithoutBuffed>& model)
 	{
 		m_model = model;
 		return true;

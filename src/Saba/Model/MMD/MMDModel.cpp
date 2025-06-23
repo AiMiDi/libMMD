@@ -56,7 +56,7 @@ namespace saba
 		return m_joints.emplace_back(std::make_unique<MMDJoint>()).get();
 	}
 
-	void MMDModel::SaveBaseAnimation()
+	void MMDModelWithoutBuffed::SaveBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -80,7 +80,7 @@ namespace saba
 		}
 	}
 
-	void MMDModel::LoadBaseAnimation()
+	void MMDModelWithoutBuffed::LoadBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -104,7 +104,7 @@ namespace saba
 		}
 	}
 
-	void MMDModel::ClearBaseAnimation()
+	void MMDModelWithoutBuffed::ClearBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -143,7 +143,7 @@ namespace saba
 		}
 	}
 
-	void MMDModel::UpdateAllAnimation(const VMDAnimation * vmdAnim, const float vmdFrame, const float physicsElapsed)
+	void MMDModelWithoutBuffed::UpdateAllAnimation(const VMDAnimation * vmdAnim, const float vmdFrame, const float physicsElapsed)
 	{
 		if (vmdAnim != nullptr)
 		{
@@ -159,7 +159,7 @@ namespace saba
 		UpdateNodeAnimation(true);
 	}
 
-	void MMDModel::LoadPose(const VPDFile & vpd, const int frameCount)
+	void MMDModelWithoutBuffed::LoadPose(const VPDFile & vpd, const int frameCount)
 	{
 		struct Pose
 		{
