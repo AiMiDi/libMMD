@@ -222,6 +222,11 @@ namespace saba
 		void EndAnimation() override;
 
 		/**
+		 * @brief Update the morph animation.
+		 */
+		void UpdateMorphAnimation() override;
+
+		/**
 		 * @brief Update the node animation.
 		 * @param afterPhysicsAnim True if updating after physics animation.
 		 */
@@ -259,41 +264,14 @@ namespace saba
 		 * @brief Destroy the PMX model.
 		 */
 		virtual void Destroy();
-
-		enum class SkinningType
-		{
-			Weight1,
-			Weight2,
-			Weight4,
-			SDEF,
-			DualQuaternion,
-		};
-
-		struct VertexBoneInfo
-		{
-			SkinningType	m_skinningType;
-			union
-			{
-				struct
-				{
-					int32_t	m_boneIndex[4];
-					float	m_boneWeight[4];
-				};
-				struct
-				{
-					int32_t	m_boneIndex[2];
-					float	m_boneWeight;
-
-					glm::vec3	m_sdefC;
-					glm::vec3	m_sdefR0;
-					glm::vec3	m_sdefR1;
-				} m_sdef;
-			};
-		};
-
 	protected:
 		enum class MorphType;
 		class PMXMorph;
+		struct MaterialFactor;
+		struct MaterialMorphData;
+		struct BoneMorphElement;
+		struct BoneMorphData;
+		struct GroupMorphData;
 
 		std::vector<MMDMaterial>	m_materials;
 		std::vector<MMDSubMesh>		m_subMeshes;
@@ -304,7 +282,19 @@ namespace saba
 		MMDMorphManagerT<PMXMorph>	m_morphMan;
 		MMDPhysicsManager			m_physicsMan;
 
+		std::vector<BoneMorphData>		m_boneMorphDatas;
+		std::vector<GroupMorphData>		m_groupMorphDatas;
+		std::vector<MaterialMorphData>	m_materialMorphDatas;
+		std::vector<MMDMaterial>	m_initMaterials;
+		std::vector<MaterialFactor>	m_mulMaterialFactors;
+		std::vector<MaterialFactor>	m_addMaterialFactors;
+
+		virtual void Morph(const PMXMorph* morph, float weight);
 		virtual void LoadMorph(const PMXFile& file);
+		void BeginMorphMaterial();
+		void EndMorphMaterial();
+		void MorphMaterial(const MaterialMorphData& morphData, float weight);
+		static void MorphBone(const BoneMorphData& morphData, float weight);
 	};
 
 	/**
@@ -382,11 +372,6 @@ namespace saba
 		void BeginAnimation() override;
 
 		/**
-		 * @brief Update the morph animation.
-		 */
-		void UpdateMorphAnimation() override;
-
-		/**
 		 * @brief Update the model.
 		 */
 		void Update() override;
@@ -422,7 +407,7 @@ namespace saba
 		std::vector<glm::vec3>	m_positions;
 		std::vector<glm::vec3>	m_normals;
 		std::vector<glm::vec2>	m_uvs;
-		std::vector<VertexBoneInfo>	m_vertexBoneInfos;
+
 		std::vector<glm::vec3>	m_updatePositions;
 		std::vector<glm::vec3>	m_updateNormals;
 		std::vector<glm::vec2>	m_updateUVs;
@@ -435,40 +420,27 @@ namespace saba
 		struct PositionMorphData;
 		struct UVMorph;
 		struct UVMorphData;
-		struct MaterialFactor;
-		struct MaterialMorphData;
-		struct BoneMorphElement;
-		struct BoneMorphData;
-		struct GroupMorphData;
 		struct UpdateRange;
+		enum class SkinningType;
+		struct VertexBoneInfo;
 
 		void Update(const UpdateRange& range);
 		void SetupParallelUpdate();
-		void Morph(const PMXMorph* morph, float weight);
 		void MorphPosition(const PositionMorphData& morphData, float weight);
 		void MorphUV(const UVMorphData& morphData, float weight);
-		void BeginMorphMaterial();
-		void EndMorphMaterial();
-		void MorphMaterial(const MaterialMorphData& morphData, float weight);
-		static void MorphBone(const BoneMorphData& morphData, float weight);
+
+		void Morph(const PMXMorph* morph, float weight) override;
 		void LoadMorph(const PMXFile& file) override;
 
 		std::vector<glm::mat4>	m_transforms;
+		std::vector<VertexBoneInfo>	m_vertexBoneInfos;
 
 		std::vector<PositionMorphData>	m_positionMorphDatas;
 		std::vector<UVMorphData>		m_uvMorphDatas;
-		std::vector<MaterialMorphData>	m_materialMorphDatas;
-		std::vector<BoneMorphData>		m_boneMorphDatas;
-		std::vector<GroupMorphData>		m_groupMorphDatas;
 
-		// PositionMorph用
+		// Position Morph
 		std::vector<glm::vec3>	m_morphPositions;
 		std::vector<glm::vec4>	m_morphUVs;
-
-		// マテリアルMorph用
-		std::vector<MMDMaterial>	m_initMaterials;
-		std::vector<MaterialFactor>	m_mulMaterialFactors;
-		std::vector<MaterialFactor>	m_addMaterialFactors;
 
 		uint32_t							m_parallelUpdateCount;
 		std::vector<UpdateRange>			m_updateRanges;

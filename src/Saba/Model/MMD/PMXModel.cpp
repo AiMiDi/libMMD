@@ -41,6 +41,152 @@ namespace saba
 		size_t		m_dataIndex{};
 	};
 
+	struct PMXModelWithoutBuffered::MaterialFactor
+	{
+		explicit MaterialFactor(
+			const glm::vec3& diffuse = glm::vec3(1),
+			const float alpha = 1,
+			const glm::vec3& specular = glm::vec3(1),
+			const float specularPower = 1,
+			const glm::vec3& ambient = glm::vec3(1),
+			const glm::vec4& edgeColor = glm::vec4(1),
+			const float edgeSize = 1,
+			const glm::vec4& textureFactor = glm::vec4(1),
+			const glm::vec4& spTextureFactor = glm::vec4(1),
+			const glm::vec4& toonTextureFactor = glm::vec4(1)
+			): m_diffuse(diffuse),
+			m_alpha(alpha),
+			m_specular(specular),
+			m_specularPower(specularPower),
+			m_ambient(ambient),
+			m_edgeColor(edgeColor),
+			m_edgeSize(edgeSize),
+			m_textureFactor(textureFactor),
+			m_spTextureFactor(spTextureFactor),
+			m_toonTextureFactor(toonTextureFactor)
+		{}
+
+		explicit MaterialFactor(const PMXFileMorph::MaterialMorph& pmxMat):
+			m_diffuse(pmxMat.m_diffuse),
+			m_alpha(pmxMat.m_diffuse.a),
+			m_specular(pmxMat.m_specular),
+			m_specularPower(pmxMat.m_specularPower),
+			m_ambient(pmxMat.m_ambient),
+			m_edgeColor(pmxMat.m_edgeColor),
+			m_edgeSize(pmxMat.m_edgeSize),
+			m_textureFactor(pmxMat.m_textureFactor),
+			m_spTextureFactor(pmxMat.m_sphereTextureFactor),
+			m_toonTextureFactor(pmxMat.m_toonTextureFactor)
+		{}
+
+		void Mul(const MaterialFactor& val, float weight)
+		{
+			m_diffuse = mix(m_diffuse, m_diffuse * val.m_diffuse, weight);
+			m_alpha = glm::mix(m_alpha, m_alpha * val.m_alpha, weight);
+			m_specular = mix(m_specular, m_specular * val.m_specular, weight);
+			m_specularPower = glm::mix(m_specularPower, m_specularPower * val.m_specularPower, weight);
+			m_ambient = mix(m_ambient, m_ambient * val.m_ambient, weight);
+			m_edgeColor = mix(m_edgeColor, m_edgeColor * val.m_edgeColor, weight);
+			m_edgeSize = glm::mix(m_edgeSize, m_edgeSize * val.m_edgeSize, weight);
+			m_textureFactor = mix(m_textureFactor, m_textureFactor * val.m_textureFactor, weight);
+			m_spTextureFactor = mix(m_spTextureFactor, m_spTextureFactor * val.m_spTextureFactor, weight);
+			m_toonTextureFactor = mix(m_toonTextureFactor, m_toonTextureFactor * val.m_toonTextureFactor, weight);
+		}
+
+		void Add(const MaterialFactor& val, float weight)
+		{
+			m_diffuse += val.m_diffuse * weight;
+			m_alpha += val.m_alpha * weight;
+			m_specular += val.m_specular * weight;
+			m_specularPower += val.m_specularPower * weight;
+			m_ambient += val.m_ambient * weight;
+			m_edgeColor += val.m_edgeColor * weight;
+			m_edgeSize += val.m_edgeSize * weight;
+			m_textureFactor += val.m_textureFactor * weight;
+			m_spTextureFactor += val.m_spTextureFactor * weight;
+			m_toonTextureFactor += val.m_toonTextureFactor * weight;
+		}
+
+		glm::vec3	m_diffuse;
+		float		m_alpha;
+		glm::vec3	m_specular;
+		float		m_specularPower;
+		glm::vec3	m_ambient;
+		glm::vec4	m_edgeColor;
+		float		m_edgeSize;
+		glm::vec4	m_textureFactor;
+		glm::vec4	m_spTextureFactor;
+		glm::vec4	m_toonTextureFactor;
+	};
+
+	struct PMXModelWithoutBuffered::MaterialMorphData
+	{
+		std::vector<PMXFileMorph::MaterialMorph>	m_materialMorphs;
+
+		MaterialMorphData() = default;
+		~MaterialMorphData() = default;
+		MaterialMorphData(const MaterialMorphData&) = delete;
+		MaterialMorphData& operator=(const MaterialMorphData&) = delete;
+		MaterialMorphData(MaterialMorphData&& other) noexcept
+			: m_materialMorphs(std::move(other.m_materialMorphs)){}
+		MaterialMorphData& operator=(MaterialMorphData&& other) noexcept
+		{
+			if (this != &other)
+			{
+				m_materialMorphs = std::move(other.m_materialMorphs);
+			}
+			return *this;
+		}
+	};
+
+	struct PMXModelWithoutBuffered::BoneMorphElement
+	{
+		explicit BoneMorphElement(MMDNode* node = nullptr, const glm::vec3& position = glm::vec3{}, const glm::quat& rotate = glm::quat{})
+			: m_node(node), m_position(position), m_rotate(rotate) {}
+
+		MMDNode*	m_node;
+		glm::vec3	m_position;
+		glm::quat	m_rotate;
+	};
+
+	struct PMXModelWithoutBuffered::BoneMorphData
+	{
+		std::vector<BoneMorphElement>	m_boneMorphs;
+
+		BoneMorphData() = default;
+		~BoneMorphData() = default;
+		BoneMorphData(const BoneMorphData&) = delete;
+		BoneMorphData& operator=(const BoneMorphData&) = delete;
+		BoneMorphData(BoneMorphData&& other) noexcept : m_boneMorphs(std::move(other.m_boneMorphs)){}
+		BoneMorphData& operator=(BoneMorphData&& other) noexcept
+		{
+			if (this != &other)
+			{
+				m_boneMorphs = std::move(other.m_boneMorphs);
+			}
+			return *this;
+		}
+	};
+
+	struct PMXModelWithoutBuffered::GroupMorphData
+	{
+		std::vector<PMXFileMorph::GroupMorph>		m_groupMorphs;
+
+		GroupMorphData() = default;
+		~GroupMorphData() = default;
+		GroupMorphData(const GroupMorphData&) = delete;
+		GroupMorphData& operator=(const GroupMorphData&) = delete;
+		GroupMorphData(GroupMorphData&& other) noexcept: m_groupMorphs(std::move(other.m_groupMorphs)){}
+		GroupMorphData& operator=(GroupMorphData&& other) noexcept
+		{
+			if (this != &other)
+			{
+				m_groupMorphs = std::move(other.m_groupMorphs);
+			}
+			return *this;
+		}
+	};
+
 	PMXModelWithoutBuffered::PMXModelWithoutBuffered() = default;
 
 	PMXModelWithoutBuffered::~PMXModelWithoutBuffered()
@@ -438,6 +584,44 @@ namespace saba
 		return true;
 	}
 
+	void PMXModelWithoutBuffered::Morph(const PMXMorph* morph, float weight)
+	{
+		std::stack<std::pair<const PMXMorph*, float>> morphStack;
+		morphStack.emplace(morph, weight);
+
+		while (!morphStack.empty())
+		{
+			auto [currentMorph, currentWeight] = morphStack.top();
+			morphStack.pop();
+
+			switch (currentMorph->m_morphType)
+			{
+			case MorphType::Material:
+				MorphMaterial(m_materialMorphDatas[currentMorph->m_dataIndex], currentWeight);
+				break;
+			case MorphType::Bone:
+				MorphBone(m_boneMorphDatas[currentMorph->m_dataIndex], currentWeight);
+				break;
+			case MorphType::Group:
+				{
+					const auto& [m_groupMorphs] = m_groupMorphDatas[currentMorph->m_dataIndex];
+					for (const auto& [m_morphIndex, m_weight] : m_groupMorphs)
+					{
+						if (m_morphIndex == -1)
+						{
+							continue;
+						}
+						auto& elemMorph = (*m_morphMan.GetMorphs())[m_morphIndex];
+						morphStack.emplace(elemMorph.get(), m_weight * currentWeight);
+					}
+					break;
+				}
+			default:
+				break;
+			}
+		}
+	}
+
 	void PMXModelWithoutBuffered::LoadMorph(const PMXFile& file)
 	{
 		// Process morphs
@@ -467,16 +651,33 @@ namespace saba
 			case PMXMorphType::Material:
 				{
 					pmxMorph->m_morphType = MorphType::Material;
+					auto& morphData = m_materialMorphDatas.emplace_back();
+					morphData.m_materialMorphs = morph.m_materialMorph;
+					pmxMorph->m_dataIndex = m_materialMorphDatas.size() - 1;
 				}
 				break;
 			case PMXMorphType::Bone:
 				{
 					pmxMorph->m_morphType = MorphType::Bone;
+					auto& morphData = m_boneMorphDatas.emplace_back();
+					morphData.m_boneMorphs.reserve(morph.m_boneMorph.size());
+					for (const auto& bone : morph.m_boneMorph)
+					{
+						if (bone.m_boneIndex != -1)
+						{
+							auto* node = m_nodeMan.GetNode(bone.m_boneIndex);
+							morphData.m_boneMorphs.emplace_back(node, bone.m_position, bone.m_quaternion);
+						}
+					}
+					pmxMorph->m_dataIndex = m_boneMorphDatas.size() - 1;
 				}
 				break;
 			case PMXMorphType::Group:
 				{
 					pmxMorph->m_morphType = MorphType::Group;
+					auto& morphData = m_groupMorphDatas.emplace_back();
+					morphData.m_groupMorphs = morph.m_groupMorph;
+					pmxMorph->m_dataIndex = m_groupMorphDatas.size() - 1;
 				}
 				break;
 			default:
@@ -484,6 +685,134 @@ namespace saba
 				break;
 			}
 		}
+	}
+
+	void PMXModelWithoutBuffered::BeginMorphMaterial()
+	{
+		MaterialFactor initMul{
+			glm::vec3(1), 1, glm::vec3(1), 1, glm::vec3(1),
+			glm::vec4(1), 1, glm::vec4(1), glm::vec4(1), glm::vec4(1)
+		};
+
+		MaterialFactor initAdd{
+			glm::vec3(0), 0, glm::vec3(0), 0, glm::vec3(0),
+			glm::vec4(0), 0, glm::vec4(0), glm::vec4(0), glm::vec4(0)
+		};
+
+		const size_t matCount = m_materials.size();
+		for (size_t matIdx = 0; matIdx < matCount; matIdx++)
+		{
+			m_mulMaterialFactors[matIdx] = initMul;
+			m_mulMaterialFactors[matIdx].m_diffuse = m_materials[matIdx].m_diffuse;
+			m_mulMaterialFactors[matIdx].m_alpha = m_materials[matIdx].m_alpha;
+			m_mulMaterialFactors[matIdx].m_specular = m_materials[matIdx].m_specular;
+			m_mulMaterialFactors[matIdx].m_specularPower = m_materials[matIdx].m_specularPower;
+			m_mulMaterialFactors[matIdx].m_ambient = m_materials[matIdx].m_ambient;
+
+			m_addMaterialFactors[matIdx] = initAdd;
+		}
+	}
+
+	void PMXModelWithoutBuffered::EndMorphMaterial()
+	{
+		const size_t matCount = m_materials.size();
+		for (size_t matIdx = 0; matIdx < matCount; matIdx++)
+		{
+			MaterialFactor matFactor = m_mulMaterialFactors[matIdx];
+			matFactor.Add(m_addMaterialFactors[matIdx], 1.0f);
+
+			m_materials[matIdx].m_diffuse = matFactor.m_diffuse;
+			m_materials[matIdx].m_alpha = matFactor.m_alpha;
+			m_materials[matIdx].m_specular = matFactor.m_specular;
+			m_materials[matIdx].m_specularPower = matFactor.m_specularPower;
+			m_materials[matIdx].m_ambient = matFactor.m_ambient;
+			m_materials[matIdx].m_textureMulFactor = m_mulMaterialFactors[matIdx].m_textureFactor;
+			m_materials[matIdx].m_textureAddFactor = m_addMaterialFactors[matIdx].m_textureFactor;
+			m_materials[matIdx].m_spTextureMulFactor = m_mulMaterialFactors[matIdx].m_spTextureFactor;
+			m_materials[matIdx].m_spTextureAddFactor = m_addMaterialFactors[matIdx].m_spTextureFactor;
+			m_materials[matIdx].m_toonTextureMulFactor = m_mulMaterialFactors[matIdx].m_toonTextureFactor;
+			m_materials[matIdx].m_toonTextureAddFactor = m_addMaterialFactors[matIdx].m_toonTextureFactor;
+		}
+	}
+
+	void PMXModelWithoutBuffered::MorphMaterial(const MaterialMorphData & morphData, const float weight)
+	{
+		for (const auto& matMorph : morphData.m_materialMorphs)
+		{
+			if (matMorph.m_materialIndex != -1)
+			{
+				const auto mi = matMorph.m_materialIndex;
+				switch (matMorph.m_opType)
+				{
+				case saba::PMXFileMorph::MaterialMorph::OpType::Mul:
+					m_mulMaterialFactors[mi].Mul(
+						MaterialFactor(matMorph),
+						weight
+					);
+					break;
+				case saba::PMXFileMorph::MaterialMorph::OpType::Add:
+					m_addMaterialFactors[mi].Add(
+						MaterialFactor(matMorph),
+						weight
+					);
+					break;
+				default:
+					break;
+				}
+			}
+			else
+			{
+				switch (matMorph.m_opType)
+				{
+				case saba::PMXFileMorph::MaterialMorph::OpType::Mul:
+					for (size_t i = 0; i < m_materials.size(); i++)
+					{
+						m_mulMaterialFactors[i].Mul(
+							MaterialFactor(matMorph),
+							weight
+						);
+					}
+					break;
+				case saba::PMXFileMorph::MaterialMorph::OpType::Add:
+					for (size_t i = 0; i < m_materials.size(); i++)
+					{
+						m_addMaterialFactors[i].Add(
+							MaterialFactor(matMorph),
+							weight
+						);
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	void PMXModelWithoutBuffered::MorphBone(const BoneMorphData & morphData, const float weight)
+	{
+		for (const auto& [m_node, m_position, m_rotate] : morphData.m_boneMorphs)
+		{
+			const auto node = m_node;
+			glm::vec3 t = mix(glm::vec3(0), m_position, weight);
+			node->SetTranslate(node->GetTranslate() + t);
+			glm::quat q = slerp(node->GetRotate(), m_rotate, weight);
+			node->SetRotate(q);
+		}
+	}
+
+	void PMXModelWithoutBuffered::UpdateMorphAnimation()
+	{
+		// Process morphs
+		BeginMorphMaterial();
+
+		const auto& morphs = *m_morphMan.GetMorphs();
+		for (const auto & morph : morphs)
+		{
+			Morph(morph.get(), morph->GetWeight());
+		}
+
+		EndMorphMaterial();
 	}
 
 	struct PMXModel::PositionMorph
@@ -542,152 +871,6 @@ namespace saba
 		}
 	};
 
-	struct PMXModel::MaterialFactor
-	{
-		explicit MaterialFactor(
-			const glm::vec3& diffuse = glm::vec3(1),
-			const float alpha = 1,
-			const glm::vec3& specular = glm::vec3(1),
-			const float specularPower = 1,
-			const glm::vec3& ambient = glm::vec3(1),
-			const glm::vec4& edgeColor = glm::vec4(1),
-			const float edgeSize = 1,
-			const glm::vec4& textureFactor = glm::vec4(1),
-			const glm::vec4& spTextureFactor = glm::vec4(1),
-			const glm::vec4& toonTextureFactor = glm::vec4(1)
-			): m_diffuse(diffuse),
-			m_alpha(alpha),
-			m_specular(specular),
-			m_specularPower(specularPower),
-			m_ambient(ambient),
-			m_edgeColor(edgeColor),
-			m_edgeSize(edgeSize),
-			m_textureFactor(textureFactor),
-			m_spTextureFactor(spTextureFactor),
-			m_toonTextureFactor(toonTextureFactor)
-		{}
-
-		explicit MaterialFactor(const PMXFileMorph::MaterialMorph& pmxMat):
-			m_diffuse(pmxMat.m_diffuse),
-			m_alpha(pmxMat.m_diffuse.a),
-			m_specular(pmxMat.m_specular),
-			m_specularPower(pmxMat.m_specularPower),
-			m_ambient(pmxMat.m_ambient),
-			m_edgeColor(pmxMat.m_edgeColor),
-			m_edgeSize(pmxMat.m_edgeSize),
-			m_textureFactor(pmxMat.m_textureFactor),
-			m_spTextureFactor(pmxMat.m_sphereTextureFactor),
-			m_toonTextureFactor(pmxMat.m_toonTextureFactor)
-		{}
-
-		void Mul(const MaterialFactor& val, float weight)
-		{
-			m_diffuse = mix(m_diffuse, m_diffuse * val.m_diffuse, weight);
-			m_alpha = glm::mix(m_alpha, m_alpha * val.m_alpha, weight);
-			m_specular = mix(m_specular, m_specular * val.m_specular, weight);
-			m_specularPower = glm::mix(m_specularPower, m_specularPower * val.m_specularPower, weight);
-			m_ambient = mix(m_ambient, m_ambient * val.m_ambient, weight);
-			m_edgeColor = mix(m_edgeColor, m_edgeColor * val.m_edgeColor, weight);
-			m_edgeSize = glm::mix(m_edgeSize, m_edgeSize * val.m_edgeSize, weight);
-			m_textureFactor = mix(m_textureFactor, m_textureFactor * val.m_textureFactor, weight);
-			m_spTextureFactor = mix(m_spTextureFactor, m_spTextureFactor * val.m_spTextureFactor, weight);
-			m_toonTextureFactor = mix(m_toonTextureFactor, m_toonTextureFactor * val.m_toonTextureFactor, weight);
-		}
-
-		void Add(const MaterialFactor& val, float weight)
-		{
-			m_diffuse += val.m_diffuse * weight;
-			m_alpha += val.m_alpha * weight;
-			m_specular += val.m_specular * weight;
-			m_specularPower += val.m_specularPower * weight;
-			m_ambient += val.m_ambient * weight;
-			m_edgeColor += val.m_edgeColor * weight;
-			m_edgeSize += val.m_edgeSize * weight;
-			m_textureFactor += val.m_textureFactor * weight;
-			m_spTextureFactor += val.m_spTextureFactor * weight;
-			m_toonTextureFactor += val.m_toonTextureFactor * weight;
-		}
-
-		glm::vec3	m_diffuse;
-		float		m_alpha;
-		glm::vec3	m_specular;
-		float		m_specularPower;
-		glm::vec3	m_ambient;
-		glm::vec4	m_edgeColor;
-		float		m_edgeSize;
-		glm::vec4	m_textureFactor;
-		glm::vec4	m_spTextureFactor;
-		glm::vec4	m_toonTextureFactor;
-	};
-
-	struct PMXModel::MaterialMorphData
-	{
-		std::vector<PMXFileMorph::MaterialMorph>	m_materialMorphs;
-
-		MaterialMorphData() = default;
-		~MaterialMorphData() = default;
-		MaterialMorphData(const MaterialMorphData&) = delete;
-		MaterialMorphData& operator=(const MaterialMorphData&) = delete;
-		MaterialMorphData(MaterialMorphData&& other) noexcept
-			: m_materialMorphs(std::move(other.m_materialMorphs)){}
-		MaterialMorphData& operator=(MaterialMorphData&& other) noexcept
-		{
-			if (this != &other)
-			{
-				m_materialMorphs = std::move(other.m_materialMorphs);
-			}
-			return *this;
-		}
-	};
-
-	struct PMXModel::BoneMorphElement
-	{
-		explicit BoneMorphElement(MMDNode* node = nullptr, const glm::vec3& position = glm::vec3{}, const glm::quat& rotate = glm::quat{})
-			: m_node(node), m_position(position), m_rotate(rotate) {}
-
-		MMDNode*	m_node;
-		glm::vec3	m_position;
-		glm::quat	m_rotate;
-	};
-
-	struct PMXModel::BoneMorphData
-	{
-		std::vector<BoneMorphElement>	m_boneMorphs;
-
-		BoneMorphData() = default;
-		~BoneMorphData() = default;
-		BoneMorphData(const BoneMorphData&) = delete;
-		BoneMorphData& operator=(const BoneMorphData&) = delete;
-		BoneMorphData(BoneMorphData&& other) noexcept : m_boneMorphs(std::move(other.m_boneMorphs)){}
-		BoneMorphData& operator=(BoneMorphData&& other) noexcept
-		{
-			if (this != &other)
-			{
-				m_boneMorphs = std::move(other.m_boneMorphs);
-			}
-			return *this;
-		}
-	};
-
-	struct PMXModel::GroupMorphData
-	{
-		std::vector<PMXFileMorph::GroupMorph>		m_groupMorphs;
-
-		GroupMorphData() = default;
-		~GroupMorphData() = default;
-		GroupMorphData(const GroupMorphData&) = delete;
-		GroupMorphData& operator=(const GroupMorphData&) = delete;
-		GroupMorphData(GroupMorphData&& other) noexcept: m_groupMorphs(std::move(other.m_groupMorphs)){}
-		GroupMorphData& operator=(GroupMorphData&& other) noexcept
-		{
-			if (this != &other)
-			{
-				m_groupMorphs = std::move(other.m_groupMorphs);
-			}
-			return *this;
-		}
-	};
-
 	struct PMXModel::UpdateRange
 	{
 		explicit UpdateRange(size_t vertexOffset = 0, size_t vertexCount = 0)
@@ -707,20 +890,6 @@ namespace saba
 			m_morphPositions[vtxIdx] = glm::vec3(0);
 			m_morphUVs[vtxIdx] = glm::vec4(0);
 		}
-	}
-
-	void PMXModel::UpdateMorphAnimation()
-	{
-		// Process morphs
-		BeginMorphMaterial();
-
-		const auto& morphs = *m_morphMan.GetMorphs();
-		for (const auto & morph : morphs)
-		{
-			Morph(morph.get(), morph->GetWeight());
-		}
-
-		EndMorphMaterial();
 	}
 
 	void PMXModel::Update()
@@ -787,6 +956,37 @@ namespace saba
 
 		return true;
 	}
+
+	enum class PMXModel::SkinningType
+	{
+		Weight1,
+		Weight2,
+		Weight4,
+		SDEF,
+		DualQuaternion,
+	};
+
+	struct PMXModel::VertexBoneInfo
+	{
+		SkinningType	m_skinningType;
+		union
+		{
+			struct
+			{
+				int32_t	m_boneIndex[4];
+				float	m_boneWeight[4];
+			};
+			struct
+			{
+				int32_t	m_boneIndex[2];
+				float	m_boneWeight;
+
+				glm::vec3	m_sdefC;
+				glm::vec3	m_sdefR0;
+				glm::vec3	m_sdefR1;
+			} m_sdef;
+		};
+	};
 
 	bool PMXModel::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
@@ -1275,120 +1475,6 @@ namespace saba
 		for (const auto& [m_index, m_uv] : morphData.m_morphUVs)
 		{
 			m_morphUVs[m_index] += m_uv * weight;
-		}
-	}
-
-	void PMXModel::BeginMorphMaterial()
-	{
-		MaterialFactor initMul{
-			glm::vec3(1), 1, glm::vec3(1), 1, glm::vec3(1),
-			glm::vec4(1), 1, glm::vec4(1), glm::vec4(1), glm::vec4(1)
-		};
-
-		MaterialFactor initAdd{
-			glm::vec3(0), 0, glm::vec3(0), 0, glm::vec3(0),
-			glm::vec4(0), 0, glm::vec4(0), glm::vec4(0), glm::vec4(0)
-		};
-
-		const size_t matCount = m_materials.size();
-		for (size_t matIdx = 0; matIdx < matCount; matIdx++)
-		{
-			m_mulMaterialFactors[matIdx] = initMul;
-			m_mulMaterialFactors[matIdx].m_diffuse = m_materials[matIdx].m_diffuse;
-			m_mulMaterialFactors[matIdx].m_alpha = m_materials[matIdx].m_alpha;
-			m_mulMaterialFactors[matIdx].m_specular = m_materials[matIdx].m_specular;
-			m_mulMaterialFactors[matIdx].m_specularPower = m_materials[matIdx].m_specularPower;
-			m_mulMaterialFactors[matIdx].m_ambient = m_materials[matIdx].m_ambient;
-
-			m_addMaterialFactors[matIdx] = initAdd;
-		}
-	}
-
-	void PMXModel::EndMorphMaterial()
-	{
-		const size_t matCount = m_materials.size();
-		for (size_t matIdx = 0; matIdx < matCount; matIdx++)
-		{
-			MaterialFactor matFactor = m_mulMaterialFactors[matIdx];
-			matFactor.Add(m_addMaterialFactors[matIdx], 1.0f);
-
-			m_materials[matIdx].m_diffuse = matFactor.m_diffuse;
-			m_materials[matIdx].m_alpha = matFactor.m_alpha;
-			m_materials[matIdx].m_specular = matFactor.m_specular;
-			m_materials[matIdx].m_specularPower = matFactor.m_specularPower;
-			m_materials[matIdx].m_ambient = matFactor.m_ambient;
-			m_materials[matIdx].m_textureMulFactor = m_mulMaterialFactors[matIdx].m_textureFactor;
-			m_materials[matIdx].m_textureAddFactor = m_addMaterialFactors[matIdx].m_textureFactor;
-			m_materials[matIdx].m_spTextureMulFactor = m_mulMaterialFactors[matIdx].m_spTextureFactor;
-			m_materials[matIdx].m_spTextureAddFactor = m_addMaterialFactors[matIdx].m_spTextureFactor;
-			m_materials[matIdx].m_toonTextureMulFactor = m_mulMaterialFactors[matIdx].m_toonTextureFactor;
-			m_materials[matIdx].m_toonTextureAddFactor = m_addMaterialFactors[matIdx].m_toonTextureFactor;
-		}
-	}
-
-	void PMXModel::MorphMaterial(const MaterialMorphData & morphData, const float weight)
-	{
-		for (const auto& matMorph : morphData.m_materialMorphs)
-		{
-			if (matMorph.m_materialIndex != -1)
-			{
-				const auto mi = matMorph.m_materialIndex;
-				switch (matMorph.m_opType)
-				{
-				case saba::PMXFileMorph::MaterialMorph::OpType::Mul:
-					m_mulMaterialFactors[mi].Mul(
-						MaterialFactor(matMorph),
-						weight
-					);
-					break;
-				case saba::PMXFileMorph::MaterialMorph::OpType::Add:
-					m_addMaterialFactors[mi].Add(
-						MaterialFactor(matMorph),
-						weight
-					);
-					break;
-				default:
-					break;
-				}
-			}
-			else
-			{
-				switch (matMorph.m_opType)
-				{
-				case saba::PMXFileMorph::MaterialMorph::OpType::Mul:
-					for (size_t i = 0; i < m_materials.size(); i++)
-					{
-						m_mulMaterialFactors[i].Mul(
-							MaterialFactor(matMorph),
-							weight
-						);
-					}
-					break;
-				case saba::PMXFileMorph::MaterialMorph::OpType::Add:
-					for (size_t i = 0; i < m_materials.size(); i++)
-					{
-						m_addMaterialFactors[i].Add(
-							MaterialFactor(matMorph),
-							weight
-						);
-					}
-					break;
-				default:
-					break;
-				}
-			}
-		}
-	}
-
-	void PMXModel::MorphBone(const BoneMorphData & morphData, const float weight)
-	{
-		for (const auto& [m_node, m_position, m_rotate] : morphData.m_boneMorphs)
-		{
-			const auto node = m_node;
-			glm::vec3 t = mix(glm::vec3(0), m_position, weight);
-			node->SetTranslate(node->GetTranslate() + t);
-			glm::quat q = slerp(node->GetRotate(), m_rotate, weight);
-			node->SetRotate(q);
 		}
 	}
 

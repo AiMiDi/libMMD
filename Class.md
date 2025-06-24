@@ -70,8 +70,6 @@ class PMXModelWithoutBuffed
 -- Model Unique --
 +{abstract}void Destroy()
 + bool LoadPMX(const saba::PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
-+enum class SkinningType
-+struct VertexBoneInfo
 -- Manager Interface --
 +MMDNodeManager* GetNodeManager()
 +MMDIKManager* GetIKManager()
@@ -91,9 +89,15 @@ class PMXModelWithoutBuffed
 +void UpdateNodeAnimation(bool afterPhysicsAnim)
 +void ResetPhysics()
 +void UpdatePhysicsAnimation(float elapsed)
++void UpdateMorphAnimation()
 -- protected --
 #enum class MorphType
 #class PMXMorph
+#struct MaterialFactor
+#struct MaterialMorphData
+#struct BoneMorphElement
+#struct BoneMorphData
+#struct GroupMorphData
 #std::vector<MMDMaterial>	m_materials
 #std::vector<MMDSubMesh>	m_subMeshes
 #std::vector<PMXNode*>		m_sortedNodes
@@ -101,6 +105,17 @@ class PMXModelWithoutBuffed
 #MMDIKManagerT<MMDIkSolver>	m_ikSolverMan
 #MMDMorphManagerT<PMXMorph>	m_morphMan
 #MMDPhysicsManager			m_physicsMan
+#std::vector<MaterialMorphData>	m_materialMorphDatas
+#std::vector<BoneMorphData>		m_boneMorphDatas
+#std::vector<GroupMorphData>		m_groupMorphDatas
+.. Material Morph ..
+#std::vector<MMDMaterial>	m_initMaterials
+#std::vector<MaterialFactor>	m_mulMaterialFactors
+#std::vector<MaterialFactor>	m_addMaterialFactors
+#void BeginMorphMaterial()
+#void EndMorphMaterial()
+#void MorphMaterial(const MaterialMorphData& morphData, float weight)
+#{static} void MorphBone(const BoneMorphData& morphData, float weight)
 #{abstract} void LoadMorph(const PMXFile& file)
 }
 class PMDModelWithoutBuffed
@@ -158,7 +173,6 @@ class PMXModel
 +const void* GetIndices() const
 -- Animation --
 +void Update()
-+void UpdateMorphAnimation()
 +void SetParallelUpdateHint(uint32_t parallelCount)
 -- private --
 .. Buffer ..
@@ -180,34 +194,20 @@ class PMXModel
 -struct PositionMorphData
 -struct UVMorph
 -struct UVMorphData
--struct MaterialFactor
--struct MaterialMorphData
--struct BoneMorphElement
--struct BoneMorphData
--struct GroupMorphData
 -struct UpdateRange
+-enum class SkinningType
+-struct VertexBoneInfo
 -std::vector<PositionMorphData>	m_positionMorphDatas
 -std::vector<UVMorphData>		m_uvMorphDatas
--std::vector<MaterialMorphData>	m_materialMorphDatas
--std::vector<BoneMorphData>		m_boneMorphDatas
--std::vector<GroupMorphData>		m_groupMorphDatas
 -void Update(const UpdateRange& range)
 -void SetupParallelUpdate()
 -void Morph(const PMXMorph* morph, float weight)
 -void MorphPosition(const PositionMorphData& morphData, float weight)
 -void MorphUV(const UVMorphData& morphData, float weight)
--void BeginMorphMaterial()
--void EndMorphMaterial()
--void MorphMaterial(const MaterialMorphData& morphData, float weight)
--static void MorphBone(const BoneMorphData& morphData, float weight)
 -void LoadMorph(const PMXFile& file)
 .. Position Morph .
 -std::vector<glm::vec3>	m_morphPositions
 -std::vector<glm::vec4>	m_morphUVs
-.. Material Morph ..
--std::vector<MMDMaterial>	m_initMaterials
--std::vector<MaterialFactor>	m_mulMaterialFactors
--std::vector<MaterialFactor>	m_addMaterialFactors
 .. Parallel Update ..
 -uint32_t							m_parallelUpdateCount
 -std::vector<UpdateRange>			m_updateRanges
