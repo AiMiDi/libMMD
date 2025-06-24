@@ -73,7 +73,7 @@ namespace saba
 		 * @param model The MMD model.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const std::shared_ptr<MMDModelWithoutBuffed>& model);
+		bool Create(const std::shared_ptr<MMDModelWithoutBuffered>& model);
 
 		/**
 		 * @brief Add a VMD file to the animation.
@@ -113,7 +113,7 @@ namespace saba
 		using IKControllerPtr = std::unique_ptr<VMDIKController>;
 		using MorphControllerPtr = std::unique_ptr<VMDMorphController>;
 
-		std::shared_ptr<MMDModelWithoutBuffed>			m_model; ///< The MMD model
+		std::shared_ptr<MMDModelWithoutBuffered>			m_model; ///< The MMD model
 		std::vector<NodeControllerPtr>		m_nodeControllers; ///< Node controllers
 		std::vector<IKControllerPtr>		m_ikControllers; ///< IK controllers
 		std::vector<MorphControllerPtr>		m_morphControllers; ///< Morph controllers

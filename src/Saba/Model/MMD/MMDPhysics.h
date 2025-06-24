@@ -28,7 +28,7 @@ class btThreads;
 namespace saba
 {
 	class MMDPhysics;
-	class MMDModelWithoutBuffed;
+	class MMDModelWithoutBuffered;
 	class MMDNode;
 
 	class MMDMotionState;
@@ -51,7 +51,7 @@ namespace saba
 		 * @param node Pointer to the MMD node.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const PMDRigidBodyExt& pmdRigidBody, MMDModelWithoutBuffed* model, MMDNode* node);
+		bool Create(const PMDRigidBodyExt& pmdRigidBody, MMDModelWithoutBuffered* model, MMDNode* node);
 		/**
 		 * @brief Create a rigid body from PMX data.
 		 * @param pmxRigidBody PMX rigid body data.
@@ -59,7 +59,7 @@ namespace saba
 		 * @param node Pointer to the MMD node.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const PMXRigidbody& pmxRigidBody, MMDModelWithoutBuffed* model, MMDNode* node);
+		bool Create(const PMXRigidbody& pmxRigidBody, MMDModelWithoutBuffered* model, MMDNode* node);
 		/**
 		 * @brief Destroy the rigid body.
 		 */

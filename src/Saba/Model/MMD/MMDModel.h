@@ -244,10 +244,10 @@ namespace saba
 	/**
 	 * @brief Represents an MMD model.
 	 */
-	class MMDModelWithoutBuffed
+	class MMDModelWithoutBuffered
 	{
 	public:
-		virtual ~MMDModelWithoutBuffed() = default;
+		virtual ~MMDModelWithoutBuffered() = default;
 
 		/**
 		 * @brief Get the node manager.
@@ -623,7 +623,7 @@ namespace saba
 		};
 	};
 
-	class MMDModel : virtual public MMDModelWithoutBuffed
+	class MMDModel : virtual public MMDModelWithoutBuffered
 	{
 	public:
 		/**
@@ -696,6 +696,21 @@ namespace saba
 		 * @param parallelCount The number of parallel updates.
 		 */
 		virtual void SetParallelUpdateHint(uint32_t parallelCount) = 0;
+
+		/**
+		 * @brief Get the minimum bounding box of the model.
+		 * @return The minimum bounding box.
+		 */
+		const glm::vec3& GetBBoxMin() const { return m_bboxMin; }
+
+		/**
+		 * @brief Get the maximum bounding box of the model.
+		 * @return The maximum bounding box.
+		 */
+		const glm::vec3& GetBBoxMax() const { return m_bboxMax; }
+	protected:
+		glm::vec3		m_bboxMin = glm::vec3(0); ///< Minimum bounding box
+		glm::vec3		m_bboxMax = glm::vec3(0); ///< Maximum bounding box
 	};
 }
 

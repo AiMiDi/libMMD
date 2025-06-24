@@ -1,6 +1,8 @@
 # Class
 
-![Class.png](Class.svg)
+![Class](Class.svg)
+
+![Class2](Class2.svg)
 
 ```plantuml
 @startuml
@@ -41,6 +43,11 @@ interface MMDModelWithoutBuffed
 }
 interface MMDModel
 {
+-- Model Universal --
+#glm::vec3 m_bboxMin
+#glm::vec3 m_bboxMax
++const glm::vec3& GetBBoxMin() const
++const glm::vec3& GetBBoxMax() const
 -- Buffer Interface --
 +{abstract} size_t GetVertexCount() const
 +{abstract} const glm::vec3* GetPositions() const
@@ -101,7 +108,8 @@ class PMDModelWithoutBuffed
 -- Model Universal --
 + bool Load(const std::string& filepath, const std::string& mmdDataDir)
 -- Model Unique --
-+ bool LoadPMD(const saba::PMDFile& file, const std::string& mmdDataDir)
++ {abstract} void Destroy()
++ {abstract} bool LoadPMD(const saba::PMDFile& file, const std::string& mmdDataDir)
 -- Manager Interface --
 +MMDNodeManager* GetNodeManager()
 +MMDIKManager* GetIKManager()
@@ -118,17 +126,25 @@ class PMDModelWithoutBuffed
 +void UpdateAllAnimation(const VMDAnimation* vmdAnim, float vmdFrame, float physicsElapsed)
 +void BeginAnimation()
 +void EndAnimation()
-+void UpdateMorphAnimation()
 +void UpdateNodeAnimation(bool afterPhysicsAnim)
 +void ResetPhysics()
 +void UpdatePhysicsAnimation(float elapsed)
+-- protected --
+#struct MorphVertex
+#class PMDMorph
+#MMDNodeManagerT<MMDNode>	m_nodeMan
+#MMDIKManagerT<MMDIkSolver>	m_ikSolverMan
+#MMDMorphManagerT<PMDMorph>	m_morphMan
+#MMDPhysicsManager			m_physicsMan
+#std::vector<MMDMaterial>	m_materials
+#std::vector<MMDSubMesh>		m_subMeshes
+#{abstract} void LoadMorph(const PMDFile& file)
 }
 class PMXModel
 {
 -- Model Unique --
-+void Destroy()
-+const glm::vec3& GetBBoxMin() const
-+const glm::vec3& GetBBoxMax() const
++ void Destroy()
++ bool LoadPMX(const saba::PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 -- Buffer Interface --
 +size_t GetVertexCount() const
 +const glm::vec3* GetPositions() const
@@ -188,7 +204,7 @@ class PMXModel
 .. Position Morph .
 -std::vector<glm::vec3>	m_morphPositions
 -std::vector<glm::vec4>	m_morphUVs
-.. マテリアルMorph ..
+.. Material Morph ..
 -std::vector<MMDMaterial>	m_initMaterials
 -std::vector<MaterialFactor>	m_mulMaterialFactors
 -std::vector<MaterialFactor>	m_addMaterialFactors
@@ -199,6 +215,9 @@ class PMXModel
 }
 class PMDModel
 {
+-- Model Unique --
++void Destroy()
++ bool LoadPMD(const saba::PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 -- Buffer Interface --
 +size_t GetVertexCount() const
 +const glm::vec3* GetPositions() const
@@ -213,6 +232,21 @@ class PMDModel
 -- Animation --
 + void Update()
 +void SetParallelUpdateHint(uint32_t parallelCount)
+-- private --
+.. Buffer ..
+-std::vector<glm::vec3>	m_positions
+-std::vector<glm::vec3>	m_normals
+-std::vector<glm::vec2>	m_uvs
+-std::vector<glm::ivec2> m_bones
+-std::vector<glm::vec2>	m_boneWeights
+-std::vector<uint16_t> m_indices
+.. Update Buffer ..
+-std::vector<glm::vec3>	m_updatePositions
+-std::vector<glm::vec3>	m_updateNormals
+-std::vector<glm::mat4>	m_transforms
+.. Morph ..
+-PMDMorph m_baseMorph
+-void LoadMorph(const PMDFile& file)
 }
 
 MMDModelWithoutBuffed<|--MMDModel
@@ -223,4 +257,82 @@ PMDModelWithoutBuffed<|--PMDModel
 MMDModel<|..PMDModel
 MMDModelWithoutBuffed<|..PMDModelWithoutBuffed
 @enduml
+```
+
+```plantuml
+@startuml
+interface MMDNodeManager
+{
++static constexpr size_t NPos
++{abstract}size_t GetNodeCount()
++{abstract}size_t FindNodeIndex(const std::string& name)
++{abstract}MMDNode* GetMMDNode(size_t idx)
++MMDNode* GetMMDNode(const std::string& nodeName)
+}
+interface MMDIKManager
+{
++static constexpr size_t NPos
++{abstract}size_t GetIKSolverCount()
++{abstract}size_t FindIKSolverIndex(const std::string& name)
++{abstract}MMDIkSolver* GetMMDIKSolver(size_t idx)
++MMDIkSolver* GetMMDIKSolver(const std::string& ikName)
+}
+interface MMDMorphManager
+{
++static constexpr size_t NPos
++{abstract}size_t GetMorphCount()
++{abstract}size_t FindMorphIndex(const std::string& name)
++{abstract}MMDMorph* GetMorph(size_t idx)
++MMDMorph* GetMorph(const std::string& name)
+}
+class MMDPhysicsManager
+{
++type RigidBodyPtr
++type JointPtr
++bool Create()
++MMDPhysics* GetMMDPhysics()
++MMDRigidBody* AddRigidBody()
++std::vector<RigidBodyPtr>* GetRigidBodys()
++MMDJoint* AddJoint()
++std::vector<JointPtr>* GetJoints()
+-std::unique_ptr<MMDPhysics> m_mmdPhysics
+-std::vector<RigidBodyPtr> m_rigidBodys
+-std::vector<JointPtr> m_joints
+}
+class MMDNodeManagerT<NodeType>
+{
++type NodePtr
++size_t GetNodeCount()
++size_t FindNodeIndex(const std::string& name)
++MMDNode* GetMMDNode(size_t idx)
++NodeType* AddNode()
++NodeType* GetNode(size_t i)
++std::vector<NodePtr>* GetNodes()
+-std::vector<NodePtr>	m_nodes
+}
+class MMDIKManagerT<IKSolverType>
+{
++type IKSolverPtr
++size_t GetIKSolverCount()
++size_t FindIKSolverIndex(const std::string& name)
++MMDIkSolver* GetMMDIKSolver(size_t idx)
++IKSolverType* AddIKSolver()
++IKSolverType* GetIKSolver(size_t i)
++std::vector<IKSolverPtr>* GetIKSolvers()
+-std::vector<IKSolverPtr>	m_ikSolvers
+}
+class MMDMorphManagerT<MorphType>
+{
++type MorphPtr
++size_t GetMorphCount()
++size_t FindMorphIndex(const std::string& name)
++MMDMorph* GetMorph(size_t idx)
++MorphType* AddMorph()
++std::vector<MorphPtr>* GetMorphs()
+}
+MMDNodeManager<|--MMDNodeManagerT
+MMDIKManager<|--MMDIKManagerT
+MMDMorphManager<|--MMDMorphManagerT
+  @enduml
+  
 ```

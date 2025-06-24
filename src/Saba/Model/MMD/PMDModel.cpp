@@ -45,7 +45,7 @@ namespace saba
 		}
 	}
 
-	struct PMDModel::MorphVertex
+	struct PMDModelWithoutBuffered::MorphVertex
 	{
 		uint32_t	m_index;
 		glm::vec3	m_position;
@@ -55,7 +55,15 @@ namespace saba
 			, m_position(position){}
 	};
 
-	void PMDModel::InitializeAnimation()
+	PMDModelWithoutBuffered::~PMDModelWithoutBuffered()
+	{
+		m_materials.clear();
+		m_subMeshes.clear();
+		m_nodeMan.GetNodes()->clear();
+		m_morphMan.GetMorphs()->clear();
+	}
+
+	void PMDModelWithoutBuffered::InitializeAnimation()
 	{
 		ClearBaseAnimation();
 
@@ -92,7 +100,7 @@ namespace saba
 		ResetPhysics();
 	}
 
-	void PMDModel::BeginAnimation()
+	void PMDModelWithoutBuffered::BeginAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -100,7 +108,7 @@ namespace saba
 		}
 	}
 
-	void PMDModel::EndAnimation()
+	void PMDModelWithoutBuffered::EndAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -108,11 +116,7 @@ namespace saba
 		}
 	}
 
-	void PMDModel::UpdateMorphAnimation()
-	{
-	}
-
-	void PMDModel::UpdateNodeAnimation(const bool afterPhysicsAnim)
+	void PMDModelWithoutBuffered::UpdateNodeAnimation(const bool afterPhysicsAnim)
 	{
 		if (afterPhysicsAnim)
 		{
@@ -138,7 +142,7 @@ namespace saba
 		}
 	}
 
-	void PMDModel::ResetPhysics()
+	void PMDModelWithoutBuffered::ResetPhysics()
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -180,7 +184,7 @@ namespace saba
 		}
 	}
 
-	void PMDModel::UpdatePhysicsAnimation(const float elapsed)
+	void PMDModelWithoutBuffered::UpdatePhysicsAnimation(const float elapsed)
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -214,6 +218,277 @@ namespace saba
 				node->UpdateGlobalTransform();
 			}
 		}
+	}
+
+	bool PMDModelWithoutBuffered::Load(const std::string& filepath, const std::string& mmdDataDir)
+	{
+		Destroy();
+
+		PMDFile pmd;
+		if (!ReadPMDFile(&pmd, filepath.c_str()))
+		{
+			return false;
+		}
+
+		if (!LoadPMD(pmd, PathUtil::GetDirectoryName(filepath), mmdDataDir))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	bool PMDModelWithoutBuffered::LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	{
+		m_modelName = file.m_header.m_modelName.ToUtf8String();
+		m_comment = file.m_header.m_comment.ToUtf8String();
+		if(file.m_header.m_haveEnglishNameExt)
+		{
+			m_englishModelName = file.m_header.m_englishModelNameExt.ToUtf8String();
+
+			m_englishComment = file.m_header.m_englishCommentExt.ToUtf8String();
+		}
+
+		std::vector<std::string> toonTextures;
+		toonTextures.reserve(file.m_toonTextureNames.size());
+		for (const auto& toonTexName : file.m_toonTextureNames)
+		{
+			toonTextures.emplace_back(
+				ResolveToonTexturePath(
+				mmdDataDir,
+				dirPath,
+				toonTexName.ToUtf8String()
+				));
+		}
+
+		// Material
+		m_materials.reserve(file.m_materials.size());
+		m_subMeshes.reserve(file.m_materials.size());
+		uint32_t beginIndex = 0;
+		for (const auto& [m_diffuse, m_alpha, m_specularPower, m_specular, m_ambient, m_toonIndex, m_edgeFlag, m_faceVertexCount, m_textureName] : file.m_materials)
+		{
+			MMDMaterial mat;
+			mat.m_diffuse = m_diffuse;
+			mat.m_alpha = m_alpha;
+			mat.m_specularPower = m_specularPower;
+			mat.m_specular = m_specular;
+			mat.m_ambient = m_ambient;
+			mat.m_edgeFlag = m_edgeFlag;
+			mat.m_edgeSize = m_edgeFlag == 0 ? 0.0f : 1.0f;
+			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
+			mat.m_bothFace = false;
+
+			std::string orgTexName = m_textureName.ToUtf8String();
+			std::string texName;
+			std::string spTexName;
+			if (auto asterPos = orgTexName.find_first_of('*'); asterPos == std::string::npos)
+			{
+				if (std::string ext = PathUtil::GetExt(orgTexName); ext == "sph")
+				{
+					spTexName = orgTexName;
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
+				}
+				else if (ext == "spa")
+				{
+					spTexName = orgTexName;
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
+				}
+				else
+				{
+					texName = orgTexName;
+				}
+			}
+			else
+			{
+				texName = orgTexName.substr(0, asterPos);
+				spTexName = orgTexName.substr(asterPos + 1);
+				if (std::string ext = PathUtil::GetExt(spTexName); ext == "sph")
+				{
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
+				}
+				else if (ext == "spa")
+				{
+					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
+				}
+			}
+
+			if (!texName.empty())
+			{
+				std::string texPath = PathUtil::Combine(dirPath, texName);
+				mat.m_texture = PathUtil::Normalize(texPath);
+			}
+
+			if (!spTexName.empty())
+			{
+				std::string spTexPath = PathUtil::Combine(dirPath, spTexName);
+				mat.m_spTexture = PathUtil::Normalize(spTexPath);
+			}
+
+			if (m_toonIndex != 255)
+			{
+				mat.m_toonTexture = toonTextures[m_toonIndex];
+			}
+
+			m_materials.emplace_back(mat);
+			m_subMeshes.emplace_back(static_cast<int>(beginIndex),
+				static_cast<int>(m_faceVertexCount),
+				static_cast<int>(m_materials.size() - 1));
+
+			beginIndex = beginIndex + m_faceVertexCount;
+		}
+
+		LoadMorph(file);
+
+		// Node
+		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
+		for (const auto& bone : file.m_bones)
+		{
+			auto* node = m_nodeMan.AddNode();
+			node->SetName(bone.m_boneName.ToUtf8String());
+		}
+		for (size_t i = 0; i < file.m_bones.size(); i++)
+		{
+			const auto& [m_boneName, m_parent, m_tail, m_boneType, m_ikParent, m_position, m_englishBoneNameExt] = file.m_bones[i];
+			auto* node = m_nodeMan.GetNode(i);
+			if (m_parent != 0xFFFF)
+			{
+				const auto& parentBone = file.m_bones[m_parent];
+				auto* parentNode = m_nodeMan.GetNode(m_parent);
+				parentNode->AddChild(node);
+				glm::vec3 localPos = m_position - parentBone.m_position;
+				localPos.z *= -1;
+
+				node->SetTranslate(localPos);
+			}
+			else
+			{
+				glm::vec3 localPos = m_position;
+				localPos.z *= -1;
+
+				node->SetTranslate(localPos);
+			}
+			glm::mat4 init = translate(
+				glm::mat4(1),
+				m_position * glm::vec3(1, 1, -1)
+			);
+			node->SetGlobalTransform(init);
+			node->CalculateInverseInitTransform();
+			node->SaveInitialTRS();
+		}
+
+		// IK
+		m_ikSolverMan.GetIKSolvers()->reserve(file.m_iks.size());
+		for (const auto& [m_ikNode, m_ikTarget, m_numChain, m_numIteration, m_rotateLimit, m_chanins] : file.m_iks)
+		{
+			auto solver = m_ikSolverMan.AddIKSolver();
+			auto* ikNode = m_nodeMan.GetNode(m_ikNode);
+			solver->SetIKNode(ikNode);
+
+			auto* targetNode = m_nodeMan.GetNode(m_ikTarget);
+			solver->SetTargetNode(targetNode);
+
+			for (const auto& chain : m_chanins)
+			{
+				auto* chainNode = m_nodeMan.GetNode(chain);
+				auto findPos = chainNode->GetName().find(u8"ひざ");
+				bool isKnee = false;
+				if (findPos != std::string::npos)
+				{
+					isKnee = true;
+				}
+				solver->AddIKChain(chainNode, isKnee);
+				chainNode->EnableIK(true);
+			}
+
+			solver->SetIterateCount(m_numIteration);
+			solver->SetLimitAngle(m_rotateLimit * 4.0f);
+		}
+
+		if (!m_physicsMan.Create())
+		{
+			SABA_ERROR("Create Physics Fail.");
+			return false;
+		}
+
+		for (const auto& pmdRB : file.m_rigidBodies)
+		{
+			auto rb = m_physicsMan.AddRigidBody();
+			MMDNode* node = nullptr;
+			if (pmdRB.m_boneIndex != 0xFFFF)
+			{
+				node = m_nodeMan.GetMMDNode(pmdRB.m_boneIndex);
+			}
+			if (!rb->Create(pmdRB, this, node))
+			{
+				SABA_ERROR("Create Rigid Body Fail.\n");
+				return false;
+			}
+			m_physicsMan.GetMMDPhysics()->AddRigidBody(rb);
+		}
+
+		for (const auto& pmdJoint : file.m_joints)
+		{
+			if (pmdJoint.m_rigidBodyA != -1 &&
+				pmdJoint.m_rigidBodyB != -1 &&
+				pmdJoint.m_rigidBodyA != pmdJoint.m_rigidBodyB)
+			{
+				auto joint = m_physicsMan.AddJoint();
+				auto rigidBodys = m_physicsMan.GetRigidBodys();
+				bool ret = joint->CreateJoint(
+					pmdJoint,
+					(*rigidBodys)[pmdJoint.m_rigidBodyA].get(),
+					(*rigidBodys)[pmdJoint.m_rigidBodyB].get()
+				);
+				if (!ret)
+				{
+					SABA_ERROR("Create Joint Fail.\n");
+					return false;
+				}
+				m_physicsMan.GetMMDPhysics()->AddJoint(joint);
+			}
+			else
+			{
+				SABA_WARN("Illegal Joint [{}]", pmdJoint.m_jointName.ToUtf8String());
+			}
+		}
+
+		ResetPhysics();
+
+		return true;
+	}
+
+	void PMDModelWithoutBuffered::Destroy()
+	{
+		m_materials.clear();
+		m_subMeshes.clear();
+		m_nodeMan.GetNodes()->clear();
+		m_morphMan.GetMorphs()->clear();
+	}
+
+	void PMDModelWithoutBuffered::LoadMorph(const PMDFile& file)
+	{
+		for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : file.m_morphs)
+		{
+			if (m_morphType != saba::PMDMorph::Base)
+			{
+				PMDMorph* morph = m_morphMan.AddMorph();
+				morph->SetName(m_morphName.ToUtf8String());
+				morph->SetWeight(0.0f);
+			}
+		}
+	}
+
+	PMDModel::~PMDModel()
+	{
+		m_materials.clear();
+		m_subMeshes.clear();
+		m_positions.clear();
+		m_normals.clear();
+		m_uvs.clear();
+		m_bones.clear();
+		m_boneWeights.clear();
+		m_indices.clear();
+		m_nodeMan.GetNodes()->clear();
 	}
 
 	void PMDModel::Update()
@@ -289,27 +564,9 @@ namespace saba
 		}
 	}
 
-	bool PMDModel::Load(const std::string& filepath, const std::string& mmdDataDir)
+	bool PMDModel::LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
-		Destroy();
-
-		PMDFile pmd;
-		if (!ReadPMDFile(&pmd, filepath.c_str()))
-		{
-			return false;
-		}
-
-		m_modelName = pmd.m_header.m_modelName.ToUtf8String();
-		m_comment = pmd.m_header.m_comment.ToUtf8String();
-		if(pmd.m_header.m_haveEnglishNameExt)
-		{
-			m_englishModelName = pmd.m_header.m_englishModelNameExt.ToUtf8String();
-			m_englishComment = pmd.m_header.m_englishCommentExt.ToUtf8String();
-		}
-
-		std::string dirPath = PathUtil::GetDirectoryName(filepath);
-
-		size_t vertexCount = pmd.m_vertices.size();
+		size_t vertexCount = file.m_vertices.size();
 		m_positions.reserve(vertexCount);
 		m_normals.reserve(vertexCount);
 		m_uvs.reserve(vertexCount);
@@ -317,7 +574,7 @@ namespace saba
 		m_boneWeights.reserve(vertexCount);
 		m_bboxMax = glm::vec3(-std::numeric_limits<float>::max());
 		m_bboxMin = glm::vec3(std::numeric_limits<float>::max());
-		for (const auto& [m_position, m_normal, m_uv, m_bone, m_boneWeight, m_edge] : pmd.m_vertices)
+		for (const auto& [m_position, m_normal, m_uv, m_bone, m_boneWeight, m_edge] : file.m_vertices)
 		{
 			glm::vec3 pos = m_position * glm::vec3(1, 1, -1);
 			glm::vec3 nor = m_normal * glm::vec3(1, 1, -1);
@@ -335,8 +592,8 @@ namespace saba
 		m_updatePositions.resize(m_positions.size());
 		m_updateNormals.resize(m_normals.size());
 
-		m_indices.reserve(pmd.m_faces.size() * 3);
-		for (const auto& [m_vertices] : pmd.m_faces)
+		m_indices.reserve(file.m_faces.size() * 3);
+		for (const auto& [m_vertices] : file.m_faces)
 		{
 			for (int i = 0; i < 3; i++)
 			{
@@ -345,95 +602,26 @@ namespace saba
 			}
 		}
 
-		std::vector<std::string> toonTextures;
-		toonTextures.reserve(pmd.m_toonTextureNames.size());
-		for (const auto& toonTexName : pmd.m_toonTextureNames)
-		{
-			toonTextures.emplace_back(
-				ResolveToonTexturePath(
-				mmdDataDir,
-				dirPath,
-				toonTexName.ToUtf8String()
-				));
-		}
+		m_transforms.resize(m_nodeMan.GetNodeCount());
 
-		// Materialをコピー
-		m_materials.reserve(pmd.m_materials.size());
-		m_subMeshes.reserve(pmd.m_materials.size());
-		uint32_t beginIndex = 0;
-		for (const auto& [m_diffuse, m_alpha, m_specularPower, m_specular, m_ambient, m_toonIndex, m_edgeFlag, m_faceVertexCount, m_textureName] : pmd.m_materials)
-		{
-			MMDMaterial mat;
-			mat.m_diffuse = m_diffuse;
-			mat.m_alpha = m_alpha;
-			mat.m_specularPower = m_specularPower;
-			mat.m_specular = m_specular;
-			mat.m_ambient = m_ambient;
-			mat.m_edgeFlag = m_edgeFlag;
-			mat.m_edgeSize = m_edgeFlag == 0 ? 0.0f : 1.0f;
-			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
-			mat.m_bothFace = false;
+		return PMDModelWithoutBuffered::LoadPMD(file, dirPath, mmdDataDir);
+	}
 
-			std::string orgTexName = m_textureName.ToUtf8String();
-			std::string texName;
-			std::string spTexName;
-			if (auto asterPos = orgTexName.find_first_of('*'); asterPos == std::string::npos)
-			{
-				if (std::string ext = PathUtil::GetExt(orgTexName); ext == "sph")
-				{
-					spTexName = orgTexName;
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
-				}
-				else if (ext == "spa")
-				{
-					spTexName = orgTexName;
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
-				}
-				else
-				{
-					texName = orgTexName;
-				}
-			}
-			else
-			{
-				texName = orgTexName.substr(0, asterPos);
-				spTexName = orgTexName.substr(asterPos + 1);
-				if (std::string ext = PathUtil::GetExt(spTexName); ext == "sph")
-				{
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
-				}
-				else if (ext == "spa")
-				{
-					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
-				}
-			}
+	void PMDModel::Destroy()
+	{
+		PMDModelWithoutBuffered::Destroy();
+		m_positions.clear();
+		m_normals.clear();
+		m_uvs.clear();
+		m_indices.clear();
+		m_bones.clear();
+		m_boneWeights.clear();
 
-			if (!texName.empty())
-			{
-				std::string texPath = PathUtil::Combine(dirPath, texName);
-				mat.m_texture = PathUtil::Normalize(texPath);
-			}
+	}
 
-			if (!spTexName.empty())
-			{
-				std::string spTexPath = PathUtil::Combine(dirPath, spTexName);
-				mat.m_spTexture = PathUtil::Normalize(spTexPath);
-			}
-
-			if (m_toonIndex != 255)
-			{
-				mat.m_toonTexture = toonTextures[m_toonIndex];
-			}
-
-			m_materials.emplace_back(mat);
-			m_subMeshes.emplace_back(static_cast<int>(beginIndex),
-				static_cast<int>(m_faceVertexCount),
-				static_cast<int>(m_materials.size() - 1));
-
-			beginIndex = beginIndex + m_faceVertexCount;
-		}
-
-		for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : pmd.m_morphs)
+	void PMDModel::LoadMorph(const PMDFile& file)
+	{
+		for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : file.m_morphs)
 		{
 			PMDMorph* morph;
 			if (m_morphType == saba::PMDMorph::Base)
@@ -452,140 +640,7 @@ namespace saba
 				morph->m_vertices.emplace_back(m_vertexIndex, m_position * glm::vec3(1, 1, -1));
 			}
 		}
-
-		// Nodeの作成
-		m_nodeMan.GetNodes()->reserve(pmd.m_bones.size());
-		for (const auto& bone : pmd.m_bones)
-		{
-			auto* node = m_nodeMan.AddNode();
-			node->SetName(bone.m_boneName.ToUtf8String());
-		}
-		for (size_t i = 0; i < pmd.m_bones.size(); i++)
-		{
-			const auto& [m_boneName, m_parent, m_tail, m_boneType, m_ikParent, m_position, m_englishBoneNameExt] = pmd.m_bones[i];
-			auto* node = m_nodeMan.GetNode(i);
-			if (m_parent != 0xFFFF)
-			{
-				const auto& parentBone = pmd.m_bones[m_parent];
-				auto* parentNode = m_nodeMan.GetNode(m_parent);
-				parentNode->AddChild(node);
-				glm::vec3 localPos = m_position - parentBone.m_position;
-				localPos.z *= -1;
-
-				node->SetTranslate(localPos);
-			}
-			else
-			{
-				glm::vec3 localPos = m_position;
-				localPos.z *= -1;
-
-				node->SetTranslate(localPos);
-			}
-			glm::mat4 init = translate(
-				glm::mat4(1),
-				m_position * glm::vec3(1, 1, -1)
-			);
-			node->SetGlobalTransform(init);
-			node->CalculateInverseInitTransform();
-			node->SaveInitialTRS();
-		}
-		m_transforms.resize(m_nodeMan.GetNodeCount());
-
-		// IKを作成
-		m_ikSolverMan.GetIKSolvers()->reserve(pmd.m_iks.size());
-		for (const auto& [m_ikNode, m_ikTarget, m_numChain, m_numIteration, m_rotateLimit, m_chanins] : pmd.m_iks)
-		{
-			auto solver = m_ikSolverMan.AddIKSolver();
-			auto* ikNode = m_nodeMan.GetNode(m_ikNode);
-			solver->SetIKNode(ikNode);
-
-			auto* targetNode = m_nodeMan.GetNode(m_ikTarget);
-			solver->SetTargetNode(targetNode);
-
-			for (const auto& chain : m_chanins)
-			{
-				auto* chainNode = m_nodeMan.GetNode(chain);
-				auto findPos = chainNode->GetName().find(u8"ひざ");
-				bool isKnee = false;
-				if (findPos != std::string::npos)
-				{
-					isKnee = true;
-				}
-				solver->AddIKChain(chainNode, isKnee);
-				chainNode->EnableIK(true);
-			}
-
-			solver->SetIterateCount(m_numIteration);
-			solver->SetLimitAngle(m_rotateLimit * 4.0f);
-		}
-
-		if (!m_physicsMan.Create())
-		{
-			SABA_ERROR("Create Physics Fail.");
-			return false;
-		}
-
-		for (const auto& pmdRB : pmd.m_rigidBodies)
-		{
-			auto rb = m_physicsMan.AddRigidBody();
-			MMDNode* node = nullptr;
-			if (pmdRB.m_boneIndex != 0xFFFF)
-			{
-				node = m_nodeMan.GetMMDNode(pmdRB.m_boneIndex);
-			}
-			if (!rb->Create(pmdRB, this, node))
-			{
-				SABA_ERROR("Create Rigid Body Fail.\n");
-				return false;
-			}
-			m_physicsMan.GetMMDPhysics()->AddRigidBody(rb);
-		}
-
-		for (const auto& pmdJoint : pmd.m_joints)
-		{
-			if (pmdJoint.m_rigidBodyA != -1 &&
-				pmdJoint.m_rigidBodyB != -1 &&
-				pmdJoint.m_rigidBodyA != pmdJoint.m_rigidBodyB)
-			{
-				auto joint = m_physicsMan.AddJoint();
-				auto rigidBodys = m_physicsMan.GetRigidBodys();
-				bool ret = joint->CreateJoint(
-					pmdJoint,
-					(*rigidBodys)[pmdJoint.m_rigidBodyA].get(),
-					(*rigidBodys)[pmdJoint.m_rigidBodyB].get()
-				);
-				if (!ret)
-				{
-					SABA_ERROR("Create Joint Fail.\n");
-					return false;
-				}
-				m_physicsMan.GetMMDPhysics()->AddJoint(joint);
-			}
-			else
-			{
-				SABA_WARN("Illegal Joint [{}]", pmdJoint.m_jointName.ToUtf8String());
-			}
-		}
-
-		ResetPhysics();
-
-		return true;
 	}
-
-	void PMDModel::Destroy()
-	{
-		m_materials.clear();
-		m_subMeshes.clear();
-
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_bones.clear();
-		m_boneWeights.clear();
-
-		m_indices.clear();
-
-		m_nodeMan.GetNodes()->clear();
-	}
-
 }
+
+

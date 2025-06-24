@@ -144,13 +144,13 @@ namespace saba
 	};
 
 	/**
-	 * @brief PMXModel class represents a PMX model.
+	 * @brief Represents a PMX model without buffered data.
 	 */
-	class PMXModelWithoutBuffed : public MMDModelWithoutBuffed
+	class PMXModelWithoutBuffered : public MMDModelWithoutBuffered
 	{
 	public:
-		PMXModelWithoutBuffed();
-		~PMXModelWithoutBuffed() override;
+		PMXModelWithoutBuffered();
+		~PMXModelWithoutBuffered() override;
 
 		/**
 		 * @brief Get the node manager.
@@ -307,7 +307,10 @@ namespace saba
 		virtual void LoadMorph(const PMXFile& file);
 	};
 
-	class PMXModel final : public PMXModelWithoutBuffed, public MMDModel
+	/**
+	 * @brief PMXModel class represents a PMX model.
+	 */
+	class PMXModel final : public PMXModelWithoutBuffered, public MMDModel
 	{
 	public:
 		PMXModel();
@@ -415,19 +418,6 @@ namespace saba
 		 * @return Returns true if the loading is successful, otherwise false.
 		 */
 		bool LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir) override;
-
-		/**
-		 * @brief Get the bounding box minimum coordinates.
-		 * @return Bounding box minimum coordinates.
-		 */
-		const glm::vec3& GetBBoxMin() const { return m_bboxMin; }
-
-		/**
-		 * @brief Get the bounding box maximum coordinates.
-		 * @return Bounding box maximum coordinates.
-		 */
-		const glm::vec3& GetBBoxMax() const { return m_bboxMax; }
-
 	private:
 		std::vector<glm::vec3>	m_positions;
 		std::vector<glm::vec3>	m_normals;
@@ -440,9 +430,6 @@ namespace saba
 		std::vector<char>	m_indices;
 		size_t				m_indexCount;
 		size_t				m_indexElementSize;
-
-		glm::vec3		m_bboxMin;
-		glm::vec3		m_bboxMax;
 
 		struct PositionMorph;
 		struct PositionMorphData;

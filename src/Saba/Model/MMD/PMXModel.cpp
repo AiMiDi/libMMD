@@ -24,7 +24,7 @@
 
 namespace saba
 {
-	enum class PMXModelWithoutBuffed::MorphType
+	enum class PMXModelWithoutBuffered::MorphType
 	{
 		None,
 		Position,
@@ -34,23 +34,23 @@ namespace saba
 		Group,
 	};
 
-	class PMXModelWithoutBuffed::PMXMorph : public MMDMorph
+	class PMXModelWithoutBuffered::PMXMorph : public MMDMorph
 	{
 	public:
 		MorphType	m_morphType{MorphType::None};
 		size_t		m_dataIndex{};
 	};
 
-	PMXModelWithoutBuffed::PMXModelWithoutBuffed() = default;
+	PMXModelWithoutBuffered::PMXModelWithoutBuffered() = default;
 
-	PMXModelWithoutBuffed::~PMXModelWithoutBuffed()
+	PMXModelWithoutBuffered::~PMXModelWithoutBuffered()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
 		m_nodeMan.GetNodes()->clear();
 	}
 
-	void PMXModelWithoutBuffed::InitializeAnimation()
+	void PMXModelWithoutBuffered::InitializeAnimation()
 	{
 		ClearBaseAnimation();
 
@@ -113,7 +113,7 @@ namespace saba
 		ResetPhysics();
 	}
 
-	void PMXModelWithoutBuffed::BeginAnimation()
+	void PMXModelWithoutBuffered::BeginAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -121,7 +121,7 @@ namespace saba
 		}
 	}
 
-	void PMXModelWithoutBuffed::EndAnimation()
+	void PMXModelWithoutBuffered::EndAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -129,7 +129,7 @@ namespace saba
 		}
 	}
 
-	void PMXModelWithoutBuffed::UpdateNodeAnimation(const bool afterPhysicsAnim)
+	void PMXModelWithoutBuffered::UpdateNodeAnimation(const bool afterPhysicsAnim)
 	{
 		for (const auto pmxNode : m_sortedNodes)
 		{
@@ -188,7 +188,7 @@ namespace saba
 		}
 	}
 
-	void PMXModelWithoutBuffed::ResetPhysics()
+	void PMXModelWithoutBuffered::ResetPhysics()
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -231,7 +231,7 @@ namespace saba
 		}
 	}
 
-	void PMXModelWithoutBuffed::UpdatePhysicsAnimation(const float elapsed)
+	void PMXModelWithoutBuffered::UpdatePhysicsAnimation(const float elapsed)
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -268,14 +268,14 @@ namespace saba
 		}
 	}
 
-	void PMXModelWithoutBuffed::Destroy()
+	void PMXModelWithoutBuffered::Destroy()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
 		m_nodeMan.GetNodes()->clear();
 	}
 
-	bool PMXModelWithoutBuffed::Load(const std::string& filepath, const std::string& mmdDataDir)
+	bool PMXModelWithoutBuffered::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
 		Destroy();
 
@@ -285,18 +285,15 @@ namespace saba
 			return false;
 		}
 
-		std::string dirPath = PathUtil::GetDirectoryName(filepath);
-		if (!LoadPMX(pmx, dirPath, mmdDataDir))
+		if (!LoadPMX(pmx, PathUtil::GetDirectoryName(filepath), mmdDataDir))
 		{
 			return false;
 		}
 
-		LoadMorph(pmx);
-
 		return true;
 	}
 
-	bool PMXModelWithoutBuffed::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	bool PMXModelWithoutBuffered::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
 		m_modelName = file.m_info.m_modelName;
 		m_englishModelName = file.m_info.m_englishModelName;
@@ -363,6 +360,8 @@ namespace saba
 
 			m_materials.emplace_back(std::move(mat));
 		}
+
+		LoadMorph(file);
 
 		// Create bone nodes
 		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
@@ -439,7 +438,7 @@ namespace saba
 		return true;
 	}
 
-	void PMXModelWithoutBuffed::LoadMorph(const PMXFile& file)
+	void PMXModelWithoutBuffered::LoadMorph(const PMXFile& file)
 	{
 		// Process morphs
 		for (const auto& morph : file.m_morphs)
@@ -700,7 +699,7 @@ namespace saba
 
 	void PMXModel::BeginAnimation()
 	{
-		PMXModelWithoutBuffed::BeginAnimation();
+		PMXModelWithoutBuffered::BeginAnimation();
 
 		const size_t vtxCount = m_morphPositions.size();
 		for (size_t vtxIdx = 0; vtxIdx < vtxCount; vtxIdx++)
@@ -780,7 +779,7 @@ namespace saba
 
 	bool PMXModel::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
-		if (!PMXModelWithoutBuffed::Load(filepath, mmdDataDir))
+		if (!PMXModelWithoutBuffered::Load(filepath, mmdDataDir))
 			return false;
 
 		// Set default parallel update configuration
@@ -791,7 +790,7 @@ namespace saba
 
 	bool PMXModel::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
-		if (!PMXModelWithoutBuffed::LoadPMX(file, dirPath, mmdDataDir))
+		if (!PMXModelWithoutBuffered::LoadPMX(file, dirPath, mmdDataDir))
 			return false;
 
 		// Pre-allocate memory
@@ -1393,7 +1392,7 @@ namespace saba
 		}
 	}
 
-	PMXModel::PMXModel(): m_indexCount(0), m_indexElementSize(0), m_bboxMin(0), m_bboxMax(0), m_parallelUpdateCount(0)
+	PMXModel::PMXModel(): m_indexCount(0), m_indexElementSize(0), m_parallelUpdateCount(0)
 	{
 	}
 
