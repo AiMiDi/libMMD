@@ -10,11 +10,13 @@
 #include "MMDPhysics.h"
 
 #include <Saba/Base/Path.h>
-#include <Saba/Base/File.h>
 #include <Saba/Base/Log.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/dual_quaternion.hpp>
 #include <limits>
 #include <algorithm>
 #include <sstream>
@@ -1404,7 +1406,7 @@ namespace saba
 				*updatePosition = glm::vec3(m * glm::vec4(*position + *morphPos, 1));
 				*updateNormal = glm::normalize(glm::mat3(m) * *normal);
 			}
-			*updateUV = *uv + glm::vec2((*morphUV).x, (*morphUV).y);
+			*updateUV = *uv + glm::vec2(morphUV->x, morphUV->y);
 
 			vtxInfo++;
 			position++;
