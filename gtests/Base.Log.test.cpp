@@ -10,7 +10,7 @@ class TestSink : public spdlog::sinks::sink
 public:
 	void log(const spdlog::details::log_msg& msg) override
 	{
-		m_buffer.push_back(msg.formatted.str());
+		m_buffer.emplace_back(msg.payload.data(), msg.payload.size());
 	}
 
 	void flush() override

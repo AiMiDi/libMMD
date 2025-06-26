@@ -18,7 +18,7 @@ namespace saba
 	/**
 	 * @brief Represents a PMD model without buffered data.
 	 */
-	class PMDModelWithoutBuffered : public MMDModelWithoutBuffered
+	class PMDModelWithoutBuffered : virtual public MMDModelWithoutBuffered
 	{
 	public:
 		PMDModelWithoutBuffered() = default;

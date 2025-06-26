@@ -596,7 +596,7 @@ namespace saba
 			 */
 			MMDMorph* GetMorph(size_t idx) override
 			{
-				return m_morphs[idx].get();
+				return reinterpret_cast<MMDMorph*>(m_morphs[idx].get());
 			}
 
 			/**

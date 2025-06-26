@@ -146,7 +146,7 @@ namespace saba
 	/**
 	 * @brief Represents a PMX model without buffered data.
 	 */
-	class PMXModelWithoutBuffered : public MMDModelWithoutBuffered
+	class PMXModelWithoutBuffered : virtual public MMDModelWithoutBuffered
 	{
 	public:
 		PMXModelWithoutBuffered();
