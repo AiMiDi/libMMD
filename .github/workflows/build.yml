@@ -1,0 +1,77 @@
+name: saba-build-actions
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Release, Debug]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libbullet-dev libgl1-mesa-dev libglu1-mesa-dev
+
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install cmake bullet
+
+    - name: Install dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install cmake
+        # Download and build Bullet Physics
+        git clone https://github.com/bulletphysics/bullet3.git
+        cd bullet3
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_SHARED_LIBS=OFF -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON
+        cmake --build . --config ${{ matrix.build_type }}
+        cmake --install . --prefix ../install
+        echo "BULLET_ROOT=${{ github.workspace }}/bullet3/install" >> $ENV:GITHUB_ENV
+      shell: powershell
+
+    - name: Set Bullet root for Linux/macOS
+      if: matrix.os != 'windows-latest'
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          echo "BULLET_ROOT=/usr" >> $GITHUB_ENV
+        else
+          echo "BULLET_ROOT=$(brew --prefix bullet)" >> $GITHUB_ENV
+        fi
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ env.BULLET_ROOT }} -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --config ${{ matrix.build_type }} -j 4
+
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure -C ${{ matrix.build_type }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: saba-${{ matrix.os }}-${{ matrix.build_type }}
+        path: |
+          build/src/
+          build/mmd2obj*
+        retention-days: 7
