@@ -1286,169 +1286,135 @@ namespace saba
 
 	void PMXModel::Update(const UpdateRange& range)
 	{
-		// Use aligned pointers to optimize SIMD access
-		const auto* __restrict position = m_positions.data() + range.m_vertexOffset;
-		const auto* __restrict normal = m_normals.data() + range.m_vertexOffset;
-		const auto* __restrict uv = m_uvs.data() + range.m_vertexOffset;
-		const auto* __restrict morphPos = m_morphPositions.data() + range.m_vertexOffset;
-		const auto* __restrict morphUV = m_morphUVs.data() + range.m_vertexOffset;
-		const auto* __restrict vtxInfo = m_vertexBoneInfos.data() + range.m_vertexOffset;
-		const auto* __restrict transforms = m_transforms.data();
-		auto* __restrict updatePosition = m_updatePositions.data() + range.m_vertexOffset;
-		auto* __restrict updateNormal = m_updateNormals.data() + range.m_vertexOffset;
-		auto* __restrict updateUV = m_updateUVs.data() + range.m_vertexOffset;
+		const auto* position = m_positions.data() + range.m_vertexOffset;
+		const auto* normal = m_normals.data() + range.m_vertexOffset;
+		const auto* uv = m_uvs.data() + range.m_vertexOffset;
+		const auto* morphPos = m_morphPositions.data() + range.m_vertexOffset;
+		const auto* morphUV = m_morphUVs.data() + range.m_vertexOffset;
+		const auto* vtxInfo = m_vertexBoneInfos.data() + range.m_vertexOffset;
+		const auto* transforms = m_transforms.data();
+		auto* updatePosition = m_updatePositions.data() + range.m_vertexOffset;
+		auto* updateNormal = m_updateNormals.data() + range.m_vertexOffset;
+		auto* updateUV = m_updateUVs.data() + range.m_vertexOffset;
 
-		// Prefetch data to cache
-		_mm_prefetch(reinterpret_cast<const char*>(position), _MM_HINT_T0);
-		_mm_prefetch(reinterpret_cast<const char*>(normal), _MM_HINT_T0);
-		_mm_prefetch(reinterpret_cast<const char*>(vtxInfo), _MM_HINT_T0);
-
-		// Batch process vertices
-		constexpr size_t batchSize = 4; // SIMD width
-		const size_t vectorizedCount = range.m_vertexCount / batchSize * batchSize;
-		
-		// Vectorized main loop
-		for (size_t i = 0; i < vectorizedCount; i += batchSize)
-		{
-			// Prefetch next batch of data
-			_mm_prefetch(reinterpret_cast<const char*>(position + i + batchSize), _MM_HINT_T0);
-			_mm_prefetch(reinterpret_cast<const char*>(normal + i + batchSize), _MM_HINT_T0);
-			_mm_prefetch(reinterpret_cast<const char*>(vtxInfo + i + batchSize), _MM_HINT_T0);
-
-			for (size_t j = 0; j < batchSize; ++j)
-			{
-				const size_t idx = i + j;
-				glm::mat4 m;
-				
-				// Calculate transform matrix based on skinning type
-				switch (vtxInfo[idx].m_skinningType)
-				{
-				case SkinningType::Weight1:
-					{
-						const auto i0 = vtxInfo[idx].m_boneIndex[0];
-						m = transforms[i0];
-						break;
-					}
-				case SkinningType::Weight2:
-					{
-						const auto i0 = vtxInfo[idx].m_boneIndex[0];
-						const auto i1 = vtxInfo[idx].m_boneIndex[1];
-						const auto w0 = vtxInfo[idx].m_boneWeight[0];
-						m = transforms[i0] * w0 + transforms[i1] * (1.0f - w0);
-						break;
-					}
-				case SkinningType::Weight4:
-					{
-						const auto i0 = vtxInfo[idx].m_boneIndex[0];
-						const auto i1 = vtxInfo[idx].m_boneIndex[1];
-						const auto i2 = vtxInfo[idx].m_boneIndex[2];
-						const auto i3 = vtxInfo[idx].m_boneIndex[3];
-						const auto w0 = vtxInfo[idx].m_boneWeight[0];
-						const auto w1 = vtxInfo[idx].m_boneWeight[1];
-						const auto w2 = vtxInfo[idx].m_boneWeight[2];
-						const auto w3 = vtxInfo[idx].m_boneWeight[3];
-						m = transforms[i0] * w0 + transforms[i1] * w1 + 
-							transforms[i2] * w2 + transforms[i3] * w3;
-						break;
-					}
-				default:
-					m = glm::mat4(1.0f);
-					break;
-				}
-
-				// Apply transforms
-				updatePosition[idx] = glm::vec3(m * glm::vec4(position[idx] + morphPos[idx], 1.0f));
-				updateNormal[idx] = glm::normalize(glm::mat3(m) * normal[idx]);
-				updateUV[idx] = glm::vec2(uv[idx].x + morphUV[idx].x, uv[idx].y + morphUV[idx].y);
-			}
-		}
-
-		// Process remaining vertices
-		for (size_t i = vectorizedCount; i < range.m_vertexCount; ++i)
+		for (size_t i = 0; i < range.m_vertexCount; i++)
 		{
 			glm::mat4 m;
-			switch (vtxInfo[i].m_skinningType)
+			switch (vtxInfo->m_skinningType)
 			{
-			case SkinningType::Weight1:
-				{
-					const auto i0 = vtxInfo[i].m_boneIndex[0];
-					m = transforms[i0];
-					break;
-				}
-			case SkinningType::Weight2:
-				{
-					const auto i0 = vtxInfo[i].m_boneIndex[0];
-					const auto i1 = vtxInfo[i].m_boneIndex[1];
-					const auto w0 = vtxInfo[i].m_boneWeight[0];
-					m = transforms[i0] * w0 + transforms[i1] * (1.0f - w0);
-					break;
-				}
-			case SkinningType::Weight4:
-				{
-					const auto i0 = vtxInfo[i].m_boneIndex[0];
-					const auto i1 = vtxInfo[i].m_boneIndex[1];
-					const auto i2 = vtxInfo[i].m_boneIndex[2];
-					const auto i3 = vtxInfo[i].m_boneIndex[3];
-					const auto w0 = vtxInfo[i].m_boneWeight[0];
-					const auto w1 = vtxInfo[i].m_boneWeight[1];
-					const auto w2 = vtxInfo[i].m_boneWeight[2];
-					const auto w3 = vtxInfo[i].m_boneWeight[3];
-					m = transforms[i0] * w0 + transforms[i1] * w1 + 
-						transforms[i2] * w2 + transforms[i3] * w3;
-					break;
-				}
-			default:
-				m = glm::mat4(1.0f);
+			case PMXModel::SkinningType::Weight1:
+			{
+				const auto i0 = vtxInfo->m_boneIndex[0];
+				const auto& m0 = transforms[i0];
+				m = m0;
 				break;
 			}
-
-			updatePosition[i] = glm::vec3(m * glm::vec4(position[i] + morphPos[i], 1.0f));
-			updateNormal[i] = glm::normalize(glm::mat3(m) * normal[i]);
-			updateUV[i] = glm::vec2(uv[i].x + morphUV[i].x, uv[i].y + morphUV[i].y);
-		}
-	}
-
-	void PMXModel::Morph(const PMXMorph* morph, const float weight)
-	{
-		std::stack<std::pair<const PMXMorph*, float>> morphStack;
-		morphStack.emplace(morph, weight);
-
-		while (!morphStack.empty())
-		{
-			auto [currentMorph, currentWeight] = morphStack.top();
-			morphStack.pop();
-
-			switch (currentMorph->m_morphType)
+			case PMXModel::SkinningType::Weight2:
 			{
-			case MorphType::Position:
-				MorphPosition(m_positionMorphDatas[currentMorph->m_dataIndex], currentWeight);
+				const auto i0 = vtxInfo->m_boneIndex[0];
+				const auto i1 = vtxInfo->m_boneIndex[1];
+				const auto w0 = vtxInfo->m_boneWeight[0];
+				const auto w1 = vtxInfo->m_boneWeight[1];
+				const auto& m0 = transforms[i0];
+				const auto& m1 = transforms[i1];
+				m = m0 * w0 + m1 * w1;
 				break;
-			case MorphType::UV:
-				MorphUV(m_uvMorphDatas[currentMorph->m_dataIndex], currentWeight);
-				break;
-			case MorphType::Material:
-				MorphMaterial(m_materialMorphDatas[currentMorph->m_dataIndex], currentWeight);
-				break;
-			case MorphType::Bone:
-				MorphBone(m_boneMorphDatas[currentMorph->m_dataIndex], currentWeight);
-				break;
-			case MorphType::Group:
+			}
+			case PMXModel::SkinningType::Weight4:
 			{
-				const auto& [m_groupMorphs] = m_groupMorphDatas[currentMorph->m_dataIndex];
-				for (const auto& [m_morphIndex, m_weight] : m_groupMorphs)
+				const auto i0 = vtxInfo->m_boneIndex[0];
+				const auto i1 = vtxInfo->m_boneIndex[1];
+				const auto i2 = vtxInfo->m_boneIndex[2];
+				const auto i3 = vtxInfo->m_boneIndex[3];
+				const auto w0 = vtxInfo->m_boneWeight[0];
+				const auto w1 = vtxInfo->m_boneWeight[1];
+				const auto w2 = vtxInfo->m_boneWeight[2];
+				const auto w3 = vtxInfo->m_boneWeight[3];
+				const auto& m0 = transforms[i0];
+				const auto& m1 = transforms[i1];
+				const auto& m2 = transforms[i2];
+				const auto& m3 = transforms[i3];
+				m = m0 * w0 + m1 * w1 + m2 * w2 + m3 * w3;
+				break;
+			}
+			case PMXModel::SkinningType::SDEF:
+			{
+				// https://github.com/powroupi/blender_mmd_tools/blob/dev_test/mmd_tools/core/sdef.py
+
+				auto& nodes = (*m_nodeMan.GetNodes());
+				const auto i0 = vtxInfo->m_sdef.m_boneIndex[0];
+				const auto i1 = vtxInfo->m_sdef.m_boneIndex[1];
+				const auto w0 = vtxInfo->m_sdef.m_boneWeight;
+				const auto w1 = 1.0f - w0;
+				const auto center = vtxInfo->m_sdef.m_sdefC;
+				const auto cr0 = vtxInfo->m_sdef.m_sdefR0;
+				const auto cr1 = vtxInfo->m_sdef.m_sdefR1;
+				const auto q0 = glm::quat_cast(nodes[i0]->GetGlobalTransform());
+				const auto q1 = glm::quat_cast(nodes[i1]->GetGlobalTransform());
+				const auto m0 = transforms[i0];
+				const auto m1 = transforms[i1];
+
+				const auto pos = *position + *morphPos;
+				const auto rot_mat = glm::mat3_cast(glm::slerp(q0, q1, w1));
+
+				*updatePosition = glm::mat3(rot_mat) * (pos - center) + glm::vec3(m0 * glm::vec4(cr0, 1)) * w0 + glm::vec3(m1 * glm::vec4(cr1, 1)) * w1;
+				*updateNormal = rot_mat * *normal;
+
+				break;
+			}
+			case PMXModel::SkinningType::DualQuaternion:
+			{
+				//
+				// Skinning with Dual Quaternions
+				// https://www.cs.utah.edu/~ladislav/dq/index.html
+				//
+				glm::dualquat dq[4];
+				float w[4] = { 0 };
+				for (int bi = 0; bi < 4; bi++)
 				{
-					if (m_morphIndex == -1)
+					auto boneID = vtxInfo->m_boneIndex[bi];
+					if (boneID != -1)
 					{
-						continue;
+						dq[bi] = glm::dualquat_cast(glm::mat3x4(glm::transpose(transforms[boneID])));
+						dq[bi] = glm::normalize(dq[bi]);
+						w[bi] = vtxInfo->m_boneWeight[bi];
 					}
-					auto& elemMorph = (*m_morphMan.GetMorphs())[m_morphIndex];
-					morphStack.emplace(elemMorph.get(), m_weight * currentWeight);
+					else
+					{
+						w[bi] = 0;
+					}
 				}
+				if (glm::dot(dq[0].real, dq[1].real) < 0) { w[1] *= -1.0f; }
+				if (glm::dot(dq[0].real, dq[2].real) < 0) { w[2] *= -1.0f; }
+				if (glm::dot(dq[0].real, dq[3].real) < 0) { w[3] *= -1.0f; }
+				auto blendDQ = w[0] * dq[0]
+					+ w[1] * dq[1]
+					+ w[2] * dq[2]
+					+ w[3] * dq[3];
+				blendDQ = glm::normalize(blendDQ);
+				m = glm::transpose(glm::mat3x4_cast(blendDQ));
 				break;
 			}
 			default:
 				break;
 			}
+
+			if (PMXModel::SkinningType::SDEF != vtxInfo->m_skinningType)
+			{
+				*updatePosition = glm::vec3(m * glm::vec4(*position + *morphPos, 1));
+				*updateNormal = glm::normalize(glm::mat3(m) * *normal);
+			}
+			*updateUV = *uv + glm::vec2((*morphUV).x, (*morphUV).y);
+
+			vtxInfo++;
+			position++;
+			normal++;
+			uv++;
+			updatePosition++;
+			updateNormal++;
+			updateUV++;
+			morphPos++;
+			morphUV++;
 		}
 	}
 
