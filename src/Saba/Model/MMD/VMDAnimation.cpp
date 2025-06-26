@@ -309,6 +309,8 @@ namespace saba
 	{
 	}
 
+	VMDAnimation::~VMDAnimation() = default;
+
 	bool VMDAnimation::Create(const std::shared_ptr<MMDModelWithoutBuffered>& model)
 	{
 		m_model = model;

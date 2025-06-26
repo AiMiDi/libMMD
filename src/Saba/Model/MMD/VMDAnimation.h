@@ -67,6 +67,7 @@ namespace saba
 	{
 	public:
 		VMDAnimation();
+		~VMDAnimation();
 
 		/**
 		 * @brief Create the VMD animation with the given MMD model.
