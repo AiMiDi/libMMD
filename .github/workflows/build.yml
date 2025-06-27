@@ -77,7 +77,6 @@ jobs:
         } else {
           Write-Host "Using cached Bullet3 installation"
         }
-        echo "BULLET_ROOT=${{ github.workspace }}/bullet3/install" >> $ENV:GITHUB_ENV
       shell: powershell
       continue-on-error: true
 
@@ -104,7 +103,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ env.BULLET_ROOT }} -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ github.workspace }}/bullet3/install -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
 
     - name: Build
       run: |
@@ -124,3 +123,4 @@ jobs:
           build/src/
           build/mmd2obj*
         retention-days: 7
+
