@@ -17,7 +17,8 @@ if (SABA_ENABLE_TEST)
         ${GL_TEST_HEADER}
     )
 
-    set (gtests_LIBRARIES Saba SabaViewer)
+    set (gtests_LIBRARIES Saba)
+    target_include_directories(gtests PRIVATE ${PROJECT_SOURCE_DIR}/external/spdlog/include)
     
     if (UNIX)
         find_package(Threads REQUIRED)

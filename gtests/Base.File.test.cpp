@@ -20,14 +20,14 @@ TEST(BaseTest, FileTest)
 
 	// 初期状態のテスト
 	EXPECT_EQ(false, file.IsOpen());
-	EXPECT_EQ(nullptr, file.GetFilePointer());
+	EXPECT_EQ(static_cast<FILE*>(nullptr), file.GetFilePointer());
 	EXPECT_EQ(-1, file.Tell());
 	EXPECT_EQ(false, file.IsBad());
 	EXPECT_EQ(0, file.GetSize());
 
 	EXPECT_EQ(true, file.Open(dataPath + u8"/日本語.txt"));
 	EXPECT_EQ(true, file.IsOpen());
-	EXPECT_NE(nullptr, file.GetFilePointer());
+	EXPECT_NE(static_cast<FILE*>(nullptr), file.GetFilePointer());
 	EXPECT_EQ(false, file.IsBad());
 	EXPECT_EQ(4, file.GetSize());
 

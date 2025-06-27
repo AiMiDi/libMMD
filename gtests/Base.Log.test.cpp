@@ -37,7 +37,7 @@ TEST(BaseTest, LogTest)
 	auto logger = saba::Singleton<saba::Logger>::Get();
 	auto testSink = logger->AddSink<TestSink>();
 
-	EXPECT_NE(nullptr, testSink.get());
+	EXPECT_NE(static_cast<TestSink*>(nullptr), testSink.get());
 
 	SABA_INFO("test1");
 	SABA_WARN("test2");

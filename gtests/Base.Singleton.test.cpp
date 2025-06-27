@@ -33,7 +33,7 @@ TEST(BaseTest, Singleton)
 {
 	auto inst = saba::Singleton<SingletonTest>::Get();
 
-	EXPECT_NE(nullptr, inst);
+	EXPECT_NE(static_cast<decltype(inst)>(nullptr), inst);
 
 	// コンストラクタが呼ばれていることを確認
 	EXPECT_EQ(0, saba::Singleton<SingletonTest>::Get()->m_value);
