@@ -89,7 +89,7 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DSABA_BULLET_ROOT=${{ github.workspace }}/bullet3/install \
             -DBULLET_ROOT=${{ github.workspace }}/bullet3/install \
-            -DBULLET_INCLUDE_DIR=${{ github.workspace }}/bullet3/install/include/bullet \
+            -DBULLET_INCLUDE_DIRS=${{ github.workspace }}/bullet3/install/include/bullet \
             -DBULLET_DYNAMICS_LIBRARY="$BULLET_DYNAMICS_LIBRARY" \
             -DBULLET_COLLISION_LIBRARY="$BULLET_COLLISION_LIBRARY" \
             -DBULLET_MATH_LIBRARY="$BULLET_MATH_LIBRARY" \
