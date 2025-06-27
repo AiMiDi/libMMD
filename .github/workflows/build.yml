@@ -27,18 +27,35 @@ jobs:
       run: |
         brew install cmake bullet
 
+    - name: Cache Bullet3 (Windows)
+      if: matrix.os == 'windows-latest'
+      id: cache-bullet3
+      uses: actions/cache@v4
+      with:
+        path: bullet3/install
+        key: bullet3-${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('**/bullet3-version') }}
+        restore-keys: |
+          bullet3-${{ runner.os }}-${{ matrix.build_type }}-
+          bullet3-${{ runner.os }}-
+
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         choco install cmake
-        # Download and build Bullet Physics
-        git clone https://github.com/bulletphysics/bullet3.git
-        cd bullet3
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_SHARED_LIBS=OFF -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON
-        cmake --build . --config ${{ matrix.build_type }}
-        cmake --install . --prefix ../install
+        if (-Not (Test-Path "bullet3/install")) {
+          # Download and build Bullet Physics only if not cached
+          git clone https://github.com/bulletphysics/bullet3.git
+          cd bullet3
+          # Create a version file for cache key
+          git rev-parse HEAD | Out-File -FilePath "../bullet3-version" -Encoding ASCII
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_SHARED_LIBS=OFF -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON
+          cmake --build . --config ${{ matrix.build_type }}
+          cmake --install . --prefix ../install
+        } else {
+          Write-Host "Using cached Bullet3 installation"
+        }
         echo "BULLET_ROOT=${{ github.workspace }}/bullet3/install" >> $ENV:GITHUB_ENV
       shell: powershell
 
@@ -60,7 +77,7 @@ jobs:
     - name: Build
       run: |
         cd build
-        cmake --build . --config ${{ matrix.build_type }} -j 4
+        cmake --build . --config ${{ matrix.build_type }} -j
 
     - name: Run tests
       run: |
