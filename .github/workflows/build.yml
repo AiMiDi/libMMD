@@ -56,7 +56,12 @@ jobs:
         } else {
           Write-Host "Using cached Bullet3 installation"
         }
-        echo "BULLET_ROOT=$(pwd)/bullet3/install" >> $GITHUB_ENV
+        # Convert Windows path to Unix-style path for bash compatibility
+        $bulletPath = (Resolve-Path "bullet3/install").Path -replace '\\', '/'
+        if ($bulletPath -match '^([A-Za-z]):') {
+          $bulletPath = "/$($matches[1].ToLower())$($bulletPath.Substring(2))"
+        }
+        echo "BULLET_ROOT=$bulletPath" >> $env:GITHUB_ENV
       shell: powershell
       continue-on-error: true
 
@@ -72,9 +77,9 @@ jobs:
     - name: Configure CMake
       run: |
         echo "Using Bullet root: $BULLET_ROOT"
-        mkdir build
+        mkdir -p build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ env.BULLET_ROOT }} -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$BULLET_ROOT" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
       shell: bash
 
     - name: Build
