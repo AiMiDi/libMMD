@@ -64,13 +64,6 @@ jobs:
         mkdir -p build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ^
-          -DBULLET_ROOT="../bullet3/install" ^
-          -DBULLET_INCLUDE_DIR="../bullet3/install/include" ^
-          -DBULLET_INCLUDE_DIRS="../bullet3/install/include/bullet" ^
-          -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics_${{ matrix.build_type }}.lib" ^
-          -DBULLET_COLLISION_LIBRARY="../bullet3/install/lib/BulletCollision_${{ matrix.build_type }}.lib" ^
-          -DBULLET_MATH_LIBRARY="../bullet3/install/lib/LinearMath_${{ matrix.build_type }}.lib" ^
-          -DBULLET_SOFTBODY_LIBRARY="../bullet3/install/lib/BulletSoftBody_${{ matrix.build_type }}.lib" ^
           -DSABA_BULLET_ROOT="../bullet3/install" ^
           -DSABA_ENABLE_TEST=ON ^
           -DSABA_BUILD_MMD2OBJ=ON
