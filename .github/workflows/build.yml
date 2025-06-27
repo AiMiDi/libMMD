@@ -53,42 +53,11 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_SHARED_LIBS=OFF -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DUSE_DOUBLE_PRECISION=ON -DBUILD_CPU_DEMOS=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DBUILD_BULLET3=Off -DBUILD_EXTRAS=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_PYBULLET=Off -DCMAKE_INSTALL_PREFIX=../install -DINSTALL_LIBS=ON
           cmake --build . --config ${{ matrix.build_type }}
           cmake --install . --prefix ../install --config ${{ matrix.build_type }}
-          # Create proper directory structure for FindBullet
-          cd ../install
-          if (Test-Path "lib") {
-            if (-Not (Test-Path "lib/${{ matrix.build_type }}")) {
-              New-Item -ItemType Directory -Path "lib/${{ matrix.build_type }}" -Force
-            }
-            Copy-Item "lib/*.lib" -Destination "lib/${{ matrix.build_type }}/" -Force -ErrorAction SilentlyContinue
-            # Rename libraries to match FindBullet expectations
-            if (Test-Path "lib/${{ matrix.build_type }}/BulletDynamics*.lib") {
-              Rename-Item "lib/${{ matrix.build_type }}/BulletDynamics*.lib" "BulletDynamics.lib" -Force
-            }
-            if (Test-Path "lib/${{ matrix.build_type }}/BulletCollision*.lib") {
-              Rename-Item "lib/${{ matrix.build_type }}/BulletCollision*.lib" "BulletCollision.lib" -Force
-            }
-            if (Test-Path "lib/${{ matrix.build_type }}/LinearMath*.lib") {
-              Rename-Item "lib/${{ matrix.build_type }}/LinearMath*.lib" "LinearMath.lib" -Force
-            }
-            if (Test-Path "lib/${{ matrix.build_type }}/BulletSoftBody*.lib") {
-              Rename-Item "lib/${{ matrix.build_type }}/BulletSoftBody*.lib" "BulletSoftBody.lib" -Force
-            }
-          }
         } else {
           Write-Host "Using cached Bullet3 installation"
         }
       shell: powershell
       continue-on-error: true
-
-    - name: Save Bullet3 cache (Windows)
-      if: matrix.os == 'windows-latest' && always()
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          bullet3/install
-          bullet3/build
-          bullet3-version
-        key: bullet3-${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('**/bullet3-version') }}-partial
 
     - name: Set Bullet root for Linux/macOS
       if: matrix.os != 'windows-latest'
