@@ -72,7 +72,34 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ github.workspace }}/bullet3/install -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Set specific library paths for Windows
+          if [ "${{ matrix.build_type }}" = "Debug" ]; then
+            BULLET_DYNAMICS_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletDynamics_Debug.lib"
+            BULLET_COLLISION_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletCollision_Debug.lib"
+            BULLET_MATH_LIBRARY="${{ github.workspace }}/bullet3/install/lib/LinearMath_Debug.lib"
+            BULLET_SOFTBODY_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletSoftBody_Debug.lib"
+          else
+            BULLET_DYNAMICS_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletDynamics.lib"
+            BULLET_COLLISION_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletCollision.lib"
+            BULLET_MATH_LIBRARY="${{ github.workspace }}/bullet3/install/lib/LinearMath.lib"
+            BULLET_SOFTBODY_LIBRARY="${{ github.workspace }}/bullet3/install/lib/BulletSoftBody.lib"
+          fi
+          
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DSABA_BULLET_ROOT=${{ github.workspace }}/bullet3/install \
+            -DBULLET_ROOT=${{ github.workspace }}/bullet3/install \
+            -DBULLET_INCLUDE_DIR=${{ github.workspace }}/bullet3/install/include/bullet \
+            -DBULLET_DYNAMICS_LIBRARY="$BULLET_DYNAMICS_LIBRARY" \
+            -DBULLET_COLLISION_LIBRARY="$BULLET_COLLISION_LIBRARY" \
+            -DBULLET_MATH_LIBRARY="$BULLET_MATH_LIBRARY" \
+            -DBULLET_SOFTBODY_LIBRARY="$BULLET_SOFTBODY_LIBRARY" \
+            -DSABA_ENABLE_TEST=ON \
+            -DSABA_BUILD_MMD2OBJ=ON
+        else
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT=${{ env.BULLET_ROOT }} -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        fi
+      shell: bash
 
     - name: Build
       run: |
@@ -92,4 +119,3 @@ jobs:
           build/src/
           build/mmd2obj*
         retention-days: 7
-
