@@ -71,10 +71,17 @@ jobs:
 
     - name: Configure CMake
       run: |
-        echo "Using Bullet root: $BULLET_ROOT"
-        mkdir -p build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$BULLET_ROOT" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          echo "Using Bullet root: ${BULLET_ROOT}"
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="${BULLET_ROOT}" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        else
+          echo "Using Bullet root: $BULLET_ROOT"
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$BULLET_ROOT" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+        fi
       shell: bash
 
     - name: Build
