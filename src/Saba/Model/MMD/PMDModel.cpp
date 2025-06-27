@@ -45,16 +45,6 @@ namespace saba
 		}
 	}
 
-	struct PMDModelWithoutBuffered::MorphVertex
-	{
-		uint32_t	m_index;
-		glm::vec3	m_position;
-
-		explicit  MorphVertex(const uint32_t index = 0, const glm::vec3& position = glm::vec3{0})
-			: m_index(index)
-			, m_position(position){}
-	};
-
 	PMDModelWithoutBuffered::~PMDModelWithoutBuffered()
 	{
 		m_materials.clear();
@@ -464,6 +454,10 @@ namespace saba
 		m_nodeMan.GetNodes()->clear();
 		m_morphMan.GetMorphs()->clear();
 	}
+
+	PMDModelWithoutBuffered::MorphVertex::MorphVertex(const uint32_t index, const glm::vec3& position): m_index(index)
+		, m_position(position)
+	{}
 
 	void PMDModelWithoutBuffered::LoadMorph(const PMDFile& file)
 	{

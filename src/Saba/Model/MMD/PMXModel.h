@@ -266,12 +266,20 @@ namespace saba
 		virtual void Destroy();
 	protected:
 		enum class MorphType;
-		class PMXMorph;
 		struct MaterialFactor;
 		struct MaterialMorphData;
 		struct BoneMorphElement;
 		struct BoneMorphData;
 		struct GroupMorphData;
+
+		class PMXMorph : public MMDMorph
+		{
+		public:
+			MorphType	m_morphType;
+			size_t		m_dataIndex;
+
+			PMXMorph();
+		};
 
 		std::vector<MMDMaterial>	m_materials;
 		std::vector<MMDSubMesh>		m_subMeshes;

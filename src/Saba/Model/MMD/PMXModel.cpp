@@ -36,13 +36,6 @@ namespace saba
 		Group,
 	};
 
-	class PMXModelWithoutBuffered::PMXMorph : public MMDMorph
-	{
-	public:
-		MorphType	m_morphType{MorphType::None};
-		size_t		m_dataIndex{};
-	};
-
 	struct PMXModelWithoutBuffered::MaterialFactor
 	{
 		explicit MaterialFactor(
@@ -422,6 +415,9 @@ namespace saba
 		m_subMeshes.clear();
 		m_nodeMan.GetNodes()->clear();
 	}
+
+	PMXModelWithoutBuffered::PMXMorph::PMXMorph(): m_morphType(MorphType::None), m_dataIndex()
+	{}
 
 	bool PMXModelWithoutBuffered::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
@@ -1443,6 +1439,50 @@ namespace saba
 		for (const auto& [m_index, m_uv] : morphData.m_morphUVs)
 		{
 			m_morphUVs[m_index] += m_uv * weight;
+		}
+	}
+
+	void PMXModel::Morph(const PMXMorph* morph, float weight)
+	{
+		switch (morph->m_morphType)
+		{
+		case MorphType::Position:
+			MorphPosition(
+				m_positionMorphDatas[morph->m_dataIndex],
+				weight
+			);
+			break;
+		case MorphType::UV:
+			MorphUV(
+				m_uvMorphDatas[morph->m_dataIndex],
+				weight
+			);
+			break;
+		case MorphType::Material:
+			MorphMaterial(
+				m_materialMorphDatas[morph->m_dataIndex],
+				weight
+			);
+			break;
+		case MorphType::Bone:
+			MorphBone(
+				m_boneMorphDatas[morph->m_dataIndex],
+				weight
+			);
+			break;
+		case MorphType::Group:
+			{
+				auto& groupMorphData = m_groupMorphDatas[morph->m_dataIndex];
+				for (const auto& groupMorph : groupMorphData.m_groupMorphs)
+				{
+					if (groupMorph.m_morphIndex == -1) { continue; }
+					auto& elemMorph = (*m_morphMan.GetMorphs())[groupMorph.m_morphIndex];
+					Morph(elemMorph.get(), groupMorph.m_weight * weight);
+				}
+				break;
+			}
+		default:
+			break;
 		}
 	}
 
