@@ -42,7 +42,6 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         choco install cmake
-        echo "BULLET_ROOT=$(pwd)/bullet3/install" >> $GITHUB_ENV
         if (-Not (Test-Path "bullet3/install")) {
           # Download and build Bullet Physics only if not cached
           git clone https://github.com/bulletphysics/bullet3.git
@@ -58,7 +57,6 @@ jobs:
           Write-Host "Using cached Bullet3 installation"
         }
       shell: powershell
-      continue-on-error: true
 
     - name: Set Bullet root for Linux/macOS
       if: matrix.os != 'windows-latest'
@@ -72,10 +70,10 @@ jobs:
     - name: Configure CMake
       run: |
         if [ "${{ runner.os }}" = "Windows" ]; then
-          echo "Using Bullet root: ${BULLET_ROOT}"
+          echo "Using Bullet root: bullet3/install"
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="${BULLET_ROOT}" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
         else
           echo "Using Bullet root: $BULLET_ROOT"
           mkdir -p build
