@@ -39,7 +39,20 @@ namespace saba
 			{
 				return false;
 			}
-			wStr = reinterpret_cast<const wchar_t*>(utf16Str.c_str());
+			wStr.assign(reinterpret_cast<const wchar_t*>(utf16Str.c_str()), utf16Str.length());
+		}
+		else if (sizeof(wchar_t) == sizeof(char32_t))
+		{
+			std::u32string utf32Str;
+			if (!ConvU8ToU32(utf8Str, utf32Str))
+			{
+				return false;
+			}
+			wStr.assign(reinterpret_cast<const wchar_t*>(utf32Str.c_str()), utf32Str.length());
+		}
+		else
+		{
+			return false;
 		}
 
 		return true;
@@ -49,11 +62,23 @@ namespace saba
 	{
 		if (sizeof(wchar_t) == sizeof(char16_t))
 		{
-			auto utf16Str = reinterpret_cast<const char16_t*>(wStr.c_str());
+			std::u16string utf16Str(reinterpret_cast<const char16_t*>(wStr.c_str()), wStr.length());
 			if (!ConvU16ToU8(utf16Str, utf8Str))
 			{
 				return false;
 			}
+		}
+		else if (sizeof(wchar_t) == sizeof(char32_t))
+		{
+			std::u32string utf32Str(reinterpret_cast<const char32_t*>(wStr.c_str()), wStr.length());
+			if (!ConvU32ToU8(utf32Str, utf8Str))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return false;
 		}
 
 		return true;
