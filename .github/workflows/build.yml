@@ -71,7 +71,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        Write-Host $env:$BULLET_ROOT
+        echo "Using Bullet root: $BULLET_ROOT"
         mkdir -p build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$BULLET_ROOT" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
