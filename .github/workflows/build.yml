@@ -50,7 +50,20 @@ jobs:
           git rev-parse HEAD | Out-File -FilePath "../bullet3-version" -Encoding ASCII
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_SHARED_LIBS=OFF -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_CPU_DEMOS=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DBUILD_BULLET3=Off -DBUILD_EXTRAS=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_PYBULLET=Off -DCMAKE_INSTALL_PREFIX=../install -DINSTALL_LIBS=ON
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON \
+            -DBUILD_CPU_DEMOS=Off \
+            -DBUILD_OPENGL3_DEMOS=Off \
+            -DBUILD_BULLET2_DEMOS=Off \
+            -DBUILD_UNIT_TESTS=Off \
+            -DBUILD_BULLET3=Off \
+            -DBUILD_EXTRAS=Off \
+            -DUSE_GRAPHICAL_BENCHMARK=Off \
+            -DBUILD_PYBULLET=Off \
+            -DCMAKE_INSTALL_PREFIX=../install \
+            -DINSTALL_LIBS=ON
           cmake --build . --config ${{ matrix.build_type }}
           cmake --install . --prefix ../install --config ${{ matrix.build_type }}
         } else {
@@ -63,15 +76,41 @@ jobs:
         mkdir -p build
         cd build
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="/usr" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DSABA_BULLET_ROOT="/usr" \
+            -DSABA_ENABLE_TEST=ON \
+            -DSABA_BUILD_MMD2OBJ=ON
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
           if [ "${{ matrix.build_type }}" = "Debug" ]; then
-            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics_Debug" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DSABA_BULLET_ROOT="../bullet3/install" \
+              -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" \
+              -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics_Debug" \
+              -DBULLET_COLLISION_LIBRARY="../bullet3/install/lib/BulletCollision_Debug" \
+              -DBULLET_MATH_LIBRARY="../bullet3/install/lib/LinearMath_Debug" \
+              -DBULLET_SOFTBODY_LIBRARY="../bullet3/install/lib/BulletSoftBody_Debug" \
+              -DSABA_ENABLE_TEST=ON \
+              -DSABA_BUILD_MMD2OBJ=ON
           else
-            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DSABA_BULLET_ROOT="../bullet3/install" \
+              -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" \
+              -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics" \
+              -DBULLET_COLLISION_LIBRARY="../bullet3/install/lib/BulletCollision" \
+              -DBULLET_MATH_LIBRARY="../bullet3/install/lib/LinearMath" \
+              -DBULLET_SOFTBODY_LIBRARY="../bullet3/install/lib/BulletSoftBody" \
+              -DSABA_ENABLE_TEST=ON \
+              -DSABA_BUILD_MMD2OBJ=ON
           fi
         else 
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$(brew --prefix bullet)" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DSABA_BULLET_ROOT="$(brew --prefix bullet)" \
+            -DSABA_ENABLE_TEST=ON \
+            -DSABA_BUILD_MMD2OBJ=ON
         fi
       shell: bash
 
