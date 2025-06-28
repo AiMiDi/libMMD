@@ -65,7 +65,11 @@ jobs:
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="/usr" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          if [ "${{ matrix.build_type }}" = "Debug" ]; then
+            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics_Debug" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          else
+            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="../bullet3/install" -DBULLET_INCLUDE_DIR="../bullet3/install/include/bullet" -DBULLET_DYNAMICS_LIBRARY="../bullet3/install/lib/BulletDynamics" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
+          fi
         else 
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$(brew --prefix bullet)" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
         fi
