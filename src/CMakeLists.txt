@@ -112,7 +112,6 @@ set (Saba_LIBRARIES ${BULLET_LIBRARIES})
 if (UNIX)
     find_package(Threads REQUIRED)
     list (APPEND Saba_LIBRARIES ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-    target_link_libraries(Saba PRIVATE ${BULLET_LIBRARIES} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif ()
 target_link_libraries(Saba PRIVATE ${Saba_LIBRARIES})
 
