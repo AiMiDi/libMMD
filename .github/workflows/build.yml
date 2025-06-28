@@ -69,6 +69,7 @@ jobs:
         else 
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DSABA_BULLET_ROOT="$(brew --prefix bullet)" -DSABA_ENABLE_TEST=ON -DSABA_BUILD_MMD2OBJ=ON
         fi
+      shell: bash
 
     - name: Build
       run: |
