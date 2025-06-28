@@ -36,7 +36,6 @@ jobs:
         key: bullet3-${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('**/bullet3-version') }}
         restore-keys: |
           bullet3-${{ runner.os }}-${{ matrix.build_type }}-
-          bullet3-${{ runner.os }}-
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
