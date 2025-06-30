@@ -77,40 +77,40 @@ jobs:
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           cmake .. \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DSABA_BULLET_ROOT="/usr" \
-            -DSABA_ENABLE_TEST=ON \
-            -DSABA_BUILD_MMD2OBJ=ON
+            -DLIBMMD_BULLET_ROOT="/usr" \
+            -DLIBMMD_ENABLE_TEST=ON \
+            -DLIBMMD_BUILD_MMD2OBJ=ON
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
           BULLET_ROOT="$(pwd)/../bullet3/install"
           if [ "${{ matrix.build_type }}" = "Debug" ]; then
             cmake .. \
               -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              -DSABA_BULLET_ROOT="$BULLET_ROOT" \
+              -DLIBMMD_BULLET_ROOT="$BULLET_ROOT" \
               -DBULLET_INCLUDE_DIR="$BULLET_ROOT/include/bullet" \
               -DBULLET_DYNAMICS_LIBRARY="$BULLET_ROOT/lib/BulletDynamics_Debug.lib" \
               -DBULLET_COLLISION_LIBRARY="$BULLET_ROOT/lib/BulletCollision_Debug.lib" \
               -DBULLET_MATH_LIBRARY="$BULLET_ROOT/lib/LinearMath_Debug.lib" \
               -DBULLET_SOFTBODY_LIBRARY="$BULLET_ROOT/lib/BulletSoftBody_Debug.lib" \
-              -DSABA_ENABLE_TEST=ON \
-              -DSABA_BUILD_MMD2OBJ=ON
+              -DLIBMMD_ENABLE_TEST=ON \
+              -DLIBMMD_BUILD_MMD2OBJ=ON
           else
             cmake .. \
               -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              -DSABA_BULLET_ROOT="$BULLET_ROOT" \
+              -DLIBMMD_BULLET_ROOT="$BULLET_ROOT" \
               -DBULLET_INCLUDE_DIR="$BULLET_ROOT/include/bullet" \
               -DBULLET_DYNAMICS_LIBRARY="$BULLET_ROOT/lib/BulletDynamics.lib" \
               -DBULLET_COLLISION_LIBRARY="$BULLET_ROOT/lib/BulletCollision.lib" \
               -DBULLET_MATH_LIBRARY="$BULLET_ROOT/lib/LinearMath.lib" \
               -DBULLET_SOFTBODY_LIBRARY="$BULLET_ROOT/lib/BulletSoftBody.lib" \
-              -DSABA_ENABLE_TEST=ON \
-              -DSABA_BUILD_MMD2OBJ=ON
+              -DLIBMMD_ENABLE_TEST=ON \
+              -DLIBMMD_BUILD_MMD2OBJ=ON
           fi
         else 
           cmake .. \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DSABA_BULLET_ROOT="$(brew --prefix bullet)" \
-            -DSABA_ENABLE_TEST=ON \
-            -DSABA_BUILD_MMD2OBJ=ON
+            -DLIBMMD_BULLET_ROOT="$(brew --prefix bullet)" \
+            -DLIBMMD_ENABLE_TEST=ON \
+            -DLIBMMD_BUILD_MMD2OBJ=ON
         fi
       shell: bash
 

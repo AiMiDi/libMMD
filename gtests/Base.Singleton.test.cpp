@@ -1,6 +1,6 @@
 ﻿#include <gtest/gtest.h>
 
-#include <Saba/Base/Singleton.h>
+#include <libMMD/Base/Singleton.h>
 namespace
 {
 	class SingletonTest
@@ -31,16 +31,16 @@ namespace
 
 TEST(BaseTest, Singleton)
 {
-	auto inst = saba::Singleton<SingletonTest>::Get();
+	auto inst = libmmd::Singleton<SingletonTest>::Get();
 
 	EXPECT_NE(static_cast<decltype(inst)>(nullptr), inst);
 
 	// コンストラクタが呼ばれていることを確認
-	EXPECT_EQ(0, saba::Singleton<SingletonTest>::Get()->m_value);
+	EXPECT_EQ(0, libmmd::Singleton<SingletonTest>::Get()->m_value);
 
 	// 同一のインスタンスでAddが呼ばれていることを確認
-	saba::Singleton<SingletonTest>::Get()->Add();
-	EXPECT_EQ(1, saba::Singleton<SingletonTest>::Get()->m_value);
+	libmmd::Singleton<SingletonTest>::Get()->Add();
+	EXPECT_EQ(1, libmmd::Singleton<SingletonTest>::Get()->m_value);
 
 	// コンストラクターが一度しか呼ばれていないことを確認
 	EXPECT_EQ(1, SingletonTest::m_construct);

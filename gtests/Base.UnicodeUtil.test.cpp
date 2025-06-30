@@ -1,6 +1,6 @@
 ﻿#include <gtest/gtest.h>
 
-#include <Saba/Base/UnicodeUtil.h>
+#include <libMMD/Base/UnicodeUtil.h>
 
 TEST(BaseTest, UnicodeUtil)
 {
@@ -10,21 +10,21 @@ TEST(BaseTest, UnicodeUtil)
 	std::string utf8StrRet;
 	std::wstring wStrRet;
 
-	EXPECT_TRUE(saba::TryToUtf8String(wStr, utf8StrRet));
-	EXPECT_TRUE(saba::TryToWString(utf8Str, wStrRet));
+	EXPECT_TRUE(libmmd::TryToUtf8String(wStr, utf8StrRet));
+	EXPECT_TRUE(libmmd::TryToWString(utf8Str, wStrRet));
 
 	EXPECT_EQ(utf8Str, utf8StrRet);
 	EXPECT_EQ(wStr, wStrRet);
 }
 
-#include <Saba/Model/MMD/SjisToUnicode.h>
+#include <libMMD/Model/MMD/SjisToUnicode.h>
 
 TEST(BaseTest, MMSSjisToUnicode)
 {
 	{
 		// Test Ascii code.
 		const char* testStr = "abcABC=+";
-		auto convStr = saba::ConvertSjisToU32String(testStr);
+		auto convStr = libmmd::ConvertSjisToU32String(testStr);
 		EXPECT_EQ(convStr, U"abcABC=+");
 	}
 	{
@@ -35,7 +35,7 @@ TEST(BaseTest, MMSSjisToUnicode)
 			char(0xB3),
 			char(0x00),
 		};
-		auto convStr = saba::ConvertSjisToU32String(testStr);
+		auto convStr = libmmd::ConvertSjisToU32String(testStr);
 		EXPECT_EQ(convStr, U"ｱｲｳ");
 	}
 	{
@@ -51,7 +51,7 @@ TEST(BaseTest, MMSSjisToUnicode)
 			char(0x7C),
 			char(0x00)
 		};
-		auto convStr = saba::ConvertSjisToU32String(testStr);
+		auto convStr = libmmd::ConvertSjisToU32String(testStr);
 		EXPECT_EQ(convStr, U"ア①表ポ");
 	}
 	{
@@ -67,7 +67,7 @@ TEST(BaseTest, MMSSjisToUnicode)
 			char(0x7C),
 			char(0x00)
 		};
-		auto convStr = saba::ConvertSjisToU32String(testStr);
+		auto convStr = libmmd::ConvertSjisToU32String(testStr);
 		EXPECT_EQ(convStr, U"漾纊觸黥");
 	}
 	{
@@ -76,7 +76,7 @@ TEST(BaseTest, MMSSjisToUnicode)
 			char(0x81),
 			char(0x00),
 		};
-		auto convStr = saba::ConvertSjisToU32String(badSjis);
+		auto convStr = libmmd::ConvertSjisToU32String(badSjis);
 		EXPECT_EQ(convStr, U"\u30FB");
 	}
 }

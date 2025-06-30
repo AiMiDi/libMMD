@@ -1,10 +1,10 @@
-if (SABA_ENABLE_TEST)
+if (LIBMMD_ENABLE_TEST)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/googletest/include)
 
     file (GLOB SOURCE *.cpp)
     file (GLOB HEADER *.h)
 
-    if (SABA_ENABLE_GL_TEST)
+    if (LIBMMD_ENABLE_GL_TEST)
         file (GLOB GL_TEST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/GL.test/*.cpp)
         file (GLOB GL_TEST_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/GL.test/*.h)
     endif()
@@ -17,7 +17,7 @@ if (SABA_ENABLE_TEST)
         ${GL_TEST_HEADER}
     )
 
-    set (gtests_LIBRARIES Saba)
+    set (gtests_LIBRARIES libMMD)
     target_include_directories(gtests PRIVATE ${PROJECT_SOURCE_DIR}/external/spdlog/include)
     
     if (UNIX)
@@ -29,7 +29,7 @@ if (SABA_ENABLE_TEST)
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/googletest
     )
     target_link_libraries(gtests ${gtests_LIBRARIES})
-    if (SABA_ENABLE_GL_TEST)
+    if (LIBMMD_ENABLE_GL_TEST)
         target_compile_definitions (gtests PRIVATE ENABLE_GLTEST=1)
     endif()
 

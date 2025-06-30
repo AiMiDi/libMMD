@@ -1,6 +1,6 @@
 ﻿#include <gtest/gtest.h>
 
-#include <Saba/Base/File.h>
+#include <libMMD/Base/File.h>
 
 #ifndef TEST_DATA_PATH
 
@@ -16,7 +16,7 @@ TEST(BaseTest, FileTest)
 {
 	std::string dataPath = _u8(TEST_DATA_PATH);
 
-	saba::File file;
+	libmmd::File file;
 
 	// 初期状態のテスト
 	EXPECT_EQ(false, file.IsOpen());
@@ -39,24 +39,24 @@ TEST(BaseTest, FileTest)
 	EXPECT_EQ(1, file.Tell());
 	EXPECT_EQ(false, file.IsBad());
 
-	EXPECT_EQ(true, file.Seek(1, saba::File::SeekDir::Current));
+	EXPECT_EQ(true, file.Seek(1, libmmd::File::SeekDir::Current));
 	EXPECT_EQ(2, file.Tell());
 	EXPECT_EQ(true, file.Read(&ch));
 	EXPECT_EQ('3', ch);
 
-	EXPECT_EQ(true, file.Seek(0, saba::File::SeekDir::End));
+	EXPECT_EQ(true, file.Seek(0, libmmd::File::SeekDir::End));
 	EXPECT_EQ(4, file.Tell());
-	EXPECT_EQ(true, file.Seek(10, saba::File::SeekDir::End));
+	EXPECT_EQ(true, file.Seek(10, libmmd::File::SeekDir::End));
 	EXPECT_EQ(14, file.Tell());
 	EXPECT_EQ(false, file.Read(&ch));
 	EXPECT_EQ(true, file.IsBad());
 	file.ClearBadFlag();
 	EXPECT_EQ(false, file.IsBad());
 
-	EXPECT_EQ(true, file.Seek(0, saba::File::SeekDir::Begin));
+	EXPECT_EQ(true, file.Seek(0, libmmd::File::SeekDir::Begin));
 	EXPECT_EQ(0, file.Tell());
-	EXPECT_EQ(true, file.Seek(2, saba::File::SeekDir::Begin));
-	EXPECT_EQ(false, file.Seek(-10, saba::File::SeekDir::Begin));
+	EXPECT_EQ(true, file.Seek(2, libmmd::File::SeekDir::Begin));
+	EXPECT_EQ(false, file.Seek(-10, libmmd::File::SeekDir::Begin));
 	EXPECT_EQ(true, file.IsBad());
 	file.ClearBadFlag();
 	EXPECT_EQ(false, file.IsBad());
@@ -88,43 +88,43 @@ TEST(BaseTest, TextFileReader)
 	std::string dataPath = _u8(TEST_DATA_PATH);
 
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		EXPECT_EQ(false, textFile.IsOpen());
 		EXPECT_EQ(false, textFile.IsEof());
 	}
 
 	// Open
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 	}
 
 	{
-		saba::TextFileReader textFile((dataPath + u8"/text_test1.txt").c_str());
+		libmmd::TextFileReader textFile((dataPath + u8"/text_test1.txt").c_str());
 		EXPECT_EQ(true, textFile.IsOpen());
 	}
 
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		EXPECT_EQ(true, textFile.Open(dataPath + u8"/text_test1.txt"));
 		EXPECT_EQ(true, textFile.IsOpen());
 	}
 
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		EXPECT_EQ(true, textFile.Open((dataPath + u8"/text_test1.txt").c_str()));
 		EXPECT_EQ(true, textFile.IsOpen());
 	}
 
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		EXPECT_EQ(true, textFile.Open((dataPath + u8"/日本語.txt").c_str()));
 		EXPECT_EQ(true, textFile.IsOpen());
 	}
 
 	// Open -> Close
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		EXPECT_EQ(false, textFile.IsEof());
 		textFile.Close();
@@ -134,7 +134,7 @@ TEST(BaseTest, TextFileReader)
 
 	// Reopen
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		textFile.Open(dataPath + u8"/text_test2.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
@@ -143,7 +143,7 @@ TEST(BaseTest, TextFileReader)
 	// ReadLine
 	{
 		// return eof type
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		EXPECT_EQ(std::string("abc"), textFile.ReadLine());
 		EXPECT_EQ(false, textFile.IsEof());
@@ -160,7 +160,7 @@ TEST(BaseTest, TextFileReader)
 	// ReadLine
 	{
 		// no return eof type
-		saba::TextFileReader textFile(dataPath + u8"/text_test2.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test2.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		EXPECT_EQ(std::string("abc"), textFile.ReadLine());
 		EXPECT_EQ(false, textFile.IsEof());
@@ -176,13 +176,13 @@ TEST(BaseTest, TextFileReader)
 
 	// ReadAll
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		EXPECT_EQ(std::string(""), textFile.ReadAll());
 	}
 
 	// ReadAll
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		std::string text =
 			"abc\n"
@@ -195,7 +195,7 @@ TEST(BaseTest, TextFileReader)
 
 	// ReadAll
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test2.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test2.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		std::string text =
 			"abc\n"
@@ -208,7 +208,7 @@ TEST(BaseTest, TextFileReader)
 
 	// ReadAllLines
 	{
-		saba::TextFileReader textFile;
+		libmmd::TextFileReader textFile;
 		std::vector<std::string> lines;
 		textFile.ReadAllLines(lines);
 		EXPECT_TRUE(lines.empty());
@@ -216,7 +216,7 @@ TEST(BaseTest, TextFileReader)
 
 	// ReadAllLines
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test1.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test1.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		std::vector<std::string> lines;
 		textFile.ReadAllLines(lines);
@@ -230,7 +230,7 @@ TEST(BaseTest, TextFileReader)
 
 	// ReadAllLines
 	{
-		saba::TextFileReader textFile(dataPath + u8"/text_test2.txt");
+		libmmd::TextFileReader textFile(dataPath + u8"/text_test2.txt");
 		EXPECT_EQ(true, textFile.IsOpen());
 		std::vector<std::string> lines;
 		textFile.ReadAllLines(lines);

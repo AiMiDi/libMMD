@@ -1,4 +1,4 @@
-﻿#include "Saba/Base/Log.h"
+﻿#include "libMMD/Base/Log.h"
 
 #include <string>
 #include <vector>
@@ -34,14 +34,14 @@ public:
 
 TEST(BaseTest, LogTest)
 {
-	auto logger = saba::Singleton<saba::Logger>::Get();
+	auto logger = libmmd::Singleton<libmmd::Logger>::Get();
 	auto testSink = logger->AddSink<TestSink>();
 
 	EXPECT_NE(static_cast<TestSink*>(nullptr), testSink.get());
 
-	SABA_INFO("test1");
-	SABA_WARN("test2");
-	SABA_ERROR("test3");
+	LIBMMD_INFO("test1");
+	LIBMMD_WARN("test2");
+	LIBMMD_ERROR("test3");
 
 	EXPECT_EQ(3, testSink->m_buffer.size());
 
@@ -49,6 +49,6 @@ TEST(BaseTest, LogTest)
 	logger->RemoveSink(testSink.get());
 	EXPECT_EQ(1, logger->GetLogger()->sinks().size());
 
-	SABA_INFO("test4");
+	LIBMMD_INFO("test4");
 	EXPECT_EQ(3, testSink->m_buffer.size());
 }
