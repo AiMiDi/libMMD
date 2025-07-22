@@ -181,7 +181,12 @@ namespace libmmd
 		return m_keys.empty() ? 0 : m_keys.back().m_time;
 	}
 
-	VMDCameraAnimation::VMDCameraAnimation()
+	VMDCameraAnimation::VMDCameraAnimation() : m_cameraController(nullptr)
+	{
+		Destroy();
+	}
+
+	VMDCameraAnimation::~VMDCameraAnimation()
 	{
 		Destroy();
 	}
@@ -193,7 +198,11 @@ namespace libmmd
 			return false;
 		}
 
-		m_cameraController = std::make_unique<VMDCameraController>();
+		Destroy();
+
+		m_cameraController = new VMDCameraController();
+		if (!m_cameraController)
+			return false;
 		for (const auto& [m_frame, m_distance, m_interest, m_rotate, m_interpolation, m_viewAngle, m_isPerspective] : vmd.m_cameras)
 		{
 			VMDCameraAnimationKey key{};
@@ -219,7 +228,11 @@ namespace libmmd
 
 	void VMDCameraAnimation::Destroy()
 	{
-		m_cameraController.reset();
+		if (m_cameraController)
+		{
+			delete m_cameraController;
+			m_cameraController = nullptr;
+		}
 	}
 
 	void VMDCameraAnimation::Evaluate(const float t)

@@ -18,6 +18,7 @@ namespace libmmd
 	{
 	public:
 		VMDCameraAnimation();
+		~VMDCameraAnimation();
 
 		/**
 		 * @brief Create the VMD camera animation from a VMD file.
@@ -56,9 +57,7 @@ namespace libmmd
 		int32_t GetMaxKeyTime() const;
 
 	private:
-		using CameraControllerPtr = std::unique_ptr<VMDCameraController>;
-
-		CameraControllerPtr	m_cameraController;
+		VMDCameraController*	m_cameraController;
 
 		MMDCamera	m_camera;
 	};
