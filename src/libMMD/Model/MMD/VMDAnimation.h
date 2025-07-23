@@ -105,6 +105,24 @@ namespace libmmd
 		 * @return The maximum key time.
 		 */
 		int32_t GetMaxKeyTime() const { return static_cast<int32_t>(m_maxKeyTime); }
+
+		/**
+		* @brief Get the number of node (bone) controllers in the animation.
+		* @return The number of node controllers.
+		*/
+		int32_t GetNodeKeyNum() const { return static_cast<int32_t>(m_nodeControllers.size()); }
+
+		/**
+		* @brief Get the number of morph controllers in the animation.
+		* @return The number of morph controllers.
+		*/
+		int32_t GetMorphKeyNum() const { return static_cast<int32_t>(m_morphControllers.size()); }
+
+		/**
+		* @brief Get the number of IK controllers in the animation.
+		* @return The number of IK controllers.
+		*/
+		int32_t GetIKKeyNum() const { return static_cast<int32_t>(m_ikControllers.size()); }
 	private:
 		int32_t CalculateMaxKeyTime() const;
 
