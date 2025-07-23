@@ -444,31 +444,64 @@ namespace libmmd
 		m_comment = file.m_info.m_comment;
 		m_englishComment = file.m_info.m_englishComment;
 
+		std::vector<std::string> texturePaths;
+		texturePaths.reserve(file.m_textures.size());
+		for (const auto& [m_textureName] : file.m_textures)
+		{
+			std::string texPath = PathUtil::Combine(dirPath, m_textureName);
+			texturePaths.emplace_back(std::move(texPath));
+		}
+
 		// Load materials
+		m_materials.reserve(file.m_materials.size());
+		m_subMeshes.reserve(file.m_materials.size());
+		uint32_t beginIndex = 0;
 		for (const auto& pmxMat : file.m_materials)
 		{
 			MMDMaterial mat;
-			mat.m_diffuse = glm::vec3(pmxMat.m_diffuse.r, pmxMat.m_diffuse.g, pmxMat.m_diffuse.b);
+			mat.m_diffuse = pmxMat.m_diffuse;
 			mat.m_alpha = pmxMat.m_diffuse.a;
-			mat.m_specular = glm::vec3(pmxMat.m_specular.r, pmxMat.m_specular.g, pmxMat.m_specular.b);
 			mat.m_specularPower = pmxMat.m_specularPower;
-			mat.m_ambient = glm::vec3(pmxMat.m_ambient.r, pmxMat.m_ambient.g, pmxMat.m_ambient.b);
+			mat.m_specular = pmxMat.m_specular;
+			mat.m_ambient = pmxMat.m_ambient;
+			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
 			mat.m_bothFace = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::BothFace));
 			mat.m_edgeFlag = (static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::DrawEdge)) == 0 ? 0 : 1;
+			mat.m_groundShadow = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::GroundShadow));
+			mat.m_shadowCaster = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::CastSelfShadow));
+			mat.m_shadowReceiver = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::RecieveSelfShadow));
 			mat.m_edgeSize = pmxMat.m_edgeSize;
 			mat.m_edgeColor = pmxMat.m_edgeColor;
-			mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
 
-			// Process textures
+			// Texture
 			if (pmxMat.m_textureIndex != -1)
 			{
-				mat.m_texture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_textureIndex].m_textureName);
+				mat.m_texture = PathUtil::Normalize(texturePaths[pmxMat.m_textureIndex]);
 			}
 
-			// Process sphere textures
+			// ToonTexture
+			if (pmxMat.m_toonMode == PMXToonMode::Common)
+			{
+				if (pmxMat.m_toonTextureIndex != -1)
+				{
+					std::stringstream ss;
+					ss << "toon" << std::setfill('0') << std::setw(2) << (pmxMat.m_toonTextureIndex + 1) << ".bmp";
+					mat.m_toonTexture = PathUtil::Combine(mmdDataDir, ss.str());
+				}
+			}
+			else if (pmxMat.m_toonMode == PMXToonMode::Separate)
+			{
+				if (pmxMat.m_toonTextureIndex != -1)
+				{
+					mat.m_toonTexture = PathUtil::Normalize(texturePaths[pmxMat.m_toonTextureIndex]);
+				}
+			}
+
+			// SpTexture
 			if (pmxMat.m_sphereTextureIndex != -1)
 			{
-				mat.m_spTexture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_sphereTextureIndex].m_textureName);
+				mat.m_spTexture = PathUtil::Normalize(texturePaths[pmxMat.m_sphereTextureIndex]);
+				mat.m_spTextureMode = MMDMaterial::SphereTextureMode::None;
 				if (pmxMat.m_sphereMode == PMXSphereMode::Mul)
 				{
 					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Mul;
@@ -477,32 +510,21 @@ namespace libmmd
 				{
 					mat.m_spTextureMode = MMDMaterial::SphereTextureMode::Add;
 				}
-			}
-
-			// Process Toon textures
-			if (pmxMat.m_toonMode == PMXToonMode::Common)
-			{
-				if (pmxMat.m_toonTextureIndex != -1)
+				else if (pmxMat.m_sphereMode == PMXSphereMode::SubTexture)
 				{
-					std::stringstream ss;
-					ss << "toon" << std::setfill('0') << std::setw(2) << pmxMat.m_toonTextureIndex + 1 << ".bmp";
-					mat.m_toonTexture = PathUtil::Combine(mmdDataDir, ss.str());
+					// TODO: SphareTexture is SubTexture
 				}
 			}
-			else if (pmxMat.m_toonMode == PMXToonMode::Separate)
-			{
-				if (pmxMat.m_toonTextureIndex != -1)
-				{
-					mat.m_toonTexture = PathUtil::Combine(dirPath, file.m_textures[pmxMat.m_toonTextureIndex].m_textureName);
-				}
-			}
-
-			// Set other flags
-			mat.m_groundShadow = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::GroundShadow));
-			mat.m_shadowCaster = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::CastSelfShadow));
-			mat.m_shadowReceiver = !!(static_cast<uint8_t>(pmxMat.m_drawMode) & static_cast<uint8_t>(PMXDrawModeFlags::RecieveSelfShadow));
 
 			m_materials.emplace_back(std::move(mat));
+
+			MMDSubMesh subMesh;
+			subMesh.m_beginIndex = static_cast<int>(beginIndex);
+			subMesh.m_vertexCount = pmxMat.m_numFaceVertices;
+			subMesh.m_materialID = static_cast<int>(m_materials.size() - 1);
+			m_subMeshes.push_back(subMesh);
+
+			beginIndex = beginIndex + pmxMat.m_numFaceVertices;
 		}
 
 		// Create bone nodes
@@ -516,68 +538,187 @@ namespace libmmd
 		// Set bone hierarchy and transforms
 		for (size_t i = 0; i < file.m_bones.size(); i++)
 		{
-			const auto& bone = file.m_bones[i];
-			auto* node = static_cast<PMXNode*>(m_nodeMan.GetNode(i));
+			auto boneIndex = static_cast<int32_t>(file.m_bones.size() - i - 1);
+			const auto& bone = file.m_bones[boneIndex];
+			auto* node = m_nodeMan.GetNode(boneIndex);
 
-			// Set parent-child relationships
+			// Check if the node is looping
+			bool isLooping = false;
 			if (bone.m_parentBoneIndex != -1)
 			{
-				auto* parentNode = m_nodeMan.GetNode(bone.m_parentBoneIndex);
-				parentNode->AddChild(node);
-			}
-
-			// Set initial transforms
-			node->SetTranslate(bone.m_position);
-			glm::mat4 init = translate(glm::mat4(1), bone.m_position);
-			node->SetGlobalTransform(init);
-			node->CalculateInverseInitTransform();
-			node->SaveInitialTRS();
-
-			// Set other properties
-			node->SetDeformDepth(bone.m_deformDepth);
-			node->EnableDeformAfterPhysics(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::DeformAfterPhysics)));
-
-			// Process append transforms
-			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate) ||
-				static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate))
-			{
-				if (bone.m_appendBoneIndex != -1)
+				MMDNode* parent = m_nodeMan.GetNode(bone.m_parentBoneIndex);
+				while (parent != nullptr)
 				{
-					auto* appendNode = static_cast<PMXNode*>(m_nodeMan.GetNode(bone.m_appendBoneIndex));
-					node->SetAppendNode(appendNode);
-					node->EnableAppendRotate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate)));
-					node->EnableAppendTranslate(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate)));
-					node->EnableAppendLocal(!!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendLocal)));
-					node->SetAppendWeight(bone.m_appendWeight);
+					if (parent == node)
+					{
+						isLooping = true;
+						LIBMMD_ERROR("This bone hierarchy is a loop: bone={}", boneIndex);
+						break;
+					}
+					parent = parent->GetParent();
 				}
 			}
 
-			// Process IK
+			// Check parent node index
+			if (bone.m_parentBoneIndex != -1)
+			{
+				if (bone.m_parentBoneIndex >= boneIndex)
+				{
+					LIBMMD_WARN("The parent index of this node is big: bone={}", boneIndex);
+				}
+			}
+
+			if ((bone.m_parentBoneIndex != -1) && !isLooping)
+			{
+				const auto& parentBone = file.m_bones[bone.m_parentBoneIndex];
+				auto* parent = m_nodeMan.GetNode(bone.m_parentBoneIndex);
+				parent->AddChild(node);
+				auto localPos = bone.m_position - parentBone.m_position;
+				localPos.z *= -1;
+				node->SetTranslate(localPos);
+			}
+			else
+			{
+				auto localPos = bone.m_position;
+				localPos.z *= -1;
+				node->SetTranslate(localPos);
+			}
+			glm::mat4 init = glm::translate(
+				glm::mat4(1),
+				bone.m_position * glm::vec3(1, 1, -1)
+			);
+			node->SetGlobalTransform(init);
+			node->CalculateInverseInitTransform();
+
+			node->SetDeformDepth(bone.m_deformDepth);
+			bool deformAfterPhysics = !!(static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::DeformAfterPhysics));
+			node->EnableDeformAfterPhysics(deformAfterPhysics);
+			bool appendRotate = (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendRotate)) != 0;
+			bool appendTranslate = (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendTranslate)) != 0;
+			node->EnableAppendRotate(appendRotate);
+			node->EnableAppendTranslate(appendTranslate);
+			if ((appendRotate || appendTranslate) && (bone.m_appendBoneIndex != -1))
+			{
+				if (bone.m_appendBoneIndex >= boneIndex)
+				{
+					LIBMMD_WARN("The parent(morph assignment) index of this node is big: bone={}", boneIndex);
+				}
+				bool appendLocal = (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::AppendLocal)) != 0;
+				auto appendNode = m_nodeMan.GetNode(bone.m_appendBoneIndex);
+				float appendWeight = bone.m_appendWeight;
+				node->EnableAppendLocal(appendLocal);
+				node->SetAppendNode(appendNode);
+				node->SetAppendWeight(appendWeight);
+			}
+			node->SaveInitialTRS();
+		}
+
+		m_sortedNodes.clear();
+		m_sortedNodes.reserve(m_nodeMan.GetNodeCount());
+		auto* pmxNodes = m_nodeMan.GetNodes();
+		for (auto& pmxNode : (*pmxNodes))
+		{
+			m_sortedNodes.push_back(pmxNode.get());
+		}
+		std::stable_sort(
+			m_sortedNodes.begin(),
+			m_sortedNodes.end(),
+			[](const PMXNode* x, const PMXNode* y) {return x->GetDeformDepth() < y->GetDeformDepth(); }
+		);
+
+		// IK
+		for (size_t i = 0; i < file.m_bones.size(); i++)
+		{
+			const auto& bone = file.m_bones[i];
 			if (static_cast<uint16_t>(bone.m_boneFlag) & static_cast<uint16_t>(PMXBoneFlags::IK))
 			{
-				auto* ikSolver = m_ikSolverMan.AddIKSolver();
-				ikSolver->SetIterateCount(bone.m_ikIterationCount);
-				ikSolver->SetLimitAngle(bone.m_ikLimit);
-				ikSolver->SetTargetNode(node);
+				auto solver = m_ikSolverMan.AddIKSolver();
+				auto* ikNode = m_nodeMan.GetNode(i);
+				solver->SetIKNode(ikNode);
+				ikNode->SetIKSolver(solver);
+
+				if ((bone.m_ikTargetBoneIndex < 0) || (bone.m_ikTargetBoneIndex >= static_cast<int>(m_nodeMan.GetNodeCount())))
+				{
+					LIBMMD_ERROR("Wrong IK Target: bone={} target={}", i, bone.m_ikTargetBoneIndex);
+					continue;
+				}
+
+				auto* targetNode = m_nodeMan.GetNode(bone.m_ikTargetBoneIndex);
+				solver->SetTargetNode(targetNode);
 
 				for (const auto& ikLink : bone.m_ikLinks)
 				{
-					auto* ikNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
-					if (ikLink.m_enableLimit != 0)
+					auto* linkNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
+					if (ikLink.m_enableLimit)
 					{
-						ikSolver->AddIKChain(ikNode, true, ikLink.m_limitMin, ikLink.m_limitMax);
+						glm::vec3 limitMax = ikLink.m_limitMin * glm::vec3(-1);
+						glm::vec3 limitMin = ikLink.m_limitMax * glm::vec3(-1);
+						solver->AddIKChain(linkNode, true, limitMin, limitMax);
 					}
 					else
 					{
-						ikSolver->AddIKChain(ikNode, false, glm::vec3(0), glm::vec3(0));
+						solver->AddIKChain(linkNode);
 					}
+					linkNode->EnableIK(true);
 				}
 
-				node->SetIKSolver(ikSolver);
+				solver->SetIterateCount(bone.m_ikIterationCount);
+				solver->SetLimitAngle(bone.m_ikLimit);
 			}
 		}
 
 		LoadMorph(file);
+
+		// Physics
+		if (!m_physicsMan.Create())
+		{
+			LIBMMD_ERROR("Create Physics Fail.");
+			return false;
+		}
+
+		for (const auto& pmxRB : file.m_rigidbodies)
+		{
+			auto rb = m_physicsMan.AddRigidBody();
+			MMDNode* node = nullptr;
+			if (pmxRB.m_boneIndex != -1)
+			{
+				node = m_nodeMan.GetMMDNode(pmxRB.m_boneIndex);
+			}
+			if (!rb->Create(pmxRB, this, node))
+			{
+				LIBMMD_ERROR("Create Rigid Body Fail.\n");
+				return false;
+			}
+			m_physicsMan.GetMMDPhysics()->AddRigidBody(rb);
+		}
+
+		for (const auto& pmxJoint : file.m_joints)
+		{
+			if (pmxJoint.m_rigidbodyAIndex != -1 &&
+				pmxJoint.m_rigidbodyBIndex != -1 &&
+				pmxJoint.m_rigidbodyAIndex != pmxJoint.m_rigidbodyBIndex)
+			{
+				auto joint = m_physicsMan.AddJoint();
+				auto rigidBodys = m_physicsMan.GetRigidBodys();
+				bool ret = joint->CreateJoint(
+					pmxJoint,
+					(*rigidBodys)[pmxJoint.m_rigidbodyAIndex].get(),
+					(*rigidBodys)[pmxJoint.m_rigidbodyBIndex].get()
+				);
+				if (!ret)
+				{
+					LIBMMD_ERROR("Create Joint Fail.\n");
+					return false;
+				}
+				m_physicsMan.GetMMDPhysics()->AddJoint(joint);
+			}
+			else
+			{
+				LIBMMD_WARN("Illegal Joint [{}]", pmxJoint.m_name.c_str());
+			}
+		}
+
+		ResetPhysics();
 
 		return true;
 	}
@@ -681,6 +822,52 @@ namespace libmmd
 			default:
 				LIBMMD_ERROR("PMX Load Error: Unknown morph type");
 				break;
+			}
+		}
+
+		// Check whether Group Morph infinite loop.
+		{
+			std::vector<int32_t> groupMorphStack;
+			std::function<void(int32_t)> fixInifinitGropuMorph;
+			fixInifinitGropuMorph = [this, &fixInifinitGropuMorph, &groupMorphStack](int32_t morphIdx)
+			{
+				const auto& morphs = (*m_morphMan.GetMorphs());
+				if (const auto& morph = morphs[morphIdx]; morph->m_morphType == MorphType::Group)
+				{
+					auto& groupMorphData = m_groupMorphDatas[morph->m_dataIndex];
+					for (size_t i = 0; i < groupMorphData.m_groupMorphs.size(); i++)
+					{
+						auto& groupMorph = groupMorphData.m_groupMorphs[i];
+
+						auto findIt = std::find(
+							groupMorphStack.begin(),
+							groupMorphStack.end(),
+							groupMorph.m_morphIndex
+						);
+						if (findIt != groupMorphStack.end())
+						{
+							LIBMMD_WARN("Infinit Group Morph:[{}][{}][{}]",
+								morphIdx, morph->GetName(), i
+							);
+							groupMorph.m_morphIndex = -1;
+						}
+						else
+						{
+							groupMorphStack.push_back(morphIdx);
+							if (groupMorph.m_morphIndex>0)
+								fixInifinitGropuMorph(groupMorph.m_morphIndex);
+							else
+								LIBMMD_ERROR("Invalid morph index: group={}, morph={}", groupMorph.m_morphIndex, morphIdx);
+							groupMorphStack.pop_back();
+						}
+					}
+				}
+			};
+
+			for (int32_t morphIdx = 0; morphIdx < static_cast<int32_t>(m_morphMan.GetMorphCount()); morphIdx++)
+			{
+				fixInifinitGropuMorph(morphIdx);
+				groupMorphStack.clear();
 			}
 		}
 	}
