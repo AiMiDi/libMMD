@@ -327,8 +327,6 @@ namespace libmmd
 			beginIndex = beginIndex + m_faceVertexCount;
 		}
 
-		LoadMorph(file);
-
 		// Node
 		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
 		for (const auto& bone : file.m_bones)
@@ -393,6 +391,8 @@ namespace libmmd
 			solver->SetIterateCount(m_numIteration);
 			solver->SetLimitAngle(m_rotateLimit * 4.0f);
 		}
+
+		LoadMorph(file);
 
 		if (!m_physicsMan.Create())
 		{

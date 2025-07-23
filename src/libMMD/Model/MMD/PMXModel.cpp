@@ -505,8 +505,6 @@ namespace libmmd
 			m_materials.emplace_back(std::move(mat));
 		}
 
-		LoadMorph(file);
-
 		// Create bone nodes
 		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
 		for (const auto& bone : file.m_bones)
@@ -578,6 +576,8 @@ namespace libmmd
 				node->SetIKSolver(ikSolver);
 			}
 		}
+
+		LoadMorph(file);
 
 		return true;
 	}
