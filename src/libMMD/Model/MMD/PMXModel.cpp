@@ -526,6 +526,9 @@ namespace libmmd
 
 			beginIndex = beginIndex + pmxMat.m_numFaceVertices;
 		}
+		m_initMaterials = m_materials;
+		m_mulMaterialFactors.resize(m_materials.size());
+		m_addMaterialFactors.resize(m_materials.size());
 
 		// Create bone nodes
 		m_nodeMan.GetNodes()->reserve(file.m_bones.size());
