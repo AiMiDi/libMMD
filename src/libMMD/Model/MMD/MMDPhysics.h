@@ -24,6 +24,7 @@ class btMotionState;
 struct btOverlapFilterCallback;
 class btConstraintSolver;
 class btThreads;
+class btITaskScheduler;
 
 namespace libmmd
 {
@@ -265,6 +266,17 @@ namespace libmmd
 		int                                                  m_maxThreadCount;
 		double	m_fps;
 		int		m_maxSubStepCount;
+
+		static btITaskScheduler* CreateDefaultTaskScheduler();
+		static btITaskScheduler* GetPPLTaskScheduler();
+		static btITaskScheduler* CreateTaskScheduler()
+		{
+#if BT_USE_PPL
+		return GetPPLTaskScheduler();
+#else
+		return CreateDefaultTaskScheduler();
+#endif
+		}
 	};
 
 }

@@ -59,7 +59,7 @@ namespace libmmd
 		, m_fps(120.0f)
 		, m_maxSubStepCount(10)
 	{
-		btSetTaskScheduler(btCreateDefaultTaskScheduler());
+		btSetTaskScheduler(CreateTaskScheduler());
 		btGetTaskScheduler()->setNumThreads(m_maxThreadCount);
 	}
 
@@ -185,6 +185,16 @@ namespace libmmd
 	btDiscreteDynamicsWorld * MMDPhysics::GetDynamicsWorld() const
 	{
 		return m_world.get();
+	}
+
+	btITaskScheduler* MMDPhysics::CreateDefaultTaskScheduler()
+	{
+		return btCreateDefaultTaskScheduler();
+	}
+
+	btITaskScheduler* MMDPhysics::GetPPLTaskScheduler()
+	{
+		return btGetPPLTaskScheduler();
 	}
 
 	//*******************
