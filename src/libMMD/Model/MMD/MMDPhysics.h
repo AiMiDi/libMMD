@@ -25,6 +25,7 @@ struct btOverlapFilterCallback;
 class btConstraintSolver;
 class btThreads;
 class btITaskScheduler;
+class btTransform;
 
 namespace libmmd
 {
@@ -173,8 +174,15 @@ namespace libmmd
 		 */
 		btTypedConstraint* GetConstraint() const;
 
+		/**
+		 * @brief Get the transform matrix of the joint.
+		 * @return The transform matrix as glm::mat4.
+		 */
+		glm::mat4 GetTransform() const;
+
 	private:
 		std::unique_ptr<btTypedConstraint>	m_constraint;
+		std::unique_ptr<btTransform> transform;
 	};
 
 	/**
