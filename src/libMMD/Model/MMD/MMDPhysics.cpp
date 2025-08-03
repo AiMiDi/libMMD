@@ -13,6 +13,8 @@
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
 #include <LinearMath/btThreads.h>
+#include <BulletCollision/CollisionDispatch/btCollisionDispatcherMt.h>
+#include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolverMt.h>
 #include <thread>
 
 namespace libmmd
@@ -72,8 +74,8 @@ namespace libmmd
 	{
 		m_broadphase = std::make_unique<btDbvtBroadphase>();
 		m_collisionConfig = std::make_unique<btDefaultCollisionConfiguration>();
-		m_dispatcher = std::make_unique<btCollisionDispatcher>(m_collisionConfig.get());
-		m_solver = std::make_unique<btSequentialImpulseConstraintSolver>();
+		m_dispatcher = std::make_unique<btCollisionDispatcherMt>(m_collisionConfig.get());
+		m_solver = std::make_unique<btSequentialImpulseConstraintSolverMt>();
 
 		m_world = std::make_unique<btDiscreteDynamicsWorld>(
 			m_dispatcher.get(),
