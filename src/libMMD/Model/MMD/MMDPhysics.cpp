@@ -734,7 +734,7 @@ namespace libmmd
 	//*******************
 	// MMDJoint
 	//*******************
-	MMDJoint::MMDJoint(): transform(std::make_unique<btTransform>()){}
+	MMDJoint::MMDJoint() = default;
 	MMDJoint::~MMDJoint() = default;
 
 	bool MMDJoint::CreateJoint(const PMDJointExt& pmdJoint, const MMDRigidBody* rigidBodyA, const MMDRigidBody* rigidBodyB)
@@ -744,18 +744,19 @@ namespace libmmd
 		btMatrix3x3 rotMat;
 		rotMat.setEulerZYX(pmdJoint.m_jointRot.x, pmdJoint.m_jointRot.y, pmdJoint.m_jointRot.z);
 
-		transform->setIdentity();
-		transform->setOrigin(btVector3(
+		btTransform transform;
+		transform.setIdentity();
+		transform.setOrigin(btVector3(
 			pmdJoint.m_jointPos.x,
 			pmdJoint.m_jointPos.y,
 			pmdJoint.m_jointPos.z
 		));
-		transform->setBasis(rotMat);
+		transform.setBasis(rotMat);
 
 		btTransform invA = rigidBodyA->GetRigidBody()->getWorldTransform().inverse();
 		btTransform invB = rigidBodyB->GetRigidBody()->getWorldTransform().inverse();
-		invA = invA * *transform;
-		invB = invB * *transform;
+		invA = invA * transform;
+		invB = invB * transform;
 
 		auto constraint = std::make_unique<btGeneric6DofSpringConstraint>(
 			*rigidBodyA->GetRigidBody(),
@@ -828,18 +829,19 @@ namespace libmmd
 		btMatrix3x3 rotMat;
 		rotMat.setEulerZYX(pmxJoint.m_rotate.x, pmxJoint.m_rotate.y, pmxJoint.m_rotate.z);
 
-		transform->setIdentity();
-		transform->setOrigin(btVector3(
+		btTransform transform;
+		transform.setIdentity();
+		transform.setOrigin(btVector3(
 			pmxJoint.m_translate.x,
 			pmxJoint.m_translate.y,
 			pmxJoint.m_translate.z
 		));
-		transform->setBasis(rotMat);
+		transform.setBasis(rotMat);
 
 		btTransform invA = rigidBodyA->GetRigidBody()->getWorldTransform().inverse();
 		btTransform invB = rigidBodyB->GetRigidBody()->getWorldTransform().inverse();
-		invA = invA * *transform;
-		invB = invB * *transform;
+		invA = invA * transform;
+		invB = invB * transform;
 
 		auto constraint = std::make_unique<btGeneric6DofSpringConstraint>(
 			*rigidBodyA->GetRigidBody(),
@@ -915,16 +917,15 @@ namespace libmmd
 		return m_constraint.get();
 	}
 
-	glm::mat4 MMDJoint::GetTransform() const
+	glm::vec3 MMDJoint::GetPosition() const
 	{
-		alignas(16) auto result = glm::mat4(1.0f);
-		const auto constraint = reinterpret_cast<btGeneric6DofSpringConstraint*>(m_constraint.get());
-		if (constraint == nullptr)
-			return result;
-		const btTransform& frame_a = constraint->getFrameOffsetA();
-		const btTransform& frame_b = constraint->getFrameOffsetB();
-		const btTransform world_transform = (*transform) * frame_a.inverse() * frame_b;
-		world_transform.getOpenGLMatrix(&result[0][0]);
-		return result;
+		const auto& position_a = m_constraint->getRigidBodyA().getCenterOfMassPosition();
+		const auto& position_b = m_constraint->getRigidBodyB().getCenterOfMassPosition();
+		const auto position = position_a.lerp(position_b, 0.5f);
+		return {
+			position.x(),
+			position.y(),
+			position.z()
+		};
 	}
 }
