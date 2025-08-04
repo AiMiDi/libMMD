@@ -56,13 +56,26 @@ namespace libmmd
 		std::vector<btBroadphaseProxy*> m_nonFilterProxy;
 	};
 
-	MMDPhysics::MMDPhysics()
-		: m_maxThreadCount(std::max(1, static_cast<int>(std::thread::hardware_concurrency() / 2)))
-		, m_fps(120.0f)
-		, m_maxSubStepCount(10)
+	static btITaskScheduler* InitTaskScheduler()
 	{
-		btSetTaskScheduler(CreateTaskScheduler());
-		btGetTaskScheduler()->setNumThreads(m_maxThreadCount);
+		btITaskScheduler* scheduler;
+#ifdef BT_USE_PPL
+		scheduler = btGetPPLTaskScheduler();
+		if (!scheduler)
+			scheduler = btCreateDefaultTaskScheduler();
+#else
+		scheduler = btCreateDefaultTaskScheduler();
+#endif
+		if (!scheduler)
+			scheduler = btGetSequentialTaskScheduler();
+		btSetTaskScheduler(scheduler);
+		btGetTaskScheduler()->setNumThreads(scheduler->getMaxNumThreads());
+		return scheduler;
+	}
+
+	MMDPhysics::MMDPhysics()
+	{
+		static btITaskScheduler* scheduler = InitTaskScheduler();
 	}
 
 	MMDPhysics::~MMDPhysics()
@@ -74,7 +87,7 @@ namespace libmmd
 	{
 		m_broadphase = std::make_unique<btDbvtBroadphase>();
 		m_collisionConfig = std::make_unique<btDefaultCollisionConfiguration>();
-		m_dispatcher = std::make_unique<btCollisionDispatcherMt>(m_collisionConfig.get());
+		m_dispatcher = std::make_unique<btCollisionDispatcher>(m_collisionConfig.get());
 		m_solver = std::make_unique<btSequentialImpulseConstraintSolverMt>();
 
 		m_world = std::make_unique<btDiscreteDynamicsWorld>(
@@ -187,16 +200,6 @@ namespace libmmd
 	btDiscreteDynamicsWorld * MMDPhysics::GetDynamicsWorld() const
 	{
 		return m_world.get();
-	}
-
-	btITaskScheduler* MMDPhysics::CreateDefaultTaskScheduler()
-	{
-		return btCreateDefaultTaskScheduler();
-	}
-
-	btITaskScheduler* MMDPhysics::GetPPLTaskScheduler()
-	{
-		return btGetPPLTaskScheduler();
 	}
 
 	//*******************

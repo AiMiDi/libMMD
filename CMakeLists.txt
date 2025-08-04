@@ -38,12 +38,12 @@ include_directories(${BULLET_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
 if(WIN32)
-    ADD_DEFINITIONS(-DUNICODE)
-    ADD_DEFINITIONS(-D_UNICODE)
+    ADD_DEFINITIONS(-DUNICODE -D_UNICODE)
 endif(WIN32)
 
 if(MSVC)
     ADD_DEFINITIONS(/MP /utf-8)
+    ADD_DEFINITIONS(-DBT_USE_PPL=1)
 endif()
 
 add_subdirectory(src)
