@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -56,7 +56,7 @@ namespace libmmd
 		return m_joints.emplace_back(std::make_unique<MMDJoint>()).get();
 	}
 
-	void MMDModelWithoutBuffered::SaveBaseAnimation()
+	void MMDModel::SaveBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -80,7 +80,7 @@ namespace libmmd
 		}
 	}
 
-	void MMDModelWithoutBuffered::LoadBaseAnimation()
+	void MMDModel::LoadBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -104,7 +104,7 @@ namespace libmmd
 		}
 	}
 
-	void MMDModelWithoutBuffered::ClearBaseAnimation()
+	void MMDModel::ClearBaseAnimation()
 	{
 		const auto nodeMan = GetNodeManager();
 		for (size_t i = 0; i < nodeMan->GetNodeCount(); i++)
@@ -143,7 +143,7 @@ namespace libmmd
 		}
 	}
 
-	void MMDModelWithoutBuffered::UpdateAllAnimation(const VMDAnimation * vmdAnim, const float vmdFrame, const float physicsElapsed)
+	void MMDModel::UpdateAllAnimation(const VMDAnimation * vmdAnim, const float vmdFrame, const float physicsElapsed)
 	{
 		if (vmdAnim != nullptr)
 		{
@@ -159,7 +159,7 @@ namespace libmmd
 		UpdateNodeAnimation(true);
 	}
 
-	void MMDModelWithoutBuffered::LoadPose(const VPDFile & vpd, const int frameCount)
+	void MMDModel::LoadPose(const VPDFile & vpd, const int frameCount)
 	{
 		struct Pose
 		{

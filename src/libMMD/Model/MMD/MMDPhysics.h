@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -29,7 +29,7 @@ class btITaskScheduler;
 namespace libmmd
 {
 	class MMDPhysics;
-	class MMDModelWithoutBuffered;
+	class MMDModel;
 	class MMDNode;
 
 	class MMDMotionState;
@@ -52,7 +52,7 @@ namespace libmmd
 		 * @param node Pointer to the MMD node.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const PMDRigidBodyExt& pmdRigidBody, MMDModelWithoutBuffered* model, MMDNode* node);
+		bool Create(const PMDRigidBodyExt& pmdRigidBody, MMDModel* model, MMDNode* node);
 		/**
 		 * @brief Create a rigid body from PMX data.
 		 * @param pmxRigidBody PMX rigid body data.
@@ -60,7 +60,7 @@ namespace libmmd
 		 * @param node Pointer to the MMD node.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const PMXRigidbody& pmxRigidBody, MMDModelWithoutBuffered* model, MMDNode* node);
+		bool Create(const PMXRigidbody& pmxRigidBody, MMDModel* model, MMDNode* node);
 		/**
 		 * @brief Destroy the rigid body.
 		 */

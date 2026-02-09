@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -13,7 +13,6 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 #include <string>
-#include <future>
 
 namespace libmmd
 {
@@ -144,13 +143,13 @@ namespace libmmd
 	};
 
 	/**
-	 * @brief Represents a PMX model without buffered data.
+	 * @brief Represents a PMX model.
 	 */
-	class PMXModelWithoutBuffered : virtual public MMDModelWithoutBuffered
+	class PMXModel : public MMDModel
 	{
 	public:
-		PMXModelWithoutBuffered();
-		~PMXModelWithoutBuffered() override;
+		PMXModel();
+		~PMXModel() override;
 
 		/**
 		 * @brief Get the node manager.
@@ -303,156 +302,6 @@ namespace libmmd
 		void EndMorphMaterial();
 		void MorphMaterial(const MaterialMorphData& morphData, float weight);
 		static void MorphBone(const BoneMorphData& morphData, float weight);
-	};
-
-	/**
-	 * @brief PMXModel class represents a PMX model.
-	 */
-	class PMXModel final : public PMXModelWithoutBuffered, public MMDModel
-	{
-	public:
-		PMXModel();
-		~PMXModel() override;
-
-		/**
-		 * @brief Get the vertex count.
-		 * @return Vertex count.
-		 */
-		size_t GetVertexCount() const override { return m_positions.size(); }
-
-		/**
-		 * @brief Get the positions of vertices.
-		 * @return Pointer to the positions array.
-		 */
-		const glm::vec3* GetPositions() const override { return m_positions.data(); }
-
-		/**
-		 * @brief Get the normals of vertices.
-		 * @return Pointer to the normals array.
-		 */
-		const glm::vec3* GetNormals() const override { return m_normals.data(); }
-
-		/**
-		 * @brief Get the UV coordinates of vertices.
-		 * @return Pointer to the UV coordinates array.
-		 */
-		const glm::vec2* GetUVs() const override { return m_uvs.data(); }
-
-		/**
-		 * @brief Get the updated positions of vertices.
-		 * @return Pointer to the updated positions array.
-		 */
-		const glm::vec3* GetUpdatePositions() const override { return m_updatePositions.data(); }
-
-		/**
-		 * @brief Get the updated normals of vertices.
-		 * @return Pointer to the updated normals array.
-		 */
-		const glm::vec3* GetUpdateNormals() const override { return m_updateNormals.data(); }
-
-		/**
-		 * @brief Get the updated UV coordinates of vertices.
-		 * @return Pointer to the updated UV coordinates array.
-		 */
-		const glm::vec2* GetUpdateUVs() const override { return m_updateUVs.data(); }
-
-		/**
-		 * @brief Get the size of index elements.
-		 * @return Size of index elements.
-		 */
-		size_t GetIndexElementSize() const override { return m_indexElementSize; }
-
-		/**
-		 * @brief Get the index count.
-		 * @return Index count.
-		 */
-		size_t GetIndexCount() const override { return m_indexCount; }
-
-		/**
-		 * @brief Get the indices.
-		 * @return Pointer to the indices array.
-		 */
-		const void* GetIndices() const override { return &m_indices[0]; }
-
-		/**
-		 * @brief Begin the animation.
-		 */
-		void BeginAnimation() override;
-
-		/**
-		 * @brief Update the model.
-		 */
-		void Update() override;
-
-		/**
-		 * @brief Set the parallel update hint.
-		 * @param parallelCount Number of parallel updates.
-		 */
-		void SetParallelUpdateHint(uint32_t parallelCount) override;
-
-		/**
-		 * @brief Destroy the PMX model.
-		 */
-		void Destroy() override;
-
-		/**
-		 * @brief Load the PMX model from a file.
-		 * @param filepath Path to the PMX file.
-		 * @param mmdDataDir Directory containing MMD data.
-		 * @return True if loading is successful, false otherwise.
-		 */
-		bool Load(const std::string& filepath, const std::string& mmdDataDir) override;
-
-		/**
-		 * @brief Load model data from a PMX file.
-		 * @param file A constant reference to the PMX file object.
-		 * @param dirPath The directory path where the PMX file is located.
-		 * @param mmdDataDir The directory path containing MMD data.
-		 * @return Returns true if the loading is successful, otherwise false.
-		 */
-		bool LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir) override;
-	private:
-		std::vector<glm::vec3>	m_positions;
-		std::vector<glm::vec3>	m_normals;
-		std::vector<glm::vec2>	m_uvs;
-
-		std::vector<glm::vec3>	m_updatePositions;
-		std::vector<glm::vec3>	m_updateNormals;
-		std::vector<glm::vec2>	m_updateUVs;
-
-		std::vector<char>	m_indices;
-		size_t				m_indexCount;
-		size_t				m_indexElementSize;
-
-		struct PositionMorph;
-		struct PositionMorphData;
-		struct UVMorph;
-		struct UVMorphData;
-		struct UpdateRange;
-		enum class SkinningType;
-		struct VertexBoneInfo;
-
-		void Update(const UpdateRange& range);
-		void SetupParallelUpdate();
-		void MorphPosition(const PositionMorphData& morphData, float weight);
-		void MorphUV(const UVMorphData& morphData, float weight);
-
-		void Morph(const PMXMorph* morph, float weight) override;
-		void LoadMorph(const PMXFile& file) override;
-
-		std::vector<glm::mat4>	m_transforms;
-		std::vector<VertexBoneInfo>	m_vertexBoneInfos;
-
-		std::vector<PositionMorphData>	m_positionMorphDatas;
-		std::vector<UVMorphData>		m_uvMorphDatas;
-
-		// Position Morph
-		std::vector<glm::vec3>	m_morphPositions;
-		std::vector<glm::vec4>	m_morphUVs;
-
-		uint32_t							m_parallelUpdateCount;
-		std::vector<UpdateRange>			m_updateRanges;
-		std::vector<std::future<void>>		m_parallelUpdateFutures;
 	};
 }
 

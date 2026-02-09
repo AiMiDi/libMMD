@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -311,7 +311,7 @@ namespace libmmd
 
 	VMDAnimation::~VMDAnimation() = default;
 
-	bool VMDAnimation::Create(const std::shared_ptr<MMDModelWithoutBuffered>& model)
+	bool VMDAnimation::Create(const std::shared_ptr<MMDModel>& model)
 	{
 		m_model = model;
 		return true;

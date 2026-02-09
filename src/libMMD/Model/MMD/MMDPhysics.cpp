@@ -394,7 +394,7 @@ namespace libmmd
 
 	MMDRigidBody::~MMDRigidBody() = default;
 
-	bool MMDRigidBody::Create(const PMDRigidBodyExt& pmdRigidBody, MMDModelWithoutBuffered* model, MMDNode* node)
+	bool MMDRigidBody::Create(const PMDRigidBodyExt& pmdRigidBody, MMDModel* model, MMDNode* node)
 	{
 		Destroy();
 
@@ -520,7 +520,7 @@ namespace libmmd
 		return true;
 	}
 
-	bool MMDRigidBody::Create(const PMXRigidbody & pmxRigidBody, MMDModelWithoutBuffered* model, MMDNode * node)
+	bool MMDRigidBody::Create(const PMXRigidbody & pmxRigidBody, MMDModel* model, MMDNode * node)
 	{
 		Destroy();
 

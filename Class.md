@@ -6,9 +6,13 @@
 
 ```plantuml
 @startuml
-interface MMDModelWithoutBuffed
+abstract class MMDModel
 {
 -- Model Universal --
+#std::string m_modelName
+#std::string m_englishModelName
+#std::string m_comment
+#std::string m_englishComment
 +std::string GetModelName() const
 +std::string GetEnglishModelName() const
 +std::string GetComment() const
@@ -25,13 +29,13 @@ interface MMDModelWithoutBuffed
 +{abstract} const MMDMaterial* GetMaterials() const
 -- SubMesh --
 +{abstract} size_t GetSubMeshCount() const
-+{abstract} MMDSubMesh* GetSubMeshes() const
++{abstract} const MMDSubMesh* GetSubMeshes() const
 -- Animation --
 +void SaveBaseAnimation()
 +void LoadBaseAnimation()
 +void ClearBaseAnimation()
 +void UpdateAllAnimation(const VMDAnimation* vmdAnim, float vmdFrame, float physicsElapsed)
-.. Animation Interface ..
++{abstract} void InitializeAnimation()
 +{abstract} void BeginAnimation()
 +{abstract} void EndAnimation()
 +{abstract} void UpdateMorphAnimation()
@@ -41,35 +45,13 @@ interface MMDModelWithoutBuffed
 -- VPD --
 +void LoadPose(const VPDFile& vpd, int frameCount = 30)
 }
-interface MMDModel
-{
--- Model Universal --
-#glm::vec3 m_bboxMin
-#glm::vec3 m_bboxMax
-+const glm::vec3& GetBBoxMin() const
-+const glm::vec3& GetBBoxMax() const
--- Buffer Interface --
-+{abstract} size_t GetVertexCount() const
-+{abstract} const glm::vec3* GetPositions() const
-+{abstract} const glm::vec3* GetNormals() const
-+{abstract} const glm::vec2* GetUVs() const
-+{abstract} const glm::vec3* GetUpdatePositions() const
-+{abstract} const glm::vec3* GetUpdateNormals() const
-+{abstract} const glm::vec2* GetUpdateUVs() const
-+{abstract} size_t GetIndexElementSize() const
-+{abstract} size_t GetIndexCount() const
-+{abstract} const void* GetIndices() const
--- Animation --
-+{abstract} void Update()
-+{abstract} void SetParallelUpdateHint(uint32_t parallelCount)
-}
-class PMXModelWithoutBuffed
+class PMXModel
 {
 -- Model Universal --
 + bool Load(const std::string& filepath, const std::string& mmdDataDir)
 -- Model Unique --
-+{abstract}void Destroy()
-+ bool LoadPMX(const saba::PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
++{abstract} void Destroy()
++ bool LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 -- Manager Interface --
 +MMDNodeManager* GetNodeManager()
 +MMDIKManager* GetIKManager()
@@ -81,15 +63,15 @@ class PMXModelWithoutBuffed
 +const MMDMaterial* GetMaterials() const
 -- SubMesh --
 +size_t GetSubMeshCount() const
-+MMDSubMesh* GetSubMeshes() const
++const MMDSubMesh* GetSubMeshes() const
 -- Animation --
-+void UpdateAllAnimation(const VMDAnimation* vmdAnim, float vmdFrame, float physicsElapsed)
++void InitializeAnimation()
 +void BeginAnimation()
 +void EndAnimation()
++void UpdateMorphAnimation()
 +void UpdateNodeAnimation(bool afterPhysicsAnim)
 +void ResetPhysics()
 +void UpdatePhysicsAnimation(float elapsed)
-+void UpdateMorphAnimation()
 -- protected --
 #enum class MorphType
 #class PMXMorph
@@ -116,15 +98,16 @@ class PMXModelWithoutBuffed
 #void EndMorphMaterial()
 #void MorphMaterial(const MaterialMorphData& morphData, float weight)
 #{static} void MorphBone(const BoneMorphData& morphData, float weight)
+#{abstract} void Morph(const PMXMorph* morph, float weight)
 #{abstract} void LoadMorph(const PMXFile& file)
 }
-class PMDModelWithoutBuffed
+class PMDModel
 {
 -- Model Universal --
 + bool Load(const std::string& filepath, const std::string& mmdDataDir)
 -- Model Unique --
 + {abstract} void Destroy()
-+ {abstract} bool LoadPMD(const saba::PMDFile& file, const std::string& mmdDataDir)
++ bool LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 -- Manager Interface --
 +MMDNodeManager* GetNodeManager()
 +MMDIKManager* GetIKManager()
@@ -136,9 +119,9 @@ class PMDModelWithoutBuffed
 +const MMDMaterial* GetMaterials() const
 -- SubMesh --
 +size_t GetSubMeshCount() const
-+MMDSubMesh* GetSubMeshes() const
++const MMDSubMesh* GetSubMeshes() const
 -- Animation --
-+void UpdateAllAnimation(const VMDAnimation* vmdAnim, float vmdFrame, float physicsElapsed)
++void InitializeAnimation()
 +void BeginAnimation()
 +void EndAnimation()
 +void UpdateNodeAnimation(bool afterPhysicsAnim)
@@ -155,107 +138,9 @@ class PMDModelWithoutBuffed
 #std::vector<MMDSubMesh>		m_subMeshes
 #{abstract} void LoadMorph(const PMDFile& file)
 }
-class PMXModel
-{
--- Model Unique --
-+ void Destroy()
-+ bool LoadPMX(const saba::PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
--- Buffer Interface --
-+size_t GetVertexCount() const
-+const glm::vec3* GetPositions() const
-+const glm::vec3* GetNormals() const
-+const glm::vec2* GetUVs() const
-+const glm::vec3* GetUpdatePositions() const
-+const glm::vec3* GetUpdateNormals() const
-+const glm::vec2* GetUpdateUVs() const
-+size_t GetIndexElementSize() const
-+size_t GetIndexCount() const
-+const void* GetIndices() const
--- Animation --
-+void Update()
-+void SetParallelUpdateHint(uint32_t parallelCount)
--- private --
-.. Buffer ..
--std::vector<glm::vec3>	m_positions
--std::vector<glm::vec3>	m_normals
--std::vector<glm::vec2>	m_uvs
--std::vector<VertexBoneInfo>	m_vertexBoneInfos
--std::vector<glm::vec3>	m_updatePositions
--std::vector<glm::vec3>	m_updateNormals
--std::vector<glm::vec2>	m_updateUVs
--std::vector<char>	m_indices
--size_t				m_indexCount
--size_t				m_indexElementSize
--std::vector<glm::mat4>	m_transforms
--glm::vec3		m_bboxMin
--glm::vec3		m_bboxMax
-.. Update Buffer ..
--struct PositionMorph
--struct PositionMorphData
--struct UVMorph
--struct UVMorphData
--struct UpdateRange
--enum class SkinningType
--struct VertexBoneInfo
--std::vector<PositionMorphData>	m_positionMorphDatas
--std::vector<UVMorphData>		m_uvMorphDatas
--void Update(const UpdateRange& range)
--void SetupParallelUpdate()
--void Morph(const PMXMorph* morph, float weight)
--void MorphPosition(const PositionMorphData& morphData, float weight)
--void MorphUV(const UVMorphData& morphData, float weight)
--void LoadMorph(const PMXFile& file)
-.. Position Morph .
--std::vector<glm::vec3>	m_morphPositions
--std::vector<glm::vec4>	m_morphUVs
-.. Parallel Update ..
--uint32_t							m_parallelUpdateCount
--std::vector<UpdateRange>			m_updateRanges
--std::vector<std::future<void>>		m_parallelUpdateFutures
-}
-class PMDModel
-{
--- Model Unique --
-+void Destroy()
-+ bool LoadPMD(const saba::PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
--- Buffer Interface --
-+size_t GetVertexCount() const
-+const glm::vec3* GetPositions() const
-+const glm::vec3* GetNormals() const
-+const glm::vec2* GetUVs() const
-+const glm::vec3* GetUpdatePositions() const
-+const glm::vec3* GetUpdateNormals() const
-+const glm::vec2* GetUpdateUVs() const
-+size_t GetIndexElementSize() const
-+size_t GetIndexCount() const
-+const void* GetIndices() const
--- Animation --
-+ void Update()
-+void SetParallelUpdateHint(uint32_t parallelCount)
--- private --
-.. Buffer ..
--std::vector<glm::vec3>	m_positions
--std::vector<glm::vec3>	m_normals
--std::vector<glm::vec2>	m_uvs
--std::vector<glm::ivec2> m_bones
--std::vector<glm::vec2>	m_boneWeights
--std::vector<uint16_t> m_indices
-.. Update Buffer ..
--std::vector<glm::vec3>	m_updatePositions
--std::vector<glm::vec3>	m_updateNormals
--std::vector<glm::mat4>	m_transforms
-.. Morph ..
--PMDMorph m_baseMorph
--void LoadMorph(const PMDFile& file)
-}
 
-MMDModelWithoutBuffed<|--MMDModel
-MMDModelWithoutBuffed<|..PMXModelWithoutBuffed
-PMXModelWithoutBuffed<|--PMXModel
-MMDModel<|..PMXModel
-PMDModelWithoutBuffed<|--PMDModel
-MMDModel<|..PMDModel
-MMDModelWithoutBuffed<|..PMDModelWithoutBuffed
+MMDModel <|-- PMXModel
+MMDModel <|-- PMDModel
 @enduml
 ```
 
@@ -330,9 +215,8 @@ class MMDMorphManagerT<MorphType>
 +MorphType* AddMorph()
 +std::vector<MorphPtr>* GetMorphs()
 }
-MMDNodeManager<|--MMDNodeManagerT
-MMDIKManager<|--MMDIKManagerT
-MMDMorphManager<|--MMDMorphManagerT
-  @enduml
-  
+MMDNodeManager <|-- MMDNodeManagerT
+MMDIKManager <|-- MMDIKManagerT
+MMDMorphManager <|-- MMDMorphManagerT
+@enduml
 ```

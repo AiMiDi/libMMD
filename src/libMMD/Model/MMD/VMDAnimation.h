@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -72,7 +72,7 @@ namespace libmmd
 		 * @param model The MMD model.
 		 * @return True if creation is successful, false otherwise.
 		 */
-		bool Create(const std::shared_ptr<MMDModelWithoutBuffered>& model);
+		bool Create(const std::shared_ptr<MMDModel>& model);
 
 		/**
 		 * @brief Add a VMD file to the animation.
@@ -130,7 +130,7 @@ namespace libmmd
 		using IKControllerPtr = std::unique_ptr<VMDIKController>;
 		using MorphControllerPtr = std::unique_ptr<VMDMorphController>;
 
-		std::shared_ptr<MMDModelWithoutBuffered>			m_model; ///< The MMD model
+		std::shared_ptr<MMDModel>			m_model; ///< The MMD model
 		std::vector<NodeControllerPtr>		m_nodeControllers; ///< Node controllers
 		std::vector<IKControllerPtr>		m_ikControllers; ///< IK controllers
 		std::vector<MorphControllerPtr>		m_morphControllers; ///< Morph controllers

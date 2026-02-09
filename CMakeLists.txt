@@ -12,7 +12,7 @@ else()
 endif()
 option (LIBMMD_BUILD_X_MODEL "Build x model." on)
 set (LIBMMD_BULLET_ROOT "" CACHE PATH "Bullet Root Directory")
-option (LIBMMD_ENABLE_TEST "Enable Google test." on)
+option (LIBMMD_ENABLE_TEST "Enable CTest." on)
 option (LIBMMD_INSTALL "libMMD install." off)
 
 set (BULLET_ROOT ${LIBMMD_BULLET_ROOT})
@@ -48,7 +48,7 @@ endif()
 
 add_subdirectory(src)
 if(LIBMMD_ENABLE_TEST)
-    add_subdirectory(gtests)
+    add_subdirectory(tests)
 endif ()
 
 if (LIBMMD_BUILD_MMD2OBJ)

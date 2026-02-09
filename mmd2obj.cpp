@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -184,92 +184,7 @@ bool MMD2Obj(const std::vector<std::string>& args)
 			mmdModel->UpdateAllAnimation(nullptr, 0, 1.0f / 60.0f);
 		}
 		mmdModel->EndAnimation();
-
-		// Update vertices.
-		mmdModel->Update();
 	}
-
-	// Output OBJ file.
-	std::ofstream objFile;
-	objFile.open("output.obj");
-	if (!objFile.is_open())
-	{
-		std::cout << "Failed to open OBJ file.\n";
-		return false;
-	}
-	objFile << "# mmmd2obj\n";
-	objFile << "mtllib output.mtl\n";
-
-	// Write positions.
-	size_t vtxCount = mmdModel->GetVertexCount();
-	const glm::vec3* positions = mmdModel->GetUpdatePositions();
-	for (size_t i = 0; i < vtxCount; i++)
-	{
-		objFile << "v " << positions[i].x << " " << positions[i].y << " " << positions[i].z << "\n";
-	}
-	const glm::vec3* normals = mmdModel->GetUpdateNormals();
-	for (size_t i = 0; i < vtxCount; i++)
-	{
-		objFile << "vn " << normals[i].x << " " << normals[i].y << " " << normals[i].z << "\n";
-	}
-	const glm::vec2* uvs = mmdModel->GetUpdateUVs();
-	for (size_t i = 0; i < vtxCount; i++)
-	{
-		objFile << "vt " << uvs[i].x << " " << uvs[i].y << "\n";
-	}
-
-	// Copy vertex indices.
-	std::vector<size_t> indices(mmdModel->GetIndexCount());
-	if (mmdModel->GetIndexElementSize() == 1)
-	{
-		uint8_t* mmdIndices = (uint8_t*)mmdModel->GetIndices();
-		for (size_t i = 0; i < indices.size(); i++)
-		{
-			indices[i] = mmdIndices[i];
-		}
-	}
-	else if (mmdModel->GetIndexElementSize() == 2)
-	{
-		uint16_t* mmdIndices = (uint16_t*)mmdModel->GetIndices();
-		for (size_t i = 0; i < indices.size(); i++)
-		{
-			indices[i] = mmdIndices[i];
-		}
-	}
-	else if (mmdModel->GetIndexElementSize() == 4)
-	{
-		uint32_t* mmdIndices = (uint32_t*)mmdModel->GetIndices();
-		for (size_t i = 0; i < indices.size(); i++)
-		{
-			indices[i] = mmdIndices[i];
-		}
-	}
-	else
-	{
-		return false;
-	}
-
-	// Write faces.
-	size_t subMeshCount = mmdModel->GetSubMeshCount();
-	const libmmd::MMDSubMesh* subMeshes = mmdModel->GetSubMeshes();
-	for (size_t i = 0; i < subMeshCount; i++)
-	{
-		objFile << "\n";
-		objFile << "usemtl " << subMeshes[i].m_materialID << "\n";
-
-		for (size_t j = 0; j < subMeshes[i].m_vertexCount; j += 3)
-		{
-			auto vtxIdx = subMeshes[i].m_beginIndex + j;
-			auto vi0 = indices[vtxIdx + 0] + 1;
-			auto vi1 = indices[vtxIdx + 1] + 1;
-			auto vi2 = indices[vtxIdx + 2] + 1;
-			objFile << "f "
-				<< vi0 << "/" << vi0 << "/" << vi0 << " "
-				<< vi1 << "/" << vi1 << "/" << vi1 << " "
-				<< vi2 << "/" << vi2 << "/" << vi2 << "\n";
-		}
-	}
-	objFile.close();
 
 	// Write materials.
 	std::ofstream mtlFile;
@@ -280,7 +195,7 @@ bool MMD2Obj(const std::vector<std::string>& args)
 		return false;
 	}
 
-	objFile << "# mmmd2obj\n";
+	mtlFile << "# mmmd2obj\n";
 	size_t materialCount = mmdModel->GetMaterialCount();
 	const libmmd::MMDMaterial* materials = mmdModel->GetMaterials();
 	for (size_t i = 0; i < materialCount; i++)

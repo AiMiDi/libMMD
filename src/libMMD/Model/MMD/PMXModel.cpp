@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -14,19 +14,16 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include <glm/gtx/dual_quaternion.hpp>
 #include <limits>
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
-#include <thread>
 #include <stack>
 
 namespace libmmd
 {
-	enum class PMXModelWithoutBuffered::MorphType
+	enum class PMXModel::MorphType
 	{
 		None,
 		Position,
@@ -36,7 +33,7 @@ namespace libmmd
 		Group,
 	};
 
-	struct PMXModelWithoutBuffered::MaterialFactor
+	struct PMXModel::MaterialFactor
 	{
 		explicit MaterialFactor(
 			const glm::vec3& diffuse = glm::vec3(1),
@@ -114,7 +111,7 @@ namespace libmmd
 		glm::vec4	m_toonTextureFactor;
 	};
 
-	struct PMXModelWithoutBuffered::MaterialMorphData
+	struct PMXModel::MaterialMorphData
 	{
 		std::vector<PMXFileMorph::MaterialMorph>	m_materialMorphs;
 
@@ -134,7 +131,7 @@ namespace libmmd
 		}
 	};
 
-	struct PMXModelWithoutBuffered::BoneMorphElement
+	struct PMXModel::BoneMorphElement
 	{
 		explicit BoneMorphElement(MMDNode* node = nullptr, const glm::vec3& position = glm::vec3{}, const glm::quat& rotate = glm::quat{})
 			: m_node(node), m_position(position), m_rotate(rotate) {}
@@ -144,7 +141,7 @@ namespace libmmd
 		glm::quat	m_rotate;
 	};
 
-	struct PMXModelWithoutBuffered::BoneMorphData
+	struct PMXModel::BoneMorphData
 	{
 		std::vector<BoneMorphElement>	m_boneMorphs;
 
@@ -163,7 +160,7 @@ namespace libmmd
 		}
 	};
 
-	struct PMXModelWithoutBuffered::GroupMorphData
+	struct PMXModel::GroupMorphData
 	{
 		std::vector<PMXFileMorph::GroupMorph>		m_groupMorphs;
 
@@ -182,16 +179,16 @@ namespace libmmd
 		}
 	};
 
-	PMXModelWithoutBuffered::PMXModelWithoutBuffered() = default;
+	PMXModel::PMXModel() = default;
 
-	PMXModelWithoutBuffered::~PMXModelWithoutBuffered()
+	PMXModel::~PMXModel()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
 		m_nodeMan.GetNodes()->clear();
 	}
 
-	void PMXModelWithoutBuffered::InitializeAnimation()
+	void PMXModel::InitializeAnimation()
 	{
 		ClearBaseAnimation();
 
@@ -254,7 +251,7 @@ namespace libmmd
 		ResetPhysics();
 	}
 
-	void PMXModelWithoutBuffered::BeginAnimation()
+	void PMXModel::BeginAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -262,7 +259,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::EndAnimation()
+	void PMXModel::EndAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -270,7 +267,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::UpdateNodeAnimation(const bool afterPhysicsAnim)
+	void PMXModel::UpdateNodeAnimation(const bool afterPhysicsAnim)
 	{
 		for (const auto pmxNode : m_sortedNodes)
 		{
@@ -329,7 +326,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::ResetPhysics()
+	void PMXModel::ResetPhysics()
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -372,7 +369,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::UpdatePhysicsAnimation(const float elapsed)
+	void PMXModel::UpdatePhysicsAnimation(const float elapsed)
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -409,17 +406,17 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::Destroy()
+	void PMXModel::Destroy()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
 		m_nodeMan.GetNodes()->clear();
 	}
 
-	PMXModelWithoutBuffered::PMXMorph::PMXMorph(): m_morphType(MorphType::None), m_dataIndex()
+	PMXModel::PMXMorph::PMXMorph(): m_morphType(MorphType::None), m_dataIndex()
 	{}
 
-	bool PMXModelWithoutBuffered::Load(const std::string& filepath, const std::string& mmdDataDir)
+	bool PMXModel::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
 		Destroy();
 
@@ -437,7 +434,7 @@ namespace libmmd
 		return true;
 	}
 
-	bool PMXModelWithoutBuffered::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	bool PMXModel::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
 		m_modelName = file.m_info.m_modelName;
 		m_englishModelName = file.m_info.m_englishModelName;
@@ -726,7 +723,7 @@ namespace libmmd
 		return true;
 	}
 
-	void PMXModelWithoutBuffered::Morph(const PMXMorph* morph, float weight)
+	void PMXModel::Morph(const PMXMorph* morph, float weight)
 	{
 		std::stack<std::pair<const PMXMorph*, float>> morphStack;
 		morphStack.emplace(morph, weight);
@@ -764,7 +761,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::LoadMorph(const PMXFile& file)
+	void PMXModel::LoadMorph(const PMXFile& file)
 	{
 		// Process morphs
 		for (const auto& morph : file.m_morphs)
@@ -875,7 +872,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::BeginMorphMaterial()
+	void PMXModel::BeginMorphMaterial()
 	{
 		MaterialFactor initMul{
 			glm::vec3(1), 1, glm::vec3(1), 1, glm::vec3(1),
@@ -901,7 +898,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::EndMorphMaterial()
+	void PMXModel::EndMorphMaterial()
 	{
 		const size_t matCount = m_materials.size();
 		for (size_t matIdx = 0; matIdx < matCount; matIdx++)
@@ -923,7 +920,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::MorphMaterial(const MaterialMorphData & morphData, const float weight)
+	void PMXModel::MorphMaterial(const MaterialMorphData & morphData, const float weight)
 	{
 		for (const auto& matMorph : morphData.m_materialMorphs)
 		{
@@ -977,7 +974,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::MorphBone(const BoneMorphData & morphData, const float weight)
+	void PMXModel::MorphBone(const BoneMorphData & morphData, const float weight)
 	{
 		for (const auto& [m_node, m_position, m_rotate] : morphData.m_boneMorphs)
 		{
@@ -989,7 +986,7 @@ namespace libmmd
 		}
 	}
 
-	void PMXModelWithoutBuffered::UpdateMorphAnimation()
+	void PMXModel::UpdateMorphAnimation()
 	{
 		// Process morphs
 		BeginMorphMaterial();
@@ -1001,683 +998,6 @@ namespace libmmd
 		}
 
 		EndMorphMaterial();
-	}
-
-	struct PMXModel::PositionMorph
-	{
-		explicit PositionMorph(uint32_t index = 0, const glm::vec3& position = glm::vec3{})
-			:m_index(index), m_position(position) {}
-
-		uint32_t	m_index;
-		glm::vec3	m_position;
-	};
-
-	struct PMXModel::PositionMorphData
-	{
-		std::vector<PositionMorph>	m_morphVertices;
-
-		PositionMorphData() = default;
-		~PositionMorphData() = default;
-		PositionMorphData(const PositionMorphData&) = delete;
-		PositionMorphData& operator=(const PositionMorphData&) = delete;
-		PositionMorphData(PositionMorphData&& other) noexcept: m_morphVertices(std::move(other.m_morphVertices)){}
-		PositionMorphData& operator=(PositionMorphData&& other) noexcept
-		{
-			if (this != &other)
-			{
-				m_morphVertices = std::move(other.m_morphVertices);
-			}
-			return *this;
-		}
-	};
-
-	struct PMXModel::UVMorph
-	{
-		explicit UVMorph(uint32_t index = 0, const glm::vec4& uv = glm::vec4{})
-			: m_index(index), m_uv(uv) {}
-
-		uint32_t	m_index;
-		glm::vec4	m_uv;
-	};
-
-	struct PMXModel::UVMorphData
-	{
-		std::vector<UVMorph>	m_morphUVs;
-
-		UVMorphData() = default;
-		~UVMorphData() = default;
-		UVMorphData(const UVMorphData&) = delete;
-		UVMorphData& operator=(const UVMorphData&) = delete;
-		UVMorphData(UVMorphData&& other) noexcept: m_morphUVs(std::move(other.m_morphUVs)){}
-		UVMorphData& operator=(UVMorphData&& other) noexcept
-		{
-			if (this != &other)
-			{
-				m_morphUVs = std::move(other.m_morphUVs);
-			}
-			return *this;
-		}
-	};
-
-	struct PMXModel::UpdateRange
-	{
-		explicit UpdateRange(size_t vertexOffset = 0, size_t vertexCount = 0)
-			: m_vertexOffset(vertexOffset), m_vertexCount(vertexCount) {}
-
-		size_t	m_vertexOffset;
-		size_t	m_vertexCount;
-	};
-
-	void PMXModel::BeginAnimation()
-	{
-		PMXModelWithoutBuffered::BeginAnimation();
-
-		const size_t vtxCount = m_morphPositions.size();
-		for (size_t vtxIdx = 0; vtxIdx < vtxCount; vtxIdx++)
-		{
-			m_morphPositions[vtxIdx] = glm::vec3(0);
-			m_morphUVs[vtxIdx] = glm::vec4(0);
-		}
-	}
-
-	void PMXModel::Update()
-	{
-		const auto& nodes = *m_nodeMan.GetNodes();
-
-		// Pre-calculate deformation matrices for skinning mesh
-		for (size_t i = 0; i < nodes.size(); i++)
-		{
-			m_transforms[i] = nodes[i]->GetGlobalTransform() * nodes[i]->GetInverseInitTransform();
-		}
-
-		if (m_parallelUpdateCount != m_updateRanges.size())
-		{
-			SetupParallelUpdate();
-		}
-
-		const size_t futureCount = m_parallelUpdateFutures.size();
-		for (size_t i = 0; i < futureCount; i++)
-		{
-			if (size_t rangeIndex = i + 1; m_updateRanges[rangeIndex].m_vertexCount != 0)
-			{
-				m_parallelUpdateFutures[i] = std::async(
-					std::launch::async,
-					[this, rangeIndex] { this->Update(this->m_updateRanges[rangeIndex]); }
-				);
-			}
-		}
-
-		Update(m_updateRanges[0]);
-
-		for (size_t i = 0; i < futureCount; i++)
-		{
-			if (const size_t rangeIndex = i + 1; m_updateRanges[rangeIndex].m_vertexCount != 0)
-			{
-				m_parallelUpdateFutures[i].wait();
-			}
-		}
-	}
-
-	void PMXModel::Destroy()
-	{
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_vertexBoneInfos.clear();
-
-		m_indices.clear();
-		m_materials.clear();
-		m_subMeshes.clear();
-
-		m_nodeMan.GetNodes()->clear();
-
-		m_updateRanges.clear();
-	}
-
-	bool PMXModel::Load(const std::string& filepath, const std::string& mmdDataDir)
-	{
-		if (!PMXModelWithoutBuffered::Load(filepath, mmdDataDir))
-			return false;
-
-		// Set default parallel update configuration
-		SetupParallelUpdate();
-
-		return true;
-	}
-
-	enum class PMXModel::SkinningType
-	{
-		Weight1,
-		Weight2,
-		Weight4,
-		SDEF,
-		DualQuaternion,
-	};
-
-	struct PMXModel::VertexBoneInfo
-	{
-		SkinningType	m_skinningType;
-		union
-		{
-			struct
-			{
-				int32_t	m_boneIndex[4];
-				float	m_boneWeight[4];
-			};
-			struct
-			{
-				int32_t	m_boneIndex[2];
-				float	m_boneWeight;
-
-				glm::vec3	m_sdefC;
-				glm::vec3	m_sdefR0;
-				glm::vec3	m_sdefR1;
-			} m_sdef;
-		};
-	};
-
-	bool PMXModel::LoadPMX(const PMXFile& file, const std::string& dirPath, const std::string& mmdDataDir)
-	{
-		if (!PMXModelWithoutBuffered::LoadPMX(file, dirPath, mmdDataDir))
-			return false;
-
-		// Pre-allocate memory
-		const size_t vertexCount = file.m_vertices.size();
-		m_positions.resize(vertexCount);
-		m_normals.resize(vertexCount);
-		m_uvs.resize(vertexCount);
-		m_vertexBoneInfos.resize(vertexCount);
-		m_updatePositions.resize(vertexCount);
-		m_updateNormals.resize(vertexCount);
-		m_updateUVs.resize(vertexCount);
-		m_morphPositions.resize(vertexCount);
-		m_morphUVs.resize(vertexCount);
-
-		m_bboxMax = glm::vec3(-std::numeric_limits<float>::max());
-		m_bboxMin = glm::vec3(std::numeric_limits<float>::max());
-
-		// Read vertex data
-		for (size_t i = 0; i < vertexCount; i++)
-		{
-			const auto& vertex = file.m_vertices[i];
-			m_positions[i] = vertex.m_position;
-			m_normals[i] = vertex.m_normal;
-			m_uvs[i] = vertex.m_uv;
-			m_bboxMax = glm::max(m_bboxMax, vertex.m_position);
-			m_bboxMin = glm::min(m_bboxMin, vertex.m_position);
-
-			// Process vertex bone weights
-			auto& vtxBoneInfo = m_vertexBoneInfos[i];
-			switch (vertex.m_weightType)
-			{
-			case PMXVertexWeight::BDEF1:
-				vtxBoneInfo.m_skinningType = SkinningType::Weight1;
-				vtxBoneInfo.m_boneIndex[0] = vertex.m_boneIndices[0];
-				vtxBoneInfo.m_boneWeight[0] = 1.0f;
-				break;
-			case PMXVertexWeight::BDEF2:
-				vtxBoneInfo.m_skinningType = SkinningType::Weight2;
-				vtxBoneInfo.m_boneIndex[0] = vertex.m_boneIndices[0];
-				vtxBoneInfo.m_boneIndex[1] = vertex.m_boneIndices[1];
-				vtxBoneInfo.m_boneWeight[0] = vertex.m_boneWeights[0];
-				vtxBoneInfo.m_boneWeight[1] = 1.0f - vertex.m_boneWeights[0];
-				break;
-			case PMXVertexWeight::BDEF4:
-				vtxBoneInfo.m_skinningType = SkinningType::Weight4;
-				vtxBoneInfo.m_boneIndex[0] = vertex.m_boneIndices[0];
-				vtxBoneInfo.m_boneIndex[1] = vertex.m_boneIndices[1];
-				vtxBoneInfo.m_boneIndex[2] = vertex.m_boneIndices[2];
-				vtxBoneInfo.m_boneIndex[3] = vertex.m_boneIndices[3];
-				vtxBoneInfo.m_boneWeight[0] = vertex.m_boneWeights[0];
-				vtxBoneInfo.m_boneWeight[1] = vertex.m_boneWeights[1];
-				vtxBoneInfo.m_boneWeight[2] = vertex.m_boneWeights[2];
-				vtxBoneInfo.m_boneWeight[3] = vertex.m_boneWeights[3];
-				break;
-			case PMXVertexWeight::SDEF:
-				vtxBoneInfo.m_skinningType = SkinningType::SDEF;
-				vtxBoneInfo.m_sdef.m_boneIndex[0] = vertex.m_boneIndices[0];
-				vtxBoneInfo.m_sdef.m_boneIndex[1] = vertex.m_boneIndices[1];
-				vtxBoneInfo.m_sdef.m_boneWeight = vertex.m_boneWeights[0];
-				vtxBoneInfo.m_sdef.m_sdefC = vertex.m_sdefC;
-				vtxBoneInfo.m_sdef.m_sdefR0 = vertex.m_sdefR0;
-				vtxBoneInfo.m_sdef.m_sdefR1 = vertex.m_sdefR1;
-				break;
-			case PMXVertexWeight::QDEF:
-				vtxBoneInfo.m_skinningType = SkinningType::Weight4;
-				vtxBoneInfo.m_boneIndex[0] = vertex.m_boneIndices[0];
-				vtxBoneInfo.m_boneIndex[1] = vertex.m_boneIndices[1];
-				vtxBoneInfo.m_boneIndex[2] = vertex.m_boneIndices[2];
-				vtxBoneInfo.m_boneIndex[3] = vertex.m_boneIndices[3];
-				vtxBoneInfo.m_boneWeight[0] = vertex.m_boneWeights[0];
-				vtxBoneInfo.m_boneWeight[1] = vertex.m_boneWeights[1];
-				vtxBoneInfo.m_boneWeight[2] = vertex.m_boneWeights[2];
-				vtxBoneInfo.m_boneWeight[3] = vertex.m_boneWeights[3];
-				break;
-			default:
-				LIBMMD_ERROR("PMX Load Error: Unknown vertex weight type");
-				return false;
-			}
-		}
-
-		// Process face data
-		const size_t faceCount = file.m_faces.size();
-		m_indexCount = faceCount * 3;
-		m_indices.resize(m_indexCount);
-
-		// Handle face data based on index size
-		switch (file.m_header.m_vertexIndexSize)
-		{
-		case 1:
-			{
-				for (size_t i = 0; i < faceCount; ++i)
-				{
-					for (int j = 0; j < 3; ++j)
-					{
-						m_indices[i * 3 + j] = static_cast<uint32_t>(file.m_faces[i].m_vertices[j]);
-					}
-				}
-			}
-			break;
-		case 2:
-			{
-				for (size_t i = 0; i < faceCount; ++i)
-				{
-					for (int j = 0; j < 3; ++j)
-					{
-						m_indices[i * 3 + j] = static_cast<uint32_t>(file.m_faces[i].m_vertices[j]);
-					}
-				}
-			}
-			break;
-		case 4:
-			{
-				for (size_t i = 0; i < faceCount; ++i)
-				{
-					for (int j = 0; j < 3; ++j)
-					{
-						m_indices[i * 3 + j] = file.m_faces[i].m_vertices[j];
-					}
-				}
-			}
-			break;
-		default:
-			LIBMMD_ERROR("PMX Load Error: Unknown vertex index size [{}]", file.m_header.m_vertexIndexSize);
-			return false;
-		}
-
-		m_indexElementSize = file.m_header.m_vertexIndexSize;
-
-		return true;
-	}
-
-	PMXModel::~PMXModel()
-	{
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_vertexBoneInfos.clear();
-
-		m_indices.clear();
-		m_materials.clear();
-		m_subMeshes.clear();
-
-		m_nodeMan.GetNodes()->clear();
-
-		m_updateRanges.clear();
-	}
-
-	void PMXModel::SetParallelUpdateHint(const uint32_t parallelCount)
-	{
-		m_parallelUpdateCount = parallelCount;
-	}
-
-	void PMXModel::LoadMorph(const PMXFile& file)
-	{
-		// Process morphs
-		for (const auto& morph : file.m_morphs)
-		{
-			auto* pmxMorph = static_cast<PMXMorph*>(m_morphMan.AddMorph());
-			pmxMorph->SetName(morph.m_name);
-			pmxMorph->SetWeight(0);
-
-			switch (morph.m_morphType)
-			{
-			case PMXMorphType::Position:
-				{
-					pmxMorph->m_morphType = MorphType::Position;
-					auto& morphData = m_positionMorphDatas.emplace_back();
-					morphData.m_morphVertices.reserve(morph.m_positionMorph.size());
-					for (const auto& vtx : morph.m_positionMorph)
-					{
-						morphData.m_morphVertices.emplace_back(vtx.m_vertexIndex, vtx.m_position);
-					}
-					pmxMorph->m_dataIndex = m_positionMorphDatas.size() - 1;
-				}
-				break;
-			case PMXMorphType::UV:
-			case PMXMorphType::AddUV1:
-			case PMXMorphType::AddUV2:
-			case PMXMorphType::AddUV3:
-			case PMXMorphType::AddUV4:
-				{
-					pmxMorph->m_morphType = MorphType::UV;
-					auto& morphData = m_uvMorphDatas.emplace_back();
-					morphData.m_morphUVs.reserve(morph.m_uvMorph.size());
-					for (const auto& uv : morph.m_uvMorph)
-					{
-						morphData.m_morphUVs.emplace_back(uv.m_vertexIndex, uv.m_uv);
-					}
-					pmxMorph->m_dataIndex = m_uvMorphDatas.size() - 1;
-				}
-				break;
-			case PMXMorphType::Material:
-				{
-					pmxMorph->m_morphType = MorphType::Material;
-					auto& morphData = m_materialMorphDatas.emplace_back();
-					morphData.m_materialMorphs = morph.m_materialMorph;
-					pmxMorph->m_dataIndex = m_materialMorphDatas.size() - 1;
-				}
-				break;
-			case PMXMorphType::Bone:
-				{
-					pmxMorph->m_morphType = MorphType::Bone;
-					auto& morphData = m_boneMorphDatas.emplace_back();
-					morphData.m_boneMorphs.reserve(morph.m_boneMorph.size());
-					for (const auto& bone : morph.m_boneMorph)
-					{
-						if (bone.m_boneIndex != -1)
-						{
-							auto* node = m_nodeMan.GetNode(bone.m_boneIndex);
-							morphData.m_boneMorphs.emplace_back(node, bone.m_position, bone.m_quaternion);
-						}
-					}
-					pmxMorph->m_dataIndex = m_boneMorphDatas.size() - 1;
-				}
-				break;
-			case PMXMorphType::Group:
-				{
-					pmxMorph->m_morphType = MorphType::Group;
-					auto& morphData = m_groupMorphDatas.emplace_back();
-					morphData.m_groupMorphs = morph.m_groupMorph;
-					pmxMorph->m_dataIndex = m_groupMorphDatas.size() - 1;
-				}
-				break;
-			default:
-				LIBMMD_ERROR("PMX Load Error: Unknown morph type");
-				break;
-			}
-		}
-	}
-
-	void PMXModel::SetupParallelUpdate()
-	{
-		if (m_parallelUpdateCount == 0)
-		{
-			// Get CPU core count as default thread count
-			m_parallelUpdateCount = std::max(1u, std::thread::hardware_concurrency());
-		}
-
-		// Limit maximum thread count
-		constexpr size_t maxParallelCount = 32;
-		if (m_parallelUpdateCount > maxParallelCount)
-		{
-			LIBMMD_WARN("PMXModel::SetParallelUpdateCount parallelCount > {}", maxParallelCount);
-			m_parallelUpdateCount = maxParallelCount;
-		}
-
-		LIBMMD_INFO("Select PMX Parallel Update Count : {}", m_parallelUpdateCount);
-
-		m_updateRanges.resize(m_parallelUpdateCount);
-		m_parallelUpdateFutures.resize(m_parallelUpdateCount - 1);
-
-		// Optimize task allocation strategy
-		const size_t vertexCount = m_positions.size();
-		constexpr size_t minVerticesPerThread = 1000; // Minimum vertices per thread
-
-		if (vertexCount < m_updateRanges.size() * minVerticesPerThread)
-		{
-			// If vertex count is small, reduce thread count to avoid thread switching overhead
-			const size_t numRanges = (vertexCount + minVerticesPerThread - 1) / minVerticesPerThread;
-			const size_t verticesPerRange = (vertexCount + numRanges - 1) / numRanges;
-
-			for (size_t rangeIdx = 0; rangeIdx < m_updateRanges.size(); rangeIdx++)
-			{
-				auto& range = m_updateRanges[rangeIdx];
-				if (rangeIdx < numRanges)
-				{
-					range.m_vertexOffset = rangeIdx * verticesPerRange;
-					range.m_vertexCount = std::min(verticesPerRange, vertexCount - range.m_vertexOffset);
-				}
-				else
-				{
-					range.m_vertexOffset = 0;
-					range.m_vertexCount = 0;
-				}
-			}
-		}
-		else
-		{
-			// For large vertex counts, distribute evenly across all threads
-			const size_t verticesPerThread = vertexCount / m_updateRanges.size();
-			size_t remainingVertices = vertexCount % m_updateRanges.size();
-			size_t currentOffset = 0;
-
-			for (auto& range : m_updateRanges)
-			{
-					range.m_vertexOffset = currentOffset;
-				range.m_vertexCount = verticesPerThread + (remainingVertices > 0 ? 1 : 0);
-				currentOffset += range.m_vertexCount;
-				if (remainingVertices > 0) remainingVertices--;
-			}
-		}
-	}
-
-	void PMXModel::Update(const UpdateRange& range)
-	{
-		const auto* position = m_positions.data() + range.m_vertexOffset;
-		const auto* normal = m_normals.data() + range.m_vertexOffset;
-		const auto* uv = m_uvs.data() + range.m_vertexOffset;
-		const auto* morphPos = m_morphPositions.data() + range.m_vertexOffset;
-		const auto* morphUV = m_morphUVs.data() + range.m_vertexOffset;
-		const auto* vtxInfo = m_vertexBoneInfos.data() + range.m_vertexOffset;
-		const auto* transforms = m_transforms.data();
-		auto* updatePosition = m_updatePositions.data() + range.m_vertexOffset;
-		auto* updateNormal = m_updateNormals.data() + range.m_vertexOffset;
-		auto* updateUV = m_updateUVs.data() + range.m_vertexOffset;
-
-		for (size_t i = 0; i < range.m_vertexCount; i++)
-		{
-			glm::mat4 m;
-			switch (vtxInfo->m_skinningType)
-			{
-			case PMXModel::SkinningType::Weight1:
-			{
-				const auto i0 = vtxInfo->m_boneIndex[0];
-				const auto& m0 = transforms[i0];
-				m = m0;
-				break;
-			}
-			case PMXModel::SkinningType::Weight2:
-			{
-				const auto i0 = vtxInfo->m_boneIndex[0];
-				const auto i1 = vtxInfo->m_boneIndex[1];
-				const auto w0 = vtxInfo->m_boneWeight[0];
-				const auto w1 = vtxInfo->m_boneWeight[1];
-				const auto& m0 = transforms[i0];
-				const auto& m1 = transforms[i1];
-				m = m0 * w0 + m1 * w1;
-				break;
-			}
-			case PMXModel::SkinningType::Weight4:
-			{
-				const auto i0 = vtxInfo->m_boneIndex[0];
-				const auto i1 = vtxInfo->m_boneIndex[1];
-				const auto i2 = vtxInfo->m_boneIndex[2];
-				const auto i3 = vtxInfo->m_boneIndex[3];
-				const auto w0 = vtxInfo->m_boneWeight[0];
-				const auto w1 = vtxInfo->m_boneWeight[1];
-				const auto w2 = vtxInfo->m_boneWeight[2];
-				const auto w3 = vtxInfo->m_boneWeight[3];
-				const auto& m0 = transforms[i0];
-				const auto& m1 = transforms[i1];
-				const auto& m2 = transforms[i2];
-				const auto& m3 = transforms[i3];
-				m = m0 * w0 + m1 * w1 + m2 * w2 + m3 * w3;
-				break;
-			}
-			case PMXModel::SkinningType::SDEF:
-			{
-				// https://github.com/powroupi/blender_mmd_tools/blob/dev_test/mmd_tools/core/sdef.py
-
-				auto& nodes = (*m_nodeMan.GetNodes());
-				const auto i0 = vtxInfo->m_sdef.m_boneIndex[0];
-				const auto i1 = vtxInfo->m_sdef.m_boneIndex[1];
-				const auto w0 = vtxInfo->m_sdef.m_boneWeight;
-				const auto w1 = 1.0f - w0;
-				const auto center = vtxInfo->m_sdef.m_sdefC;
-				const auto cr0 = vtxInfo->m_sdef.m_sdefR0;
-				const auto cr1 = vtxInfo->m_sdef.m_sdefR1;
-				const auto q0 = glm::quat_cast(nodes[i0]->GetGlobalTransform());
-				const auto q1 = glm::quat_cast(nodes[i1]->GetGlobalTransform());
-				const auto m0 = transforms[i0];
-				const auto m1 = transforms[i1];
-
-				const auto pos = *position + *morphPos;
-				const auto rot_mat = glm::mat3_cast(glm::slerp(q0, q1, w1));
-
-				*updatePosition = glm::mat3(rot_mat) * (pos - center) + glm::vec3(m0 * glm::vec4(cr0, 1)) * w0 + glm::vec3(m1 * glm::vec4(cr1, 1)) * w1;
-				*updateNormal = rot_mat * *normal;
-
-				break;
-			}
-			case PMXModel::SkinningType::DualQuaternion:
-			{
-				//
-				// Skinning with Dual Quaternions
-				// https://www.cs.utah.edu/~ladislav/dq/index.html
-				//
-				glm::dualquat dq[4];
-				float w[4] = { 0 };
-				for (int bi = 0; bi < 4; bi++)
-				{
-					auto boneID = vtxInfo->m_boneIndex[bi];
-					if (boneID != -1)
-					{
-						dq[bi] = glm::dualquat_cast(glm::mat3x4(glm::transpose(transforms[boneID])));
-						dq[bi] = glm::normalize(dq[bi]);
-						w[bi] = vtxInfo->m_boneWeight[bi];
-					}
-					else
-					{
-						w[bi] = 0;
-					}
-				}
-				if (glm::dot(dq[0].real, dq[1].real) < 0) { w[1] *= -1.0f; }
-				if (glm::dot(dq[0].real, dq[2].real) < 0) { w[2] *= -1.0f; }
-				if (glm::dot(dq[0].real, dq[3].real) < 0) { w[3] *= -1.0f; }
-				auto blendDQ = w[0] * dq[0]
-					+ w[1] * dq[1]
-					+ w[2] * dq[2]
-					+ w[3] * dq[3];
-				blendDQ = glm::normalize(blendDQ);
-				m = glm::transpose(glm::mat3x4_cast(blendDQ));
-				break;
-			}
-			default:
-				break;
-			}
-
-			if (PMXModel::SkinningType::SDEF != vtxInfo->m_skinningType)
-			{
-				*updatePosition = glm::vec3(m * glm::vec4(*position + *morphPos, 1));
-				*updateNormal = glm::normalize(glm::mat3(m) * *normal);
-			}
-			*updateUV = *uv + glm::vec2(morphUV->x, morphUV->y);
-
-			vtxInfo++;
-			position++;
-			normal++;
-			uv++;
-			updatePosition++;
-			updateNormal++;
-			updateUV++;
-			morphPos++;
-			morphUV++;
-		}
-	}
-
-	void PMXModel::MorphPosition(const PositionMorphData & morphData, const float weight)
-	{
-		if (weight == 0)
-		{
-			return;
-		}
-
-		for (const auto& [m_index, m_position] : morphData.m_morphVertices)
-		{
-			m_morphPositions[m_index] += m_position * weight;
-		}
-	}
-
-	void PMXModel::MorphUV(const UVMorphData & morphData, const float weight)
-	{
-		if (weight == 0)
-		{
-			return;
-		}
-
-		for (const auto& [m_index, m_uv] : morphData.m_morphUVs)
-		{
-			m_morphUVs[m_index] += m_uv * weight;
-		}
-	}
-
-	void PMXModel::Morph(const PMXMorph* morph, float weight)
-	{
-		switch (morph->m_morphType)
-		{
-		case MorphType::Position:
-			MorphPosition(
-				m_positionMorphDatas[morph->m_dataIndex],
-				weight
-			);
-			break;
-		case MorphType::UV:
-			MorphUV(
-				m_uvMorphDatas[morph->m_dataIndex],
-				weight
-			);
-			break;
-		case MorphType::Material:
-			MorphMaterial(
-				m_materialMorphDatas[morph->m_dataIndex],
-				weight
-			);
-			break;
-		case MorphType::Bone:
-			MorphBone(
-				m_boneMorphDatas[morph->m_dataIndex],
-				weight
-			);
-			break;
-		case MorphType::Group:
-			{
-				auto& groupMorphData = m_groupMorphDatas[morph->m_dataIndex];
-				for (const auto& groupMorph : groupMorphData.m_groupMorphs)
-				{
-					if (groupMorph.m_morphIndex == -1) { continue; }
-					auto& elemMorph = (*m_morphMan.GetMorphs())[groupMorph.m_morphIndex];
-					Morph(elemMorph.get(), groupMorph.m_weight * weight);
-				}
-				break;
-			}
-		default:
-			break;
-		}
-	}
-
-	PMXModel::PMXModel(): m_indexCount(0), m_indexElementSize(0), m_parallelUpdateCount(0)
-	{
 	}
 
 	PMXNode::PMXNode()

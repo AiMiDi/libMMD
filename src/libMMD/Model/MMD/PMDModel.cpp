@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -45,7 +45,7 @@ namespace libmmd
 		}
 	}
 
-	PMDModelWithoutBuffered::~PMDModelWithoutBuffered()
+	PMDModel::~PMDModel()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
@@ -53,7 +53,7 @@ namespace libmmd
 		m_morphMan.GetMorphs()->clear();
 	}
 
-	void PMDModelWithoutBuffered::InitializeAnimation()
+	void PMDModel::InitializeAnimation()
 	{
 		ClearBaseAnimation();
 
@@ -90,7 +90,7 @@ namespace libmmd
 		ResetPhysics();
 	}
 
-	void PMDModelWithoutBuffered::BeginAnimation()
+	void PMDModel::BeginAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -98,7 +98,7 @@ namespace libmmd
 		}
 	}
 
-	void PMDModelWithoutBuffered::EndAnimation()
+	void PMDModel::EndAnimation()
 	{
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
@@ -106,7 +106,7 @@ namespace libmmd
 		}
 	}
 
-	void PMDModelWithoutBuffered::UpdateNodeAnimation(const bool afterPhysicsAnim)
+	void PMDModel::UpdateNodeAnimation(const bool afterPhysicsAnim)
 	{
 		if (afterPhysicsAnim)
 		{
@@ -132,7 +132,7 @@ namespace libmmd
 		}
 	}
 
-	void PMDModelWithoutBuffered::ResetPhysics()
+	void PMDModel::ResetPhysics()
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -174,7 +174,7 @@ namespace libmmd
 		}
 	}
 
-	void PMDModelWithoutBuffered::UpdatePhysicsAnimation(const float elapsed)
+	void PMDModel::UpdatePhysicsAnimation(const float elapsed)
 	{
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		const auto physics = physicsMan->GetMMDPhysics();
@@ -210,7 +210,7 @@ namespace libmmd
 		}
 	}
 
-	bool PMDModelWithoutBuffered::Load(const std::string& filepath, const std::string& mmdDataDir)
+	bool PMDModel::Load(const std::string& filepath, const std::string& mmdDataDir)
 	{
 		Destroy();
 
@@ -228,7 +228,7 @@ namespace libmmd
 		return true;
 	}
 
-	bool PMDModelWithoutBuffered::LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
+	bool PMDModel::LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
 	{
 		m_modelName = file.m_header.m_modelName.ToUtf8String();
 		m_comment = file.m_header.m_comment.ToUtf8String();
@@ -447,7 +447,7 @@ namespace libmmd
 		return true;
 	}
 
-	void PMDModelWithoutBuffered::Destroy()
+	void PMDModel::Destroy()
 	{
 		m_materials.clear();
 		m_subMeshes.clear();
@@ -455,11 +455,11 @@ namespace libmmd
 		m_morphMan.GetMorphs()->clear();
 	}
 
-	PMDModelWithoutBuffered::MorphVertex::MorphVertex(const uint32_t index, const glm::vec3& position): m_index(index)
+	PMDModel::MorphVertex::MorphVertex(const uint32_t index, const glm::vec3& position): m_index(index)
 		, m_position(position)
 	{}
 
-	void PMDModelWithoutBuffered::LoadMorph(const PMDFile& file)
+	void PMDModel::LoadMorph(const PMDFile& file)
 	{
 		for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : file.m_morphs)
 		{
@@ -472,169 +472,4 @@ namespace libmmd
 		}
 	}
 
-	PMDModel::~PMDModel()
-	{
-		m_materials.clear();
-		m_subMeshes.clear();
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_bones.clear();
-		m_boneWeights.clear();
-		m_indices.clear();
-		m_nodeMan.GetNodes()->clear();
-	}
-
-	void PMDModel::Update()
-	{
-		const auto* bone = &m_bones[0];
-		const auto* boneWeight = &m_boneWeights[0];
-		auto* updatePosition = &m_updatePositions[0];
-		auto* updateNormal = &m_updateNormals[0];
-
-		 // 顶点复制
-		std::copy(m_positions.begin(), m_positions.end(), m_updatePositions.begin());
-		std::copy(m_normals.begin(), m_normals.end(), m_updateNormals.begin());
-
-		// Morph 处理
-		if (m_baseMorph.m_vertices.empty())
-		{
-			for (const auto& morph : *m_morphMan.GetMorphs())
-			{
-				const float weight = morph->GetWeight();
-				if (weight == 0.0f)
-				{
-					continue;
-				}
-				for (const auto& [m_index, m_position] : morph->m_vertices)
-				{
-					updatePosition[m_index] += m_position * weight;
-				}
-			}
-		}
-		else
-		{
-			for (const auto& [m_index, m_position] : m_baseMorph.m_vertices)
-			{
-				updatePosition[m_index] = m_position;
-			}
-			for (const auto& morph : *m_morphMan.GetMorphs())
-			{
-				const float weight = morph->GetWeight();
-				if (weight == 0.0f)
-				{
-					continue;
-				}
-				for (const auto& [m_index, m_position] : morph->m_vertices)
-				{
-					const auto& [m_base_index, m_base_position] = m_baseMorph.m_vertices[m_index];
-					updatePosition[m_base_index] += m_position * weight;
-				}
-			}
-		}
-
-		 // スキンメッシュに使用する変形マトリクスを事前計算
-		const auto& nodes = *m_nodeMan.GetNodes();
-		for (size_t i = 0; i < nodes.size(); i++)
-		{
-			m_transforms[i] = nodes[i]->GetGlobalTransform() * nodes[i]->GetInverseInitTransform();
-		}
-
-		for (size_t i = 0; i < m_positions.size(); i++)
-		{
-			const auto w0 = boneWeight->x;
-			const auto w1 = boneWeight->y;
-			const auto& m0 = m_transforms[bone->x];
-			const auto& m1 = m_transforms[bone->y];
-
-			auto m = m0 * w0 + m1 * w1;
-			*updatePosition = glm::vec3(m * glm::vec4(*updatePosition, 1));
-			*updateNormal = normalize(glm::mat3(m) * *updateNormal);
-
-			bone++;
-			boneWeight++;
-			updatePosition++;
-			updateNormal++;
-		}
-	}
-
-	bool PMDModel::LoadPMD(const PMDFile& file, const std::string& dirPath, const std::string& mmdDataDir)
-	{
-		size_t vertexCount = file.m_vertices.size();
-		m_positions.reserve(vertexCount);
-		m_normals.reserve(vertexCount);
-		m_uvs.reserve(vertexCount);
-		m_bones.reserve(vertexCount);
-		m_boneWeights.reserve(vertexCount);
-		m_bboxMax = glm::vec3(-std::numeric_limits<float>::max());
-		m_bboxMin = glm::vec3(std::numeric_limits<float>::max());
-		for (const auto& [m_position, m_normal, m_uv, m_bone, m_boneWeight, m_edge] : file.m_vertices)
-		{
-			glm::vec3 pos = m_position * glm::vec3(1, 1, -1);
-			glm::vec3 nor = m_normal * glm::vec3(1, 1, -1);
-			auto uv = glm::vec2(m_uv.x, 1.0f - m_uv.y);
-			m_positions.push_back(pos);
-			m_normals.push_back(nor);
-			m_uvs.push_back(uv);
-			m_bones.emplace_back(m_bone[0], m_bone[1]);
-			float boneWeight = static_cast<float>(m_boneWeight) / 100.0f;
-			m_boneWeights.emplace_back(boneWeight, 1.0f - boneWeight);
-
-			m_bboxMax = max(m_bboxMax, pos);
-			m_bboxMin = min(m_bboxMin, pos);
-		}
-		m_updatePositions.resize(m_positions.size());
-		m_updateNormals.resize(m_normals.size());
-
-		m_indices.reserve(file.m_faces.size() * 3);
-		for (const auto& [m_vertices] : file.m_faces)
-		{
-			for (int i = 0; i < 3; i++)
-			{
-				auto vi = m_vertices[3 - i - 1];
-				m_indices.push_back(vi);
-			}
-		}
-
-		m_transforms.resize(m_nodeMan.GetNodeCount());
-
-		return PMDModelWithoutBuffered::LoadPMD(file, dirPath, mmdDataDir);
-	}
-
-	void PMDModel::Destroy()
-	{
-		PMDModelWithoutBuffered::Destroy();
-		m_positions.clear();
-		m_normals.clear();
-		m_uvs.clear();
-		m_indices.clear();
-		m_bones.clear();
-		m_boneWeights.clear();
-
-	}
-
-	void PMDModel::LoadMorph(const PMDFile& file)
-	{
-		for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : file.m_morphs)
-		{
-			PMDMorph* morph;
-			if (m_morphType == libmmd::PMDMorph::Base)
-			{
-				morph = &m_baseMorph;
-			}
-			else
-			{
-				morph = m_morphMan.AddMorph();
-				morph->SetName(m_morphName.ToUtf8String());
-			}
-			morph->SetWeight(0.0f);
-			morph->m_vertices.reserve(m_vertices.size());
-			for (const auto [m_vertexIndex, m_position] : m_vertices)
-			{
-				morph->m_vertices.emplace_back(m_vertexIndex, m_position * glm::vec3(1, 1, -1));
-			}
-		}
-	}
 }
-
-
