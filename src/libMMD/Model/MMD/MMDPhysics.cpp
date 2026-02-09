@@ -8,7 +8,8 @@
 #include "MMDNode.h"
 #include "MMDModel.h"
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
@@ -28,9 +29,10 @@ namespace libmmd
 
 	namespace
 	{
-		glm::mat4 InvZ(const glm::mat4& m)
+		Eigen::Matrix4f InvZ(const Eigen::Matrix4f& m)
 		{
-			const glm::mat4 invZ = scale(glm::mat4(1), glm::vec3(1, 1, -1));
+			Eigen::Matrix4f invZ = Eigen::Matrix4f::Identity();
+			invZ(2, 2) = -1.0f;
 			return invZ * m * invZ;
 		}
 	}
@@ -209,10 +211,10 @@ namespace libmmd
 	class DefaultMotionState final : public MMDMotionState
 	{
 	public:
-		explicit DefaultMotionState(const glm::mat4& transform)
+		explicit DefaultMotionState(const Eigen::Matrix4f& transform)
 		{
-			glm::mat4 trans = InvZ(transform);
-			m_transform.setFromOpenGLMatrix(&trans[0][0]);
+			Eigen::Matrix4f trans = InvZ(transform);
+			m_transform.setFromOpenGLMatrix(trans.data());
 			m_initialTransform = m_transform;
 		}
 
@@ -244,12 +246,12 @@ namespace libmmd
 	class DynamicMotionState final : public MMDMotionState
 	{
 	public:
-		DynamicMotionState(MMDNode* node, const glm::mat4& offset, const bool override = true)
+		DynamicMotionState(MMDNode* node, const Eigen::Matrix4f& offset, const bool override = true)
 			: m_node(node)
 			, m_offset(offset)
 			, m_override(override)
 		{
-			m_invOffset = glm::inverse(offset);
+			m_invOffset = offset.inverse();
 			Reset();
 		}
 
@@ -265,15 +267,15 @@ namespace libmmd
 
 		void Reset() override
 		{
-			glm::mat4 global = InvZ(m_node->GetGlobalTransform() * m_offset);
-			m_transform.setFromOpenGLMatrix(&global[0][0]);
+			Eigen::Matrix4f global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			m_transform.setFromOpenGLMatrix(global.data());
 		}
 
 		void ReflectGlobalTransform() override
 		{
-			alignas(16) glm::mat4 world;
-			m_transform.getOpenGLMatrix(&world[0][0]);
-			const glm::mat4 btGlobal = InvZ(world) * m_invOffset;
+			alignas(16) Eigen::Matrix4f world;
+			m_transform.getOpenGLMatrix(world.data());
+			const Eigen::Matrix4f btGlobal = InvZ(world) * m_invOffset;
 
 			if (m_override)
 			{
@@ -284,8 +286,8 @@ namespace libmmd
 
 	private:
 		MMDNode*	m_node;
-		glm::mat4	m_offset;
-		glm::mat4	m_invOffset{};
+		Eigen::Matrix4f	m_offset;
+		Eigen::Matrix4f	m_invOffset{};
 		btTransform	m_transform;
 		bool		m_override;
 	};
@@ -293,12 +295,12 @@ namespace libmmd
 	class DynamicAndBoneMergeMotionState final : public MMDMotionState
 	{
 	public:
-		DynamicAndBoneMergeMotionState(MMDNode* node, const glm::mat4& offset, const bool override = true)
+		DynamicAndBoneMergeMotionState(MMDNode* node, const Eigen::Matrix4f& offset, const bool override = true)
 			: m_node(node)
 			, m_offset(offset)
 			, m_override(override)
 		{
-			m_invOffset = glm::inverse(offset);
+			m_invOffset = offset.inverse();
 			Reset();
 		}
 
@@ -314,17 +316,17 @@ namespace libmmd
 
 		void Reset() override
 		{
-			glm::mat4 global = InvZ(m_node->GetGlobalTransform() * m_offset);
-			m_transform.setFromOpenGLMatrix(&global[0][0]);
+			Eigen::Matrix4f global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			m_transform.setFromOpenGLMatrix(global.data());
 		}
 
 		void ReflectGlobalTransform() override
 		{
-			alignas(16) glm::mat4 world;
-			m_transform.getOpenGLMatrix(&world[0][0]);
-			glm::mat4 btGlobal = InvZ(world) * m_invOffset;
-			glm::mat4 global = m_node->GetGlobalTransform();
-			btGlobal[3] = global[3];
+			alignas(16) Eigen::Matrix4f world;
+			m_transform.getOpenGLMatrix(world.data());
+			Eigen::Matrix4f btGlobal = InvZ(world) * m_invOffset;
+			Eigen::Matrix4f global = m_node->GetGlobalTransform();
+			btGlobal.col(3) = global.col(3);
 
 			if (m_override)
 			{
@@ -335,8 +337,8 @@ namespace libmmd
 
 	private:
 		MMDNode*	m_node;
-		glm::mat4	m_offset;
-		glm::mat4	m_invOffset{};
+		Eigen::Matrix4f	m_offset;
+		Eigen::Matrix4f	m_invOffset{};
 		btTransform	m_transform;
 		bool		m_override;
 
@@ -345,7 +347,7 @@ namespace libmmd
 	class KinematicMotionState final : public MMDMotionState
 	{
 	public:
-		KinematicMotionState(MMDNode* node, const glm::mat4& offset)
+		KinematicMotionState(MMDNode* node, const Eigen::Matrix4f& offset)
 			: m_node(node)
 			, m_offset(offset)
 		{
@@ -353,7 +355,7 @@ namespace libmmd
 
 		void getWorldTransform(btTransform& worldTransform) const override
 		{
-			glm::mat4 m;
+			Eigen::Matrix4f m;
 			if (m_node != nullptr)
 			{
 				m = m_node->GetGlobalTransform() * m_offset;
@@ -363,7 +365,7 @@ namespace libmmd
 				m = m_offset;
 			}
 			m = InvZ(m);
-			worldTransform.setFromOpenGLMatrix(&m[0][0]);
+			worldTransform.setFromOpenGLMatrix(m.data());
 		}
 
 		void setWorldTransform(const btTransform& worldTransform) override
@@ -380,7 +382,7 @@ namespace libmmd
 
 	private:
 		MMDNode*	m_node;
-		glm::mat4	m_offset;
+		Eigen::Matrix4f	m_offset;
 	};
 
 	MMDRigidBody::MMDRigidBody()
@@ -388,7 +390,7 @@ namespace libmmd
 		, m_group(0)
 		, m_groupMask(0)
 		, m_node(nullptr)
-		, m_offsetMat(1)
+		, m_offsetMat(Eigen::Matrix4f::Identity())
 	{
 	}
 
@@ -435,34 +437,38 @@ namespace libmmd
 			m_shape->calculateLocalInertia(mass, localInteria);
 		}
 
-		const auto rx = rotate(glm::mat4(1), pmdRigidBody.m_rot.x, glm::vec3(1, 0, 0));
-		const auto ry = rotate(glm::mat4(1), pmdRigidBody.m_rot.y, glm::vec3(0, 1, 0));
-		const auto rz = rotate(glm::mat4(1), pmdRigidBody.m_rot.z, glm::vec3(0, 0, 1));
-		const glm::mat4 rotMat = ry * rx * rz;
-		const glm::mat4 translateMat = translate(glm::mat4(1), pmdRigidBody.m_pos);
+		Eigen::Matrix4f rx = Eigen::Matrix4f::Identity();
+		rx.block<3,3>(0,0) = Eigen::AngleAxisf(pmdRigidBody.m_rot.x(), Eigen::Vector3f::UnitX()).toRotationMatrix();
+		Eigen::Matrix4f ry = Eigen::Matrix4f::Identity();
+		ry.block<3,3>(0,0) = Eigen::AngleAxisf(pmdRigidBody.m_rot.y(), Eigen::Vector3f::UnitY()).toRotationMatrix();
+		Eigen::Matrix4f rz = Eigen::Matrix4f::Identity();
+		rz.block<3,3>(0,0) = Eigen::AngleAxisf(pmdRigidBody.m_rot.z(), Eigen::Vector3f::UnitZ()).toRotationMatrix();
+		const Eigen::Matrix4f rotMat = ry * rx * rz;
+		Eigen::Matrix4f translateMat = Eigen::Matrix4f::Identity();
+		translateMat.block<3,1>(0,3) = pmdRigidBody.m_pos;
 
-		glm::mat4 rbMat = translateMat * rotMat;
+		Eigen::Matrix4f rbMat = translateMat * rotMat;
 		if (node != nullptr)
 		{
-			const glm::mat4 global = node->GetGlobalTransform();
+			const Eigen::Matrix4f global = node->GetGlobalTransform();
 			rbMat = InvZ(global) * rbMat;
 		}
 		else
 		{
 			const MMDNode* root = model->GetNodeManager()->GetMMDNode(0);
-			const glm::mat4 global = root->GetGlobalTransform();
+			const Eigen::Matrix4f global = root->GetGlobalTransform();
 			rbMat = InvZ(global) * rbMat;
 		}
 		rbMat = InvZ(rbMat);
 
 		if (node != nullptr)
 		{
-			m_offsetMat = glm::inverse(node->GetGlobalTransform()) * rbMat;
+			m_offsetMat = node->GetGlobalTransform().inverse() * rbMat;
 		}
 		else
 		{
 			const MMDNode* root = model->GetNodeManager()->GetMMDNode(0);
-			m_offsetMat = glm::inverse(root->GetGlobalTransform()) * rbMat;
+			m_offsetMat = root->GetGlobalTransform().inverse() * rbMat;
 		}
 
 		btMotionState* motionState = nullptr;
@@ -504,7 +510,7 @@ namespace libmmd
 
 		m_rigidBody = std::make_unique<btRigidBody>(rbInfo);
 		m_rigidBody->setUserPointer(this);
-		m_rigidBody->setSleepingThresholds(0.01f, glm::radians(0.1f));
+		m_rigidBody->setSleepingThresholds(0.01f, 0.1f * static_cast<float>(EIGEN_PI) / 180.0f);
 		m_rigidBody->setActivationState(DISABLE_DEACTIVATION);
 		if (pmdRigidBody.m_rigidBodyType == PMDRigidBodyOperation::Static)
 		{
@@ -527,19 +533,19 @@ namespace libmmd
 		switch (pmxRigidBody.m_shape)
 		{
 		case PMXRigidbody::Shape::Sphere:
-			m_shape = std::make_unique<btSphereShape>(pmxRigidBody.m_shapeSize.x);
+			m_shape = std::make_unique<btSphereShape>(pmxRigidBody.m_shapeSize.x());
 			break;
 		case PMXRigidbody::Shape::Box:
 			m_shape = std::make_unique<btBoxShape>(btVector3(
-				pmxRigidBody.m_shapeSize.x,
-				pmxRigidBody.m_shapeSize.y,
-				pmxRigidBody.m_shapeSize.z
+				pmxRigidBody.m_shapeSize.x(),
+				pmxRigidBody.m_shapeSize.y(),
+				pmxRigidBody.m_shapeSize.z()
 			));
 			break;
 		case PMXRigidbody::Shape::Capsule:
 			m_shape = std::make_unique<btCapsuleShape>(
-				pmxRigidBody.m_shapeSize.x,
-				pmxRigidBody.m_shapeSize.y
+				pmxRigidBody.m_shapeSize.x(),
+				pmxRigidBody.m_shapeSize.y()
 				);
 			break;
 		default:
@@ -561,24 +567,28 @@ namespace libmmd
 			m_shape->calculateLocalInertia(mass, localInteria);
 		}
 
-		const auto rx = rotate(glm::mat4(1), pmxRigidBody.m_rotate.x, glm::vec3(1, 0, 0));
-		const auto ry = rotate(glm::mat4(1), pmxRigidBody.m_rotate.y, glm::vec3(0, 1, 0));
-		const auto rz = rotate(glm::mat4(1), pmxRigidBody.m_rotate.z, glm::vec3(0, 0, 1));
-		const glm::mat4 rotMat = ry * rx * rz;
-		const glm::mat4 translateMat = translate(glm::mat4(1), pmxRigidBody.m_translate);
+		Eigen::Matrix4f rx = Eigen::Matrix4f::Identity();
+		rx.block<3,3>(0,0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.x(), Eigen::Vector3f::UnitX()).toRotationMatrix();
+		Eigen::Matrix4f ry = Eigen::Matrix4f::Identity();
+		ry.block<3,3>(0,0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.y(), Eigen::Vector3f::UnitY()).toRotationMatrix();
+		Eigen::Matrix4f rz = Eigen::Matrix4f::Identity();
+		rz.block<3,3>(0,0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.z(), Eigen::Vector3f::UnitZ()).toRotationMatrix();
+		const Eigen::Matrix4f rotMat = ry * rx * rz;
+		Eigen::Matrix4f translateMat = Eigen::Matrix4f::Identity();
+		translateMat.block<3,1>(0,3) = pmxRigidBody.m_translate;
 
-		const glm::mat4 rbMat = InvZ(translateMat * rotMat);
+		const Eigen::Matrix4f rbMat = InvZ(translateMat * rotMat);
 
 		MMDNode* kinematicNode = nullptr;
 		if (node != nullptr)
 		{
-			m_offsetMat = glm::inverse(node->GetGlobalTransform()) * rbMat;
+			m_offsetMat = node->GetGlobalTransform().inverse() * rbMat;
 			kinematicNode = node;
 		}
 		else
 		{
 			MMDNode* root = model->GetNodeManager()->GetMMDNode(0);
-			m_offsetMat = glm::inverse(root->GetGlobalTransform()) * rbMat;
+			m_offsetMat = root->GetGlobalTransform().inverse() * rbMat;
 			kinematicNode = root;
 		}
 
@@ -622,7 +632,7 @@ namespace libmmd
 
 		m_rigidBody = std::make_unique<btRigidBody>(rbInfo);
 		m_rigidBody->setUserPointer(this);
-		m_rigidBody->setSleepingThresholds(0.01f, glm::radians(0.1f));
+		m_rigidBody->setSleepingThresholds(0.01f, 0.1f * static_cast<float>(EIGEN_PI) / 180.0f);
 		m_rigidBody->setActivationState(DISABLE_DEACTIVATION);
 		if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
 		{
@@ -717,7 +727,7 @@ namespace libmmd
 		{
 			if (const auto parent = m_node->GetParent(); parent != nullptr)
 			{
-				const auto local = glm::inverse(parent->GetGlobalTransform()) * m_node->GetGlobalTransform();
+				const Eigen::Matrix4f local = parent->GetGlobalTransform().inverse() * m_node->GetGlobalTransform();
 				m_node->SetLocalTransform(local);
 			}
 			else
@@ -727,11 +737,11 @@ namespace libmmd
 		}
 	}
 
-	glm::mat4 MMDRigidBody::GetTransform() const
+	Eigen::Matrix4f MMDRigidBody::GetTransform() const
 	{
 		const btTransform transform = m_rigidBody->getCenterOfMassTransform();
-		alignas(16) glm::mat4 mat;
-		transform.getOpenGLMatrix(&mat[0][0]);
+		alignas(16) Eigen::Matrix4f mat;
+		transform.getOpenGLMatrix(mat.data());
 		return InvZ(mat);
 	}
 
@@ -747,14 +757,14 @@ namespace libmmd
 		Destroy();
 
 		btMatrix3x3 rotMat;
-		rotMat.setEulerZYX(pmdJoint.m_jointRot.x, pmdJoint.m_jointRot.y, pmdJoint.m_jointRot.z);
+		rotMat.setEulerZYX(pmdJoint.m_jointRot.x(), pmdJoint.m_jointRot.y(), pmdJoint.m_jointRot.z());
 
 		btTransform transform;
 		transform.setIdentity();
 		transform.setOrigin(btVector3(
-			pmdJoint.m_jointPos.x,
-			pmdJoint.m_jointPos.y,
-			pmdJoint.m_jointPos.z
+			pmdJoint.m_jointPos.x(),
+			pmdJoint.m_jointPos.y(),
+			pmdJoint.m_jointPos.z()
 		));
 		transform.setBasis(rotMat);
 
@@ -770,56 +780,56 @@ namespace libmmd
 			invB,
 			true);
 		constraint->setLinearLowerLimit(btVector3(
-			pmdJoint.m_constrainPos1.x,
-			pmdJoint.m_constrainPos1.y,
-			pmdJoint.m_constrainPos1.z
+			pmdJoint.m_constrainPos1.x(),
+			pmdJoint.m_constrainPos1.y(),
+			pmdJoint.m_constrainPos1.z()
 		));
 		constraint->setLinearUpperLimit(btVector3(
-			pmdJoint.m_constrainPos2.x,
-			pmdJoint.m_constrainPos2.y,
-			pmdJoint.m_constrainPos2.z
+			pmdJoint.m_constrainPos2.x(),
+			pmdJoint.m_constrainPos2.y(),
+			pmdJoint.m_constrainPos2.z()
 		));
 
 		constraint->setAngularLowerLimit(btVector3(
-			pmdJoint.m_constrainRot1.x,
-			pmdJoint.m_constrainRot1.y,
-			pmdJoint.m_constrainRot1.z
+			pmdJoint.m_constrainRot1.x(),
+			pmdJoint.m_constrainRot1.y(),
+			pmdJoint.m_constrainRot1.z()
 		));
 		constraint->setAngularUpperLimit(btVector3(
-			pmdJoint.m_constrainRot2.x,
-			pmdJoint.m_constrainRot2.y,
-			pmdJoint.m_constrainRot2.z
+			pmdJoint.m_constrainRot2.x(),
+			pmdJoint.m_constrainRot2.y(),
+			pmdJoint.m_constrainRot2.z()
 		));
 
-		if (pmdJoint.m_springPos.x != 0)
+		if (pmdJoint.m_springPos.x() != 0)
 		{
 			constraint->enableSpring(0, true);
-			constraint->setStiffness(0, pmdJoint.m_springPos.x);
+			constraint->setStiffness(0, pmdJoint.m_springPos.x());
 		}
-		if (pmdJoint.m_springPos.y != 0)
+		if (pmdJoint.m_springPos.y() != 0)
 		{
 			constraint->enableSpring(1, true);
-			constraint->setStiffness(1, pmdJoint.m_springPos.y);
+			constraint->setStiffness(1, pmdJoint.m_springPos.y());
 		}
-		if (pmdJoint.m_springPos.z != 0)
+		if (pmdJoint.m_springPos.z() != 0)
 		{
 			constraint->enableSpring(2, true);
-			constraint->setStiffness(2, -pmdJoint.m_springPos.z);
+			constraint->setStiffness(2, -pmdJoint.m_springPos.z());
 		}
-		if (pmdJoint.m_springRot.x != 0)
+		if (pmdJoint.m_springRot.x() != 0)
 		{
 			constraint->enableSpring(3, true);
-			constraint->setStiffness(3, pmdJoint.m_springRot.x);
+			constraint->setStiffness(3, pmdJoint.m_springRot.x());
 		}
-		if (pmdJoint.m_springRot.y != 0)
+		if (pmdJoint.m_springRot.y() != 0)
 		{
 			constraint->enableSpring(4, true);
-			constraint->setStiffness(4, pmdJoint.m_springRot.y);
+			constraint->setStiffness(4, pmdJoint.m_springRot.y());
 		}
-		if (pmdJoint.m_springRot.z != 0)
+		if (pmdJoint.m_springRot.z() != 0)
 		{
 			constraint->enableSpring(5, true);
-			constraint->setStiffness(5, pmdJoint.m_springRot.z);
+			constraint->setStiffness(5, pmdJoint.m_springRot.z());
 		}
 
 		m_constraint = std::move(constraint);
@@ -832,14 +842,14 @@ namespace libmmd
 		Destroy();
 
 		btMatrix3x3 rotMat;
-		rotMat.setEulerZYX(pmxJoint.m_rotate.x, pmxJoint.m_rotate.y, pmxJoint.m_rotate.z);
+		rotMat.setEulerZYX(pmxJoint.m_rotate.x(), pmxJoint.m_rotate.y(), pmxJoint.m_rotate.z());
 
 		btTransform transform;
 		transform.setIdentity();
 		transform.setOrigin(btVector3(
-			pmxJoint.m_translate.x,
-			pmxJoint.m_translate.y,
-			pmxJoint.m_translate.z
+			pmxJoint.m_translate.x(),
+			pmxJoint.m_translate.y(),
+			pmxJoint.m_translate.z()
 		));
 		transform.setBasis(rotMat);
 
@@ -855,56 +865,56 @@ namespace libmmd
 			invB,
 			true);
 		constraint->setLinearLowerLimit(btVector3(
-			pmxJoint.m_translateLowerLimit.x,
-			pmxJoint.m_translateLowerLimit.y,
-			pmxJoint.m_translateLowerLimit.z
+			pmxJoint.m_translateLowerLimit.x(),
+			pmxJoint.m_translateLowerLimit.y(),
+			pmxJoint.m_translateLowerLimit.z()
 		));
 		constraint->setLinearUpperLimit(btVector3(
-			pmxJoint.m_translateUpperLimit.x,
-			pmxJoint.m_translateUpperLimit.y,
-			pmxJoint.m_translateUpperLimit.z
+			pmxJoint.m_translateUpperLimit.x(),
+			pmxJoint.m_translateUpperLimit.y(),
+			pmxJoint.m_translateUpperLimit.z()
 		));
 
 		constraint->setAngularLowerLimit(btVector3(
-			pmxJoint.m_rotateLowerLimit.x,
-			pmxJoint.m_rotateLowerLimit.y,
-			pmxJoint.m_rotateLowerLimit.z
+			pmxJoint.m_rotateLowerLimit.x(),
+			pmxJoint.m_rotateLowerLimit.y(),
+			pmxJoint.m_rotateLowerLimit.z()
 		));
 		constraint->setAngularUpperLimit(btVector3(
-			pmxJoint.m_rotateUpperLimit.x,
-			pmxJoint.m_rotateUpperLimit.y,
-			pmxJoint.m_rotateUpperLimit.z
+			pmxJoint.m_rotateUpperLimit.x(),
+			pmxJoint.m_rotateUpperLimit.y(),
+			pmxJoint.m_rotateUpperLimit.z()
 		));
 
-		if (pmxJoint.m_springTranslateFactor.x != 0)
+		if (pmxJoint.m_springTranslateFactor.x() != 0)
 		{
 			constraint->enableSpring(0, true);
-			constraint->setStiffness(0, pmxJoint.m_springTranslateFactor.x);
+			constraint->setStiffness(0, pmxJoint.m_springTranslateFactor.x());
 		}
-		if (pmxJoint.m_springTranslateFactor.y != 0)
+		if (pmxJoint.m_springTranslateFactor.y() != 0)
 		{
 			constraint->enableSpring(1, true);
-			constraint->setStiffness(1, pmxJoint.m_springTranslateFactor.y);
+			constraint->setStiffness(1, pmxJoint.m_springTranslateFactor.y());
 		}
-		if (pmxJoint.m_springTranslateFactor.z != 0)
+		if (pmxJoint.m_springTranslateFactor.z() != 0)
 		{
 			constraint->enableSpring(2, true);
-			constraint->setStiffness(2, pmxJoint.m_springTranslateFactor.z);
+			constraint->setStiffness(2, pmxJoint.m_springTranslateFactor.z());
 		}
-		if (pmxJoint.m_springRotateFactor.x != 0)
+		if (pmxJoint.m_springRotateFactor.x() != 0)
 		{
 			constraint->enableSpring(3, true);
-			constraint->setStiffness(3, pmxJoint.m_springRotateFactor.x);
+			constraint->setStiffness(3, pmxJoint.m_springRotateFactor.x());
 		}
-		if (pmxJoint.m_springRotateFactor.y != 0)
+		if (pmxJoint.m_springRotateFactor.y() != 0)
 		{
 			constraint->enableSpring(4, true);
-			constraint->setStiffness(4, pmxJoint.m_springRotateFactor.y);
+			constraint->setStiffness(4, pmxJoint.m_springRotateFactor.y());
 		}
-		if (pmxJoint.m_springRotateFactor.z != 0)
+		if (pmxJoint.m_springRotateFactor.z() != 0)
 		{
 			constraint->enableSpring(5, true);
-			constraint->setStiffness(5, pmxJoint.m_springRotateFactor.z);
+			constraint->setStiffness(5, pmxJoint.m_springRotateFactor.z());
 		}
 
 		m_constraint = std::move(constraint);
@@ -922,7 +932,7 @@ namespace libmmd
 		return m_constraint.get();
 	}
 
-	glm::vec3 MMDJoint::GetPosition() const
+	Eigen::Vector3f MMDJoint::GetPosition() const
 	{
 		const auto& position_a = m_constraint->getRigidBodyA().getCenterOfMassPosition();
 		const auto& position_b = m_constraint->getRigidBodyB().getCenterOfMassPosition();

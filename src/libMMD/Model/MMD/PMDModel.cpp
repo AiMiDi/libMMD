@@ -11,8 +11,8 @@
 #include <libMMD/Base/File.h>
 #include <libMMD/Base/Log.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <limits>
 #include <algorithm>
 
@@ -59,8 +59,8 @@ namespace libmmd
 
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
-			node->SetAnimationTranslate(glm::vec3(0));
-			node->SetAnimationRotate(glm::quat(1, 0, 0, 0));
+			node->SetAnimationTranslate(Eigen::Vector3f::Zero());
+			node->SetAnimationRotate(Eigen::Quaternionf::Identity());
 		}
 
 		for (const auto& node : *m_nodeMan.GetNodes())
@@ -343,22 +343,20 @@ namespace libmmd
 				const auto& parentBone = file.m_bones[m_parent];
 				auto* parentNode = m_nodeMan.GetNode(m_parent);
 				parentNode->AddChild(node);
-				glm::vec3 localPos = m_position - parentBone.m_position;
-				localPos.z *= -1;
+				Eigen::Vector3f localPos = m_position - parentBone.m_position;
+				localPos.z() *= -1;
 
 				node->SetTranslate(localPos);
 			}
 			else
 			{
-				glm::vec3 localPos = m_position;
-				localPos.z *= -1;
+				Eigen::Vector3f localPos = m_position;
+				localPos.z() *= -1;
 
 				node->SetTranslate(localPos);
 			}
-			glm::mat4 init = translate(
-				glm::mat4(1),
-				m_position * glm::vec3(1, 1, -1)
-			);
+			Eigen::Matrix4f init = Eigen::Matrix4f::Identity();
+			init.block<3,1>(0,3) = m_position.cwiseProduct(Eigen::Vector3f(1, 1, -1));
 			node->SetGlobalTransform(init);
 			node->CalculateInverseInitTransform();
 			node->SaveInitialTRS();
@@ -455,7 +453,7 @@ namespace libmmd
 		m_morphMan.GetMorphs()->clear();
 	}
 
-	PMDModel::MorphVertex::MorphVertex(const uint32_t index, const glm::vec3& position): m_index(index)
+	PMDModel::MorphVertex::MorphVertex(const uint32_t index, const Eigen::Vector3f& position): m_index(index)
 		, m_position(position)
 	{}
 

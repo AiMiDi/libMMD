@@ -10,7 +10,7 @@
 #include "MMDModel.h"
 #include "MMDIkSolver.h"
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 #include <vector>
 #include <string>
 
@@ -96,13 +96,13 @@ namespace libmmd
 		 * @brief Get the append translation.
 		 * @return Append translation.
 		 */
-		const glm::vec3& GetAppendTranslate() const { return m_appendTranslate; }
+		const Eigen::Vector3f& GetAppendTranslate() const { return m_appendTranslate; }
 
 		/**
 		 * @brief Get the append rotation.
 		 * @return Append rotation.
 		 */
-		const glm::quat& GetAppendRotate() const { return m_appendRotate; }
+		const Eigen::Quaternionf& GetAppendRotate() const { return m_appendRotate; }
 
 		/**
 		 * @brief Set the IK solver.
@@ -136,8 +136,8 @@ namespace libmmd
 		bool		m_isAppendLocal;
 		float		m_appendWeight;
 
-		glm::vec3	m_appendTranslate{};
-		glm::quat	m_appendRotate{};
+		Eigen::Vector3f	m_appendTranslate{};
+		Eigen::Quaternionf	m_appendRotate{};
 
 		MMDIkSolver*	m_ikSolver;
 	};

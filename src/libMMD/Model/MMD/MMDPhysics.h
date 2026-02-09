@@ -9,6 +9,7 @@
 #include "PMDFile.h"
 #include "PMXFile.h"
 
+#include <Eigen/Core>
 #include <memory>
 
 // Bullet Types
@@ -110,7 +111,7 @@ namespace libmmd
 		 * @brief Get the transform matrix of the rigid body.
 		 * @return Transform matrix.
 		 */
-		glm::mat4 GetTransform() const;
+		Eigen::Matrix4f GetTransform() const;
 
 	private:
 		enum class RigidBodyType
@@ -130,7 +131,7 @@ namespace libmmd
 		uint16_t		m_groupMask;
 
 		MMDNode*	m_node;
-		glm::mat4	m_offsetMat;
+		Eigen::Matrix4f	m_offsetMat;
 
 		std::string					m_name;
 	};
@@ -175,9 +176,9 @@ namespace libmmd
 
 		/**
 		 * @brief Get the position vector of the joint.
-		 * @return The position vector as glm::vec3.
+		 * @return The position vector as Eigen::Vector3f.
 		 */
-		glm::vec3 GetPosition() const;
+		Eigen::Vector3f GetPosition() const;
 
 	private:
 		std::unique_ptr<btTypedConstraint>	m_constraint;

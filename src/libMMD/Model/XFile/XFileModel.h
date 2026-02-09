@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include <glm/mat4x4.hpp>
+#include <Eigen/Core>
 
 namespace libmmd
 {
@@ -22,10 +22,10 @@ namespace libmmd
 		 */
 		struct Material
 		{
-			glm::vec4	m_diffuse; ///< Diffuse color.
-			glm::vec3	m_specular; ///< Specular color.
+			Eigen::Vector4f	m_diffuse; ///< Diffuse color.
+			Eigen::Vector3f	m_specular; ///< Specular color.
 			float		m_speculatPower; ///< Specular power.
-			glm::vec3	m_emissive; ///< Emissive color.
+			Eigen::Vector3f	m_emissive; ///< Emissive color.
 
 			std::string	m_texture; ///< Texture file path.
 
@@ -59,9 +59,9 @@ namespace libmmd
 		struct Mesh
 		{
 			std::string				m_name; ///< Name of the mesh.
-			std::vector<glm::vec3>	m_positions; ///< Positions of the vertices.
-			std::vector<glm::vec3>	m_normals; ///< Normals of the vertices.
-			std::vector<glm::vec2>	m_uvs; ///< UV coordinates of the vertices.
+			std::vector<Eigen::Vector3f>	m_positions; ///< Positions of the vertices.
+			std::vector<Eigen::Vector3f>	m_normals; ///< Normals of the vertices.
+			std::vector<Eigen::Vector2f>	m_uvs; ///< UV coordinates of the vertices.
 			std::vector<Material>	m_materials; ///< Materials of the mesh.
 			std::vector<Face>		m_faces; ///< Faces of the mesh.
 		};
@@ -72,8 +72,8 @@ namespace libmmd
 		struct Frame
 		{
 			std::string	m_name; ///< Name of the frame.
-			glm::mat4	m_local; ///< Local transformation matrix.
-			glm::mat4	m_global; ///< Global transformation matrix.
+			Eigen::Matrix4f	m_local; ///< Local transformation matrix.
+			Eigen::Matrix4f	m_global; ///< Global transformation matrix.
 			Mesh*		m_mesh; ///< Pointer to the mesh.
 
 			Frame*		m_parent; ///< Pointer to the parent frame.
@@ -110,13 +110,13 @@ namespace libmmd
 		 * @brief Get the bounding box minimum coordinates.
 		 * @return Bounding box minimum coordinates.
 		 */
-		const glm::vec3& GetBBoxMin() const { return m_bboxMin; }
+		const Eigen::Vector3f& GetBBoxMin() const { return m_bboxMin; }
 
 		/**
 		 * @brief Get the bounding box maximum coordinates.
 		 * @return Bounding box maximum coordinates.
 		 */
-		const glm::vec3& GetBBoxMax() const { return m_bboxMax; }
+		const Eigen::Vector3f& GetBBoxMax() const { return m_bboxMax; }
 
 	private:
 		static void UpdateGlobalTransform(Frame* frame);
@@ -127,8 +127,8 @@ namespace libmmd
 		std::vector<MeshPtr>	m_meshes;
 		std::vector<FramePtr>	m_frames;
 
-		glm::vec3		m_bboxMin{};
-		glm::vec3		m_bboxMax{};
+		Eigen::Vector3f		m_bboxMin{};
+		Eigen::Vector3f		m_bboxMax{};
 
 	};
 }

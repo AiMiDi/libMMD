@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2019 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -7,7 +7,8 @@
 #include "VMDAnimationCommon.hpp"
 
 #include <cstdint>
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -19,8 +20,8 @@ namespace libmmd
 		 */
 		void SetVMDBezier(VMDBezier& bezier, const int x0, const int x1, const int y0, const int y1)
 		{
-			bezier.m_cp1 = glm::vec2(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
-			bezier.m_cp2 = glm::vec2(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
+			bezier.m_cp1 = Eigen::Vector2f(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
+			bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
 		}
 	} // namespace
 
@@ -30,11 +31,11 @@ namespace libmmd
 	 */
 	struct VMDCameraAnimationKey
 	{
-		int32_t		m_time;         // Keyframe timestamp
-		glm::vec3	m_interest;     // Look-at point
-		glm::vec3	m_rotate;       // Camera rotation
-		float		m_distance;     // Distance from look-at point
-		float		m_fov;          // Field of view in radians
+		int32_t			m_time;         // Keyframe timestamp
+		Eigen::Vector3f	m_interest;     // Look-at point
+		Eigen::Vector3f	m_rotate;       // Camera rotation
+		float			m_distance;     // Distance from look-at point
+		float			m_fov;          // Field of view in radians
 
 		// Bezier interpolation curves for each parameter
 		VMDBezier	m_ixBezier;     // Interest point X
@@ -148,10 +149,10 @@ namespace libmmd
 					const auto fov_y = key0.m_fovBezier.EvalY(fov_x);
 
 					// Interpolate camera parameters
-					m_camera.m_interest = mix(key0.m_interest, key1.m_interest, glm::vec3(ix_y, iy_y, iz_y));
-					m_camera.m_rotate = mix(key0.m_rotate, key1.m_rotate, rotate_y);
-					m_camera.m_distance = glm::mix(key0.m_distance, key1.m_distance, distance_y);
-					m_camera.m_fov = glm::mix(key0.m_fov, key1.m_fov, fov_y);
+					m_camera.m_interest = key0.m_interest + (key1.m_interest - key0.m_interest).cwiseProduct(Eigen::Vector3f(ix_y, iy_y, iz_y));
+					m_camera.m_rotate = key0.m_rotate + (key1.m_rotate - key0.m_rotate) * rotate_y;
+					m_camera.m_distance = key0.m_distance + (key1.m_distance - key0.m_distance) * distance_y;
+					m_camera.m_fov = key0.m_fov + (key1.m_fov - key0.m_fov) * fov_y;
 				}
 				else
 				{
@@ -207,10 +208,10 @@ namespace libmmd
 		{
 			VMDCameraAnimationKey key{};
 			key.m_time = static_cast<int32_t>(m_frame);
-			key.m_interest = m_interest * glm::vec3(1, 1, -1);
+			key.m_interest = m_interest.cwiseProduct(Eigen::Vector3f(1, 1, -1));
 			key.m_rotate = m_rotate;
 			key.m_distance = m_distance;
-			key.m_fov = glm::radians(static_cast<float>(m_viewAngle));
+			key.m_fov = static_cast<float>(m_viewAngle) * static_cast<float>(EIGEN_PI) / 180.0f;
 
 			const uint8_t* ip = m_interpolation.data();
 			SetVMDBezier(key.m_ixBezier, ip[0], ip[1], ip[2], ip[3]);

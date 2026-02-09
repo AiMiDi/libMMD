@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -91,18 +91,18 @@ namespace libmmd
 	 */
 	struct PMXVertex
 	{
-		glm::vec3	m_position; ///< Position vector
-		glm::vec3	m_normal; ///< Normal vector
-		glm::vec2	m_uv; ///< UV coordinates
+		Eigen::Vector3f	m_position; ///< Position vector
+		Eigen::Vector3f	m_normal; ///< Normal vector
+		Eigen::Vector2f	m_uv; ///< UV coordinates
 
-		glm::vec4	m_addUV[4]; ///< Additional UVs
+		Eigen::Vector4f	m_addUV[4]; ///< Additional UVs
 
 		PMXVertexWeight	m_weightType; ///< Weight type
 		int32_t		m_boneIndices[4]; ///< Bone indices
 		float		m_boneWeights[4]; ///< Bone weights
-		glm::vec3	m_sdefC; ///< SDEF C vector
-		glm::vec3	m_sdefR0; ///< SDEF R0 vector
-		glm::vec3	m_sdefR1; ///< SDEF R1 vector
+		Eigen::Vector3f	m_sdefC; ///< SDEF C vector
+		Eigen::Vector3f	m_sdefR0; ///< SDEF R0 vector
+		Eigen::Vector3f	m_sdefR1; ///< SDEF R1 vector
 
 		float	m_edgeMag; ///< Edge magnitude
 	};
@@ -182,14 +182,14 @@ namespace libmmd
 		std::string	m_name; ///< Material name
 		std::string	m_englishName; ///< English material name
 
-		glm::vec4	m_diffuse; ///< Diffuse color
-		glm::vec3	m_specular; ///< Specular color
+		Eigen::Vector4f	m_diffuse; ///< Diffuse color
+		Eigen::Vector3f	m_specular; ///< Specular color
 		float		m_specularPower; ///< Specular power
-		glm::vec3	m_ambient; ///< Ambient color
+		Eigen::Vector3f	m_ambient; ///< Ambient color
 
 		PMXDrawModeFlags m_drawMode; ///< Draw mode flags
 
-		glm::vec4	m_edgeColor; ///< Edge color
+		Eigen::Vector4f	m_edgeColor; ///< Edge color
 		float		m_edgeSize; ///< Edge size
 
 		int32_t	m_textureIndex; ///< Texture index
@@ -252,8 +252,8 @@ namespace libmmd
 		int32_t			m_ikBoneIndex; ///< IK bone index
 		unsigned char	m_enableLimit; ///< Enable limit flag
 
-		glm::vec3	m_limitMin; ///< Minimum limit (in radians)
-		glm::vec3	m_limitMax; ///< Maximum limit (in radians)
+		Eigen::Vector3f	m_limitMin; ///< Minimum limit (in radians)
+		Eigen::Vector3f	m_limitMax; ///< Maximum limit (in radians)
 	};
 
 	/**
@@ -264,22 +264,22 @@ namespace libmmd
 		std::string	m_name; ///< Bone name
 		std::string	m_englishName; ///< English bone name
 
-		glm::vec3	m_position; ///< Position vector
+		Eigen::Vector3f	m_position; ///< Position vector
 		int32_t		m_parentBoneIndex; ///< Parent bone index
 		int32_t		m_deformDepth; ///< Deform depth
 
 		PMXBoneFlags	m_boneFlag; ///< Bone flags
 
-		glm::vec3	m_positionOffset; ///< Position offset (if target show mode is 0)
+		Eigen::Vector3f	m_positionOffset; ///< Position offset (if target show mode is 0)
 		int32_t		m_linkBoneIndex; ///< Link bone index (if target show mode is 1)
 
 		int32_t	m_appendBoneIndex; ///< Append bone index (if append rotate or append translate is enabled)
 		float	m_appendWeight; ///< Append weight
 
-		glm::vec3	m_fixedAxis; ///< Fixed axis (if fixed axis is enabled)
+		Eigen::Vector3f	m_fixedAxis; ///< Fixed axis (if fixed axis is enabled)
 
-		glm::vec3	m_localXAxis; ///< Local X axis (if local axis is enabled)
-		glm::vec3	m_localZAxis; ///< Local Z axis (if local axis is enabled)
+		Eigen::Vector3f	m_localXAxis; ///< Local X axis (if local axis is enabled)
+		Eigen::Vector3f	m_localZAxis; ///< Local Z axis (if local axis is enabled)
 
 		int32_t	m_keyValue; ///< Key value (if deform outer parent is enabled)
 
@@ -336,20 +336,20 @@ namespace libmmd
 		struct PositionMorph
 		{
 			int32_t		m_vertexIndex; ///< Vertex index
-			glm::vec3	m_position; ///< Position vector
+			Eigen::Vector3f	m_position; ///< Position vector
 		};
 
 		struct UVMorph
 		{
 			int32_t		m_vertexIndex; ///< Vertex index
-			glm::vec4	m_uv; ///< UV vector
+			Eigen::Vector4f	m_uv; ///< UV vector
 		};
 
 		struct BoneMorph
 		{
 			int32_t		m_boneIndex; ///< Bone index
-			glm::vec3	m_position; ///< Position vector
-			glm::quat	m_quaternion; ///< Rotation quaternion
+			Eigen::Vector3f	m_position; ///< Position vector
+			Eigen::Quaternionf	m_quaternion; ///< Rotation quaternion
 		};
 
 		struct MaterialMorph
@@ -362,15 +362,15 @@ namespace libmmd
 
 			int32_t		m_materialIndex; ///< Material index
 			OpType		m_opType; ///< Operation type
-			glm::vec4	m_diffuse; ///< Diffuse color
-			glm::vec3	m_specular; ///< Specular color
+			Eigen::Vector4f	m_diffuse; ///< Diffuse color
+			Eigen::Vector3f	m_specular; ///< Specular color
 			float		m_specularPower; ///< Specular power
-			glm::vec3	m_ambient; ///< Ambient color
-			glm::vec4	m_edgeColor; ///< Edge color
+			Eigen::Vector3f	m_ambient; ///< Ambient color
+			Eigen::Vector4f	m_edgeColor; ///< Edge color
 			float		m_edgeSize; ///< Edge size
-			glm::vec4	m_textureFactor; ///< Texture factor
-			glm::vec4	m_sphereTextureFactor; ///< Sphere texture factor
-			glm::vec4	m_toonTextureFactor; ///< Toon texture factor
+			Eigen::Vector4f	m_textureFactor; ///< Texture factor
+			Eigen::Vector4f	m_sphereTextureFactor; ///< Sphere texture factor
+			Eigen::Vector4f	m_toonTextureFactor; ///< Toon texture factor
 		};
 
 		struct GroupMorph
@@ -389,8 +389,8 @@ namespace libmmd
 		{
 			int32_t		m_rigidbodyIndex; ///< Rigidbody index
 			uint8_t		m_localFlag; ///< Local flag (0:OFF 1:ON)
-			glm::vec3	m_translateVelocity; ///< Translate velocity
-			glm::vec3	m_rotateTorque; ///< Rotate torque
+			Eigen::Vector3f	m_translateVelocity; ///< Translate velocity
+			Eigen::Vector3f	m_rotateTorque; ///< Rotate torque
 		};
 
 		std::vector<PositionMorph>	m_positionMorph; ///< Position morphs
@@ -459,10 +459,10 @@ namespace libmmd
 			Capsule, ///< Capsule
 		};
 		Shape		m_shape; ///< Shape
-		glm::vec3	m_shapeSize; ///< Shape size
+		Eigen::Vector3f	m_shapeSize; ///< Shape size
 
-		glm::vec3	m_translate; ///< Translation vector
-		glm::vec3	m_rotate; ///< Rotation vector (in radians)
+		Eigen::Vector3f	m_translate; ///< Translation vector
+		Eigen::Vector3f	m_rotate; ///< Rotation vector (in radians)
 
 		float	m_mass; ///< Mass
 		float	m_translateDimmer; ///< Translation dimmer
@@ -506,16 +506,16 @@ namespace libmmd
 		int32_t		m_rigidbodyAIndex; ///< Rigidbody A index
 		int32_t		m_rigidbodyBIndex; ///< Rigidbody B index
 
-		glm::vec3	m_translate; ///< Translation vector
-		glm::vec3	m_rotate; ///< Rotation vector
+		Eigen::Vector3f	m_translate; ///< Translation vector
+		Eigen::Vector3f	m_rotate; ///< Rotation vector
 
-		glm::vec3	m_translateLowerLimit; ///< Translation lower limit
-		glm::vec3	m_translateUpperLimit; ///< Translation upper limit
-		glm::vec3	m_rotateLowerLimit; ///< Rotation lower limit
-		glm::vec3	m_rotateUpperLimit; ///< Rotation upper limit
+		Eigen::Vector3f	m_translateLowerLimit; ///< Translation lower limit
+		Eigen::Vector3f	m_translateUpperLimit; ///< Translation upper limit
+		Eigen::Vector3f	m_rotateLowerLimit; ///< Rotation lower limit
+		Eigen::Vector3f	m_rotateUpperLimit; ///< Rotation upper limit
 
-		glm::vec3	m_springTranslateFactor; ///< Spring translation factor
-		glm::vec3	m_springRotateFactor; ///< Spring rotation factor
+		Eigen::Vector3f	m_springTranslateFactor; ///< Spring translation factor
+		Eigen::Vector3f	m_springRotateFactor; ///< Spring rotation factor
 	};
 
 	/**

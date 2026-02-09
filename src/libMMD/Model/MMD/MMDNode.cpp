@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -6,7 +6,6 @@
 #include <stack>
 #include "MMDNode.h"
 #include <libMMD/Base/Log.h>
-#include <glm/gtc/matrix_transform.hpp>
 
 namespace libmmd
 {
@@ -17,20 +16,20 @@ namespace libmmd
 		, m_child(nullptr)
 		, m_next(nullptr)
 		, m_prev(nullptr)
-		, m_translate(0)
-		, m_rotate(1, 0, 0, 0)
-		, m_scale(1)
-		, m_animTranslate(0)
-		, m_animRotate(1, 0, 0, 0)
-		, m_baseAnimTranslate(0)
-		, m_baseAnimRotate(1, 0, 0, 0)
-		, m_ikRotate(1, 0, 0, 0)
-		, m_local(1)
-		, m_global(1)
-		, m_inverseInit(1)
-		, m_initTranslate(0)
-		, m_initRotate(1, 0, 0, 0)
-		, m_initScale(1)
+		, m_translate(Eigen::Vector3f::Zero())
+		, m_rotate(Eigen::Quaternionf::Identity())
+		, m_scale(Eigen::Vector3f::Ones())
+		, m_animTranslate(Eigen::Vector3f::Zero())
+		, m_animRotate(Eigen::Quaternionf::Identity())
+		, m_baseAnimTranslate(Eigen::Vector3f::Zero())
+		, m_baseAnimRotate(Eigen::Quaternionf::Identity())
+		, m_ikRotate(Eigen::Quaternionf::Identity())
+		, m_local(Eigen::Matrix4f::Identity())
+		, m_global(Eigen::Matrix4f::Identity())
+		, m_inverseInit(Eigen::Matrix4f::Identity())
+		, m_initTranslate(Eigen::Vector3f::Zero())
+		, m_initRotate(Eigen::Quaternionf::Identity())
+		, m_initScale(Eigen::Vector3f::Ones())
 	{
 	}
 
@@ -65,7 +64,7 @@ namespace libmmd
 	void MMDNode::BeginUpdateTransform()
 	{
 		LoadInitialTRS();
-		SetIKRotate(glm::quat(1, 0, 0, 0));
+		SetIKRotate(Eigen::Quaternionf::Identity());
 		OnBeginUpdateTransform();
 	}
 
@@ -119,7 +118,7 @@ void MMDNode::UpdateGlobalTransform()
 
 	void MMDNode::CalculateInverseInitTransform()
 	{
-		m_inverseInit = inverse(m_global);
+		m_inverseInit = m_global.inverse();
 	}
 
 	void MMDNode::OnBeginUpdateTransform()
@@ -132,12 +131,17 @@ void MMDNode::UpdateGlobalTransform()
 
 	void MMDNode::OnUpdateLocalTransform()
 	{
-		const auto s = scale(glm::mat4(1), GetScale());
-		auto r = mat4_cast(AnimateRotate());
-		const auto t = translate(glm::mat4(1), AnimateTranslate());
+		Eigen::Matrix4f s = Eigen::Matrix4f::Identity();
+		s.diagonal().head<3>() = GetScale();
+		Eigen::Matrix4f r = Eigen::Matrix4f::Identity();
+		r.block<3,3>(0,0) = AnimateRotate().toRotationMatrix();
+		Eigen::Matrix4f t = Eigen::Matrix4f::Identity();
+		t.block<3,1>(0,3) = AnimateTranslate();
 		if (m_enableIK)
 		{
-			r = mat4_cast(m_ikRotate) * r;
+			Eigen::Matrix4f ikRot = Eigen::Matrix4f::Identity();
+			ikRot.block<3,3>(0,0) = m_ikRotate.toRotationMatrix();
+			r = ikRot * r;
 		}
 		m_local = t * r * s;
 	}

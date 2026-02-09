@@ -2,7 +2,6 @@
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include "PMXModel.h"
 
@@ -12,9 +11,8 @@
 #include <libMMD/Base/Path.h>
 #include <libMMD/Base/Log.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <limits>
 #include <algorithm>
 #include <sstream>
@@ -36,16 +34,16 @@ namespace libmmd
 	struct PMXModel::MaterialFactor
 	{
 		explicit MaterialFactor(
-			const glm::vec3& diffuse = glm::vec3(1),
+			const Eigen::Vector3f& diffuse = Eigen::Vector3f::Ones(),
 			const float alpha = 1,
-			const glm::vec3& specular = glm::vec3(1),
+			const Eigen::Vector3f& specular = Eigen::Vector3f::Ones(),
 			const float specularPower = 1,
-			const glm::vec3& ambient = glm::vec3(1),
-			const glm::vec4& edgeColor = glm::vec4(1),
+			const Eigen::Vector3f& ambient = Eigen::Vector3f::Ones(),
+			const Eigen::Vector4f& edgeColor = Eigen::Vector4f::Ones(),
 			const float edgeSize = 1,
-			const glm::vec4& textureFactor = glm::vec4(1),
-			const glm::vec4& spTextureFactor = glm::vec4(1),
-			const glm::vec4& toonTextureFactor = glm::vec4(1)
+			const Eigen::Vector4f& textureFactor = Eigen::Vector4f::Ones(),
+			const Eigen::Vector4f& spTextureFactor = Eigen::Vector4f::Ones(),
+			const Eigen::Vector4f& toonTextureFactor = Eigen::Vector4f::Ones()
 			): m_diffuse(diffuse),
 			m_alpha(alpha),
 			m_specular(specular),
@@ -59,8 +57,8 @@ namespace libmmd
 		{}
 
 		explicit MaterialFactor(const PMXFileMorph::MaterialMorph& pmxMat):
-			m_diffuse(pmxMat.m_diffuse),
-			m_alpha(pmxMat.m_diffuse.a),
+			m_diffuse(pmxMat.m_diffuse.head<3>()),
+			m_alpha(pmxMat.m_diffuse.w()),
 			m_specular(pmxMat.m_specular),
 			m_specularPower(pmxMat.m_specularPower),
 			m_ambient(pmxMat.m_ambient),
@@ -73,16 +71,16 @@ namespace libmmd
 
 		void Mul(const MaterialFactor& val, float weight)
 		{
-			m_diffuse = mix(m_diffuse, m_diffuse * val.m_diffuse, weight);
-			m_alpha = glm::mix(m_alpha, m_alpha * val.m_alpha, weight);
-			m_specular = mix(m_specular, m_specular * val.m_specular, weight);
-			m_specularPower = glm::mix(m_specularPower, m_specularPower * val.m_specularPower, weight);
-			m_ambient = mix(m_ambient, m_ambient * val.m_ambient, weight);
-			m_edgeColor = mix(m_edgeColor, m_edgeColor * val.m_edgeColor, weight);
-			m_edgeSize = glm::mix(m_edgeSize, m_edgeSize * val.m_edgeSize, weight);
-			m_textureFactor = mix(m_textureFactor, m_textureFactor * val.m_textureFactor, weight);
-			m_spTextureFactor = mix(m_spTextureFactor, m_spTextureFactor * val.m_spTextureFactor, weight);
-			m_toonTextureFactor = mix(m_toonTextureFactor, m_toonTextureFactor * val.m_toonTextureFactor, weight);
+			m_diffuse = m_diffuse + (m_diffuse.cwiseProduct(val.m_diffuse) - m_diffuse) * weight;
+			m_alpha = m_alpha + (m_alpha * val.m_alpha - m_alpha) * weight;
+			m_specular = m_specular + (m_specular.cwiseProduct(val.m_specular) - m_specular) * weight;
+			m_specularPower = m_specularPower + (m_specularPower * val.m_specularPower - m_specularPower) * weight;
+			m_ambient = m_ambient + (m_ambient.cwiseProduct(val.m_ambient) - m_ambient) * weight;
+			m_edgeColor = m_edgeColor + (m_edgeColor.cwiseProduct(val.m_edgeColor) - m_edgeColor) * weight;
+			m_edgeSize = m_edgeSize + (m_edgeSize * val.m_edgeSize - m_edgeSize) * weight;
+			m_textureFactor = m_textureFactor + (m_textureFactor.cwiseProduct(val.m_textureFactor) - m_textureFactor) * weight;
+			m_spTextureFactor = m_spTextureFactor + (m_spTextureFactor.cwiseProduct(val.m_spTextureFactor) - m_spTextureFactor) * weight;
+			m_toonTextureFactor = m_toonTextureFactor + (m_toonTextureFactor.cwiseProduct(val.m_toonTextureFactor) - m_toonTextureFactor) * weight;
 		}
 
 		void Add(const MaterialFactor& val, float weight)
@@ -99,16 +97,16 @@ namespace libmmd
 			m_toonTextureFactor += val.m_toonTextureFactor * weight;
 		}
 
-		glm::vec3	m_diffuse;
+		Eigen::Vector3f	m_diffuse;
 		float		m_alpha;
-		glm::vec3	m_specular;
+		Eigen::Vector3f	m_specular;
 		float		m_specularPower;
-		glm::vec3	m_ambient;
-		glm::vec4	m_edgeColor;
+		Eigen::Vector3f	m_ambient;
+		Eigen::Vector4f	m_edgeColor;
 		float		m_edgeSize;
-		glm::vec4	m_textureFactor;
-		glm::vec4	m_spTextureFactor;
-		glm::vec4	m_toonTextureFactor;
+		Eigen::Vector4f	m_textureFactor;
+		Eigen::Vector4f	m_spTextureFactor;
+		Eigen::Vector4f	m_toonTextureFactor;
 	};
 
 	struct PMXModel::MaterialMorphData
@@ -133,12 +131,12 @@ namespace libmmd
 
 	struct PMXModel::BoneMorphElement
 	{
-		explicit BoneMorphElement(MMDNode* node = nullptr, const glm::vec3& position = glm::vec3{}, const glm::quat& rotate = glm::quat{})
+		explicit BoneMorphElement(MMDNode* node = nullptr, const Eigen::Vector3f& position = Eigen::Vector3f::Zero(), const Eigen::Quaternionf& rotate = Eigen::Quaternionf::Identity())
 			: m_node(node), m_position(position), m_rotate(rotate) {}
 
 		MMDNode*	m_node;
-		glm::vec3	m_position;
-		glm::quat	m_rotate;
+		Eigen::Vector3f	m_position;
+		Eigen::Quaternionf	m_rotate;
 	};
 
 	struct PMXModel::BoneMorphData
@@ -194,8 +192,8 @@ namespace libmmd
 
 		for (const auto& node : *m_nodeMan.GetNodes())
 		{
-			node->SetAnimationTranslate(glm::vec3(0));
-			node->SetAnimationRotate(glm::quat(1, 0, 0, 0));
+			node->SetAnimationTranslate(Eigen::Vector3f::Zero());
+			node->SetAnimationRotate(Eigen::Quaternionf::Identity());
 		}
 
 		BeginAnimation();
@@ -456,8 +454,8 @@ namespace libmmd
 		for (const auto& pmxMat : file.m_materials)
 		{
 			MMDMaterial mat;
-			mat.m_diffuse = pmxMat.m_diffuse;
-			mat.m_alpha = pmxMat.m_diffuse.a;
+			mat.m_diffuse = pmxMat.m_diffuse.head<3>();
+			mat.m_alpha = pmxMat.m_diffuse.w();
 			mat.m_specularPower = pmxMat.m_specularPower;
 			mat.m_specular = pmxMat.m_specular;
 			mat.m_ambient = pmxMat.m_ambient;
@@ -573,20 +571,18 @@ namespace libmmd
 				const auto& parentBone = file.m_bones[bone.m_parentBoneIndex];
 				auto* parent = m_nodeMan.GetNode(bone.m_parentBoneIndex);
 				parent->AddChild(node);
-				auto localPos = bone.m_position - parentBone.m_position;
-				localPos.z *= -1;
+				Eigen::Vector3f localPos = bone.m_position - parentBone.m_position;
+				localPos.z() *= -1;
 				node->SetTranslate(localPos);
 			}
 			else
 			{
 				auto localPos = bone.m_position;
-				localPos.z *= -1;
+				localPos.z() *= -1;
 				node->SetTranslate(localPos);
 			}
-			glm::mat4 init = glm::translate(
-				glm::mat4(1),
-				bone.m_position * glm::vec3(1, 1, -1)
-			);
+			Eigen::Matrix4f init = Eigen::Matrix4f::Identity();
+			init.block<3,1>(0,3) = bone.m_position.cwiseProduct(Eigen::Vector3f(1, 1, -1));
 			node->SetGlobalTransform(init);
 			node->CalculateInverseInitTransform();
 
@@ -651,8 +647,8 @@ namespace libmmd
 					auto* linkNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
 					if (ikLink.m_enableLimit)
 					{
-						glm::vec3 limitMax = ikLink.m_limitMin * glm::vec3(-1);
-						glm::vec3 limitMin = ikLink.m_limitMax * glm::vec3(-1);
+						Eigen::Vector3f limitMax = -ikLink.m_limitMin;
+						Eigen::Vector3f limitMin = -ikLink.m_limitMax;
 						solver->AddIKChain(linkNode, true, limitMin, limitMax);
 					}
 					else
@@ -875,13 +871,13 @@ namespace libmmd
 	void PMXModel::BeginMorphMaterial()
 	{
 		MaterialFactor initMul{
-			glm::vec3(1), 1, glm::vec3(1), 1, glm::vec3(1),
-			glm::vec4(1), 1, glm::vec4(1), glm::vec4(1), glm::vec4(1)
+			Eigen::Vector3f::Ones(), 1, Eigen::Vector3f::Ones(), 1, Eigen::Vector3f::Ones(),
+			Eigen::Vector4f::Ones(), 1, Eigen::Vector4f::Ones(), Eigen::Vector4f::Ones(), Eigen::Vector4f::Ones()
 		};
 
 		MaterialFactor initAdd{
-			glm::vec3(0), 0, glm::vec3(0), 0, glm::vec3(0),
-			glm::vec4(0), 0, glm::vec4(0), glm::vec4(0), glm::vec4(0)
+			Eigen::Vector3f::Zero(), 0, Eigen::Vector3f::Zero(), 0, Eigen::Vector3f::Zero(),
+			Eigen::Vector4f::Zero(), 0, Eigen::Vector4f::Zero(), Eigen::Vector4f::Zero(), Eigen::Vector4f::Zero()
 		};
 
 		const size_t matCount = m_materials.size();
@@ -979,9 +975,9 @@ namespace libmmd
 		for (const auto& [m_node, m_position, m_rotate] : morphData.m_boneMorphs)
 		{
 			const auto node = m_node;
-			glm::vec3 t = mix(glm::vec3(0), m_position, weight);
+			Eigen::Vector3f t = m_position * weight;
 			node->SetTranslate(node->GetTranslate() + t);
-			glm::quat q = slerp(node->GetRotate(), m_rotate, weight);
+			Eigen::Quaternionf q = node->GetRotate().slerp(weight, m_rotate);
 			node->SetRotate(q);
 		}
 	}
@@ -1021,7 +1017,7 @@ namespace libmmd
 
 		if (m_isAppendRotate)
 		{
-			glm::quat appendRotate;
+			Eigen::Quaternionf appendRotate;
 			if (m_isAppendLocal)
 			{
 				appendRotate = m_appendNode->AnimateRotate();
@@ -1043,17 +1039,13 @@ namespace libmmd
 				appendRotate = m_appendNode->GetIKRotate() * appendRotate;
 			}
 
-			const glm::quat appendQ = slerp(
-				glm::quat(1, 0, 0, 0),
-				appendRotate,
-				GetAppendWeight()
-			);
+			const Eigen::Quaternionf appendQ = Eigen::Quaternionf::Identity().slerp(GetAppendWeight(), appendRotate);
 			m_appendRotate = appendQ;
 		}
 
 		if (m_isAppendTranslate)
 		{
-			glm::vec3 appendTranslate{};
+			Eigen::Vector3f appendTranslate = Eigen::Vector3f::Zero();
 			if (m_isAppendLocal)
 			{
 				appendTranslate = m_appendNode->GetTranslate() - m_appendNode->GetInitialTranslate();
@@ -1078,8 +1070,8 @@ namespace libmmd
 
 	void PMXNode::OnBeginUpdateTransform()
 	{
-		m_appendTranslate = glm::vec3(0);
-		m_appendRotate = glm::quat(1, 0, 0, 0);
+		m_appendTranslate = Eigen::Vector3f::Zero();
+		m_appendRotate = Eigen::Quaternionf::Identity();
 	}
 
 	void PMXNode::OnEndUpdateTransfrom()
@@ -1088,13 +1080,13 @@ namespace libmmd
 
 	void PMXNode::OnUpdateLocalTransform()
 	{
-		glm::vec3 t = AnimateTranslate();
+		Eigen::Vector3f t = AnimateTranslate();
 		if (m_isAppendTranslate)
 		{
 			t += m_appendTranslate;
 		}
 
-		glm::quat r = AnimateRotate();
+		Eigen::Quaternionf r = AnimateRotate();
 		if (m_enableIK)
 		{
 			r = GetIKRotate() * r;
@@ -1104,10 +1096,14 @@ namespace libmmd
 			r = r * m_appendRotate;
 		}
 
-		const glm::vec3 s = GetScale();
+		const Eigen::Vector3f s = GetScale();
 
-		m_local = translate(glm::mat4(1), t)
-			* mat4_cast(r)
-			* scale(glm::mat4(1), s);
+		Eigen::Matrix4f tMat = Eigen::Matrix4f::Identity();
+		tMat.block<3,1>(0,3) = t;
+		Eigen::Matrix4f rMat = Eigen::Matrix4f::Identity();
+		rMat.block<3,3>(0,0) = r.toRotationMatrix();
+		Eigen::Matrix4f sMat = Eigen::Matrix4f::Identity();
+		sMat.diagonal().head<3>() = s;
+		m_local = tMat * rMat * sMat;
 	}
 }

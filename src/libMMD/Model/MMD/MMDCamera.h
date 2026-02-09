@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -6,7 +6,7 @@
 #ifndef LIBMMD_MODEL_MMD_MMDCAMERA_H_
 #define LIBMMD_MODEL_MMD_MMDCAMERA_H_
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Core>
 
 namespace libmmd
 {
@@ -17,8 +17,8 @@ namespace libmmd
 	{
 		MMDCamera();
 
-		glm::vec3	m_interest{}; ///< Interest point
-		glm::vec3	m_rotate{}; ///< Rotation
+		Eigen::Vector3f	m_interest{}; ///< Interest point
+		Eigen::Vector3f	m_rotate{}; ///< Rotation
 		float		m_distance{}; ///< Distance
 		float		m_fov{}; ///< Field of view
 	};
@@ -34,9 +34,9 @@ namespace libmmd
 		 */
 		explicit MMDLookAtCamera(const MMDCamera& cam);
 
-		glm::vec3	m_center{}; ///< Center point
-		glm::vec3	m_eye{}; ///< Eye point
-		glm::vec3	m_up{}; ///< Up vector
+		Eigen::Vector3f	m_center{}; ///< Center point
+		Eigen::Vector3f	m_eye{}; ///< Eye point
+		Eigen::Vector3f	m_up{}; ///< Up vector
 	};
 }
 

@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <memory>
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -39,9 +39,9 @@ namespace libmmd
 		/**
 		 * @brief Evaluate both X and Y components of the Bezier curve at time t.
 		 * @param t The time parameter.
-		 * @return The evaluated X and Y components as a glm::vec2.
+		 * @return The evaluated X and Y components as a Eigen::Vector2f.
 		 */
-		glm::vec2 Eval(float t) const;
+		Eigen::Vector2f Eval(float t) const;
 
 		/**
 		 * @brief Find the X component of the Bezier curve at a given time.
@@ -50,8 +50,8 @@ namespace libmmd
 		 */
 		float FindBezierX(float time) const;
 
-		glm::vec2	m_cp1; ///< Control point 1
-		glm::vec2	m_cp2; ///< Control point 2
+		Eigen::Vector2f	m_cp1; ///< Control point 1
+		Eigen::Vector2f	m_cp2; ///< Control point 2
 	};
 
 	class VMDNodeController;

@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -9,8 +9,7 @@
 #include "MMDFileString.h"
 
 #include <cstdint>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include <Eigen/Core>
 #include <vector>
 #include <array>
 
@@ -43,9 +42,9 @@ namespace libmmd
 	 */
 	struct PMDVertex
 	{
-		glm::vec3	m_position;   ///< Position of the vertex.
-		glm::vec3	m_normal;     ///< Normal of the vertex.
-		glm::vec2	m_uv;         ///< UV coordinates of the vertex.
+		Eigen::Vector3f	m_position;   ///< Position of the vertex.
+		Eigen::Vector3f	m_normal;     ///< Normal of the vertex.
+		Eigen::Vector2f	m_uv;         ///< UV coordinates of the vertex.
 		uint16_t	m_bone[2];    ///< Bone indices.
 		uint8_t		m_boneWeight; ///< Bone weight.
 		uint8_t		m_edge;       ///< Edge flag.
@@ -64,11 +63,11 @@ namespace libmmd
 	 */
 	struct PMDMaterial
 	{
-		glm::vec3		m_diffuse;       ///< Diffuse color.
+		Eigen::Vector3f		m_diffuse;       ///< Diffuse color.
 		float			m_alpha;         ///< Alpha value.
 		float			m_specularPower; ///< Specular power.
-		glm::vec3		m_specular;      ///< Specular color.
-		glm::vec3		m_ambient;       ///< Ambient color.
+		Eigen::Vector3f		m_specular;      ///< Specular color.
+		Eigen::Vector3f		m_ambient;       ///< Ambient color.
 		uint8_t			m_toonIndex;     ///< Toon index.
 		uint8_t			m_edgeFlag;      ///< Edge flag.
 		uint32_t		m_faceVertexCount; ///< Number of face vertices.
@@ -85,7 +84,7 @@ namespace libmmd
 		uint16_t		m_tail;               ///< Tail bone index.
 		uint8_t			m_boneType;           ///< Bone type.
 		uint16_t		m_ikParent;           ///< IK parent bone index.
-		glm::vec3		m_position;           ///< Position of the bone.
+		Eigen::Vector3f		m_position;           ///< Position of the bone.
 		PMDString<20>	m_englishBoneNameExt; ///< English bone name extension.
 	};
 
@@ -115,7 +114,7 @@ namespace libmmd
 		struct Vertex
 		{
 			uint32_t	m_vertexIndex; ///< Vertex index.
-			glm::vec3	m_position;    ///< Position of the vertex.
+			Eigen::Vector3f	m_position;    ///< Position of the vertex.
 		};
 		using VertexList = std::vector<Vertex>;
 
@@ -192,8 +191,8 @@ namespace libmmd
 		float			m_shapeWidth;   ///< Shape width.
 		float			m_shapeHeight;  ///< Shape height.
 		float			m_shapeDepth;   ///< Shape depth.
-		glm::vec3		m_pos;          ///< Position.
-		glm::vec3		m_rot;          ///< Rotation.
+		Eigen::Vector3f		m_pos;          ///< Position.
+		Eigen::Vector3f		m_rot;          ///< Rotation.
 		float			m_rigidBodyWeight; ///< Rigid body weight.
 		float			m_rigidBodyPosDimmer; ///< Rigid body position dimmer.
 		float			m_rigidBodyRotDimmer; ///< Rigid body rotation dimmer.
@@ -212,14 +211,14 @@ namespace libmmd
 		PMDString<20>	m_jointName;      ///< Joint name.
 		uint32_t		m_rigidBodyA;     ///< Rigid body A index.
 		uint32_t		m_rigidBodyB;     ///< Rigid body B index.
-		glm::vec3		m_jointPos;       ///< Joint position.
-		glm::vec3		m_jointRot;       ///< Joint rotation.
-		glm::vec3		m_constrainPos1;  ///< Constraint position 1.
-		glm::vec3		m_constrainPos2;  ///< Constraint position 2.
-		glm::vec3		m_constrainRot1;  ///< Constraint rotation 1.
-		glm::vec3		m_constrainRot2;  ///< Constraint rotation 2.
-		glm::vec3		m_springPos;      ///< Spring position.
-		glm::vec3		m_springRot;      ///< Spring rotation.
+		Eigen::Vector3f		m_jointPos;       ///< Joint position.
+		Eigen::Vector3f		m_jointRot;       ///< Joint rotation.
+		Eigen::Vector3f		m_constrainPos1;  ///< Constraint position 1.
+		Eigen::Vector3f		m_constrainPos2;  ///< Constraint position 2.
+		Eigen::Vector3f		m_constrainRot1;  ///< Constraint rotation 1.
+		Eigen::Vector3f		m_constrainRot2;  ///< Constraint rotation 2.
+		Eigen::Vector3f		m_springPos;      ///< Spring position.
+		Eigen::Vector3f		m_springRot;      ///< Spring rotation.
 	};
 
 	/**

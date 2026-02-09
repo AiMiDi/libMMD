@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -99,8 +99,8 @@ namespace libmmd
 		void AddIKChain(
 			MMDNode* node,
 			bool axisLimit,
-			const glm::vec3& limitMin,
-			const glm::vec3& limitMax
+			const Eigen::Vector3f& limitMin,
+			const Eigen::Vector3f& limitMax
 		);
 
 		/**
@@ -134,19 +134,19 @@ namespace libmmd
 		{
 			MMDNode*	m_node; ///< Pointer to the node
 			bool		m_enableAxisLimit; ///< Axis limit flag
-			glm::vec3	m_limitMax; ///< Maximum limit
-			glm::vec3	m_limitMin; ///< Minimum limit
-			glm::vec3	m_prevAngle; ///< Previous angle
-			glm::quat	m_saveIKRot; ///< Saved IK rotation
+			Eigen::Vector3f	m_limitMax; ///< Maximum limit
+			Eigen::Vector3f	m_limitMin; ///< Minimum limit
+			Eigen::Vector3f	m_prevAngle; ///< Previous angle
+			Eigen::Quaternionf	m_saveIKRot; ///< Saved IK rotation
 			float		m_planeModeAngle; ///< Plane mode angle
 
 			IKChain(
 				MMDNode* node = nullptr,
 				const bool enableAxisLimit = false,
-				const glm::vec3& limitMax = glm::vec3(0.0f),
-				const glm::vec3& limitMin = glm::vec3(0.0f),
-				const glm::quat& saveIKRot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-				const glm::vec3& prevAngle = glm::vec3(0.0f),
+				const Eigen::Vector3f& limitMax = Eigen::Vector3f::Zero(),
+				const Eigen::Vector3f& limitMin = Eigen::Vector3f::Zero(),
+				const Eigen::Quaternionf& saveIKRot = Eigen::Quaternionf::Identity(),
+				const Eigen::Vector3f& prevAngle = Eigen::Vector3f::Zero(),
 				const float planeModeAngle = 0.0f
 			)
 				: m_node(node),

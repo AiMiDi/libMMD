@@ -98,7 +98,7 @@ add_library(
     ${MODEL_MMD_HEADER}
 )
 
-target_include_directories(libMMD PUBLIC ${PROJECT_SOURCE_DIR}/external/glm)
+target_include_directories(libMMD PUBLIC ${LIBMMD_EIGEN_ROOT})
 target_include_directories(libMMD PRIVATE ${PROJECT_SOURCE_DIR}/external/spdlog/include)
 
 if (LIBMMD_BUILD_OBJ_MODEL)

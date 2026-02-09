@@ -8,7 +8,8 @@
 #include "VPDFile.h"
 #include "VMDAnimation.h"
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <libMMD/Base/Log.h>
 
@@ -130,16 +131,17 @@ namespace libmmd
 
 	namespace
 	{
-		glm::mat3 InvZ(const glm::mat3& m)
+		Eigen::Matrix3f InvZ(const Eigen::Matrix3f& m)
 		{
-			const glm::mat3 invZ = scale(glm::mat4(1.0f), glm::vec3(1, 1, -1));
+			Eigen::Matrix3f invZ = Eigen::Matrix3f::Identity();
+			invZ(2, 2) = -1.0f;
 			return invZ * m * invZ;
 		}
-		glm::quat InvZ(const glm::quat& q)
+		Eigen::Quaternionf InvZ(const Eigen::Quaternionf& q)
 		{
-			const auto rot0 = mat3_cast(q);
+			const auto rot0 = q.toRotationMatrix();
 			const auto rot1 = InvZ(rot0);
-			return quat_cast(rot1);
+			return Eigen::Quaternionf(rot1);
 		}
 	}
 
@@ -164,17 +166,17 @@ namespace libmmd
 		struct Pose
 		{
 			MMDNode*	m_node;
-			glm::vec3	m_beginTranslate;
-			glm::vec3	m_endTranslate;
-			glm::quat	m_beginRotate;
-			glm::quat	m_endRotate;
+			Eigen::Vector3f	m_beginTranslate;
+			Eigen::Vector3f	m_endTranslate;
+			Eigen::Quaternionf	m_beginRotate;
+			Eigen::Quaternionf	m_endRotate;
 
 			explicit Pose(
 				MMDNode* node = nullptr,
-				const glm::vec3& beginTranslate = glm::vec3(0.0f),
-				const glm::vec3& endTranslate = glm::vec3(0.0f),
-				const glm::quat& beginRotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-				const glm::quat& endRotate = glm::quat(1.0f, 0.0f, 0.0f, 0.0f)
+				const Eigen::Vector3f& beginTranslate = Eigen::Vector3f::Zero(),
+				const Eigen::Vector3f& endTranslate = Eigen::Vector3f::Zero(),
+				const Eigen::Quaternionf& beginRotate = Eigen::Quaternionf::Identity(),
+				const Eigen::Quaternionf& endRotate = Eigen::Quaternionf::Identity()
 			)
 				: m_node(node),
 				  m_beginTranslate(beginTranslate),
@@ -192,7 +194,7 @@ namespace libmmd
 				const auto node = GetNodeManager()->GetMMDNode(bone.m_boneName);
 				poses.emplace_back(node,
 					node->GetAnimationTranslate(),
-					bone.m_translate * glm::vec3(1, 1, -1),
+					bone.m_translate.cwiseProduct(Eigen::Vector3f(1, 1, -1)),
 					node->GetAnimationRotate(),
 					InvZ(bone.m_quaternion));
 			}
@@ -234,15 +236,15 @@ namespace libmmd
 			float w = static_cast<float>(1 + i) / static_cast<float>(frameCount);
 			for (auto& pose : poses)
 			{
-				auto t = mix(pose.m_beginTranslate, pose.m_endTranslate, w);
-				auto q = slerp(pose.m_beginRotate, pose.m_endRotate, w);
+				Eigen::Vector3f t = pose.m_beginTranslate + (pose.m_endTranslate - pose.m_beginTranslate) * w;
+				auto q = pose.m_beginRotate.slerp(w, pose.m_endRotate);
 				pose.m_node->SetAnimationTranslate(t);
 				pose.m_node->SetAnimationRotate(q);
 			}
 
 			for (auto& morph : morphs)
 			{
-				auto weight = glm::mix(morph.m_beginWeight, morph.m_endWeight, w);
+				auto weight = morph.m_beginWeight + (morph.m_endWeight - morph.m_beginWeight) * w;
 				morph.m_morph->SetWeight(weight);
 			}
 

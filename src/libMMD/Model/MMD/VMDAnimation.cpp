@@ -11,7 +11,8 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -26,14 +27,15 @@ namespace libmmd
 			const int x1 = cp[8];
 			const int y1 = cp[12];
 
-			bezier.m_cp1 = glm::vec2(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
-			bezier.m_cp2 = glm::vec2(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
+			bezier.m_cp1 = Eigen::Vector2f(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
+			bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
 		}
 
 		// Helper function to invert Z axis transformation
-		glm::mat3 InvZ(const glm::mat3& m)
+		Eigen::Matrix3f InvZ(const Eigen::Matrix3f& m)
 		{
-			const glm::mat3 invZ = scale(glm::mat4(1), glm::vec3(1, 1, -1));
+			Eigen::Matrix3f invZ = Eigen::Matrix3f::Identity();
+			invZ(2, 2) = -1.0f;
 			return invZ * m * invZ;
 		}
 	} // namespace
@@ -47,10 +49,10 @@ namespace libmmd
 		const float it2 = it * it;
 		const float it3 = it2 * it;
 		const float x[4] = {
-			0,          // Start point
-			m_cp1.x,    // First control point
-			m_cp2.x,    // Second control point
-			1           // End point
+			0,              // Start point
+			m_cp1.x(),      // First control point
+			m_cp2.x(),      // Second control point
+			1               // End point
 		};
 
 		return t3 * x[3] + 3 * t2 * it * x[2] + 3 * t * it2 * x[1] + it3 * x[0];
@@ -65,17 +67,17 @@ namespace libmmd
 		const float it3 = it2 * it;
 		const float y[4] = {
 			0,
-			m_cp1.y,
-			m_cp2.y,
+			m_cp1.y(),
+			m_cp2.y(),
 			1,
 		};
 
 		return t3 * y[3] + 3 * t2 * it * y[2] + 3 * t * it2 * y[1] + it3 * y[0];
 	}
 
-	glm::vec2 VMDBezier::Eval(const float t) const
+	Eigen::Vector2f VMDBezier::Eval(const float t) const
 	{
-		return {EvalX(t), EvalY(t)};
+		return Eigen::Vector2f(EvalX(t), EvalY(t));
 	}
 
 	float VMDBezier::FindBezierX(const float time) const
@@ -106,9 +108,9 @@ namespace libmmd
 	struct VMDNodeAnimationKey {
 		void Set(const VMDMotion& motion);
 
-		int32_t     m_time;         // Keyframe time
-		glm::vec3   m_translate;    // Translation vector
-		glm::quat   m_rotate;       // Rotation quaternion
+		int32_t             m_time;         // Keyframe time
+		Eigen::Vector3f     m_translate;    // Translation vector
+		Eigen::Quaternionf  m_rotate;       // Rotation quaternion
 
 		// Bezier interpolation curves for each component
 		VMDBezier   m_txBezier;     // X translation
@@ -242,14 +244,14 @@ namespace libmmd
 		}
 		if (m_keys.empty())
 		{
-			m_node->SetAnimationTranslate(glm::vec3(0));
-			m_node->SetAnimationRotate(glm::quat(1, 0, 0, 0));
+			m_node->SetAnimationTranslate(Eigen::Vector3f::Zero());
+			m_node->SetAnimationRotate(Eigen::Quaternionf::Identity());
 			return;
 		}
 
 		const auto boundIt = FindBoundKey(m_keys, static_cast<int32_t>(t), m_startKeyIndex);
-		glm::vec3 vt;
-		glm::quat q;
+		Eigen::Vector3f vt;
+		Eigen::Quaternionf q;
 		if (boundIt == std::end(m_keys))
 		{
 			vt = m_keys[m_keys.size() - 1].m_translate;
@@ -275,8 +277,8 @@ namespace libmmd
 				const auto tz_y = key0.m_tzBezier.EvalY(tz_x);
 				const auto rot_y = key0.m_rotBezier.EvalY(rot_x);
 
-				vt = mix(key0.m_translate, key1.m_translate, glm::vec3(tx_y, ty_y, tz_y));
-				q = slerp(key0.m_rotate, key1.m_rotate, rot_y);
+				vt = key0.m_translate + (key1.m_translate - key0.m_translate).cwiseProduct(Eigen::Vector3f(tx_y, ty_y, tz_y));
+				q = key0.m_rotate.slerp(rot_y, key1.m_rotate);
 
 				m_startKeyIndex = std::distance(m_keys.cbegin(), boundIt);
 			}
@@ -291,8 +293,8 @@ namespace libmmd
 		{
 			const auto baseQ = m_node->GetBaseAnimationRotate();
 			const auto baseT = m_node->GetBaseAnimationTranslate();
-			m_node->SetAnimationRotate(slerp(baseQ, q, weight));
-			m_node->SetAnimationTranslate(mix(baseT, vt, weight));
+			m_node->SetAnimationRotate(baseQ.slerp(weight, q));
+			m_node->SetAnimationTranslate(baseT + (vt - baseT) * weight);
 		}
 	}
 
@@ -561,12 +563,12 @@ namespace libmmd
 	{
 		m_time = static_cast<int32_t>(motion.m_frame);
 
-		m_translate = motion.m_translate * glm::vec3(1, 1, -1);
+		m_translate = motion.m_translate.cwiseProduct(Eigen::Vector3f(1, 1, -1));
 
-		const glm::quat q = motion.m_quaternion;
-		const auto rot0 = mat3_cast(q);
+		const Eigen::Quaternionf q = motion.m_quaternion;
+		const auto rot0 = q.toRotationMatrix();
 		const auto rot1 = InvZ(rot0);
-		m_rotate = quat_cast(rot1);
+		m_rotate = Eigen::Quaternionf(rot1);
 
 		SetVMDBezier(m_txBezier, &motion.m_interpolation[0]);
 		SetVMDBezier(m_tyBezier, &motion.m_interpolation[1]);
@@ -692,7 +694,7 @@ namespace libmmd
 		}
 		else
 		{
-			m_morph->SetWeight(glm::mix(m_morph->GetBaseAnimationWeight(), weight, animWeight));
+			m_morph->SetWeight(m_morph->GetBaseAnimationWeight() + (weight - m_morph->GetBaseAnimationWeight()) * animWeight);
 		}
 	}
 

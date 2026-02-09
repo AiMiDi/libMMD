@@ -5,7 +5,7 @@ if (LIBMMD_ENABLE_TEST)
     )
     target_include_directories(mmd_model_test PRIVATE
         ${PROJECT_SOURCE_DIR}/external/spdlog/include
-        ${PROJECT_SOURCE_DIR}/external/glm
+        ${LIBMMD_EIGEN_ROOT}
     )
     target_link_libraries(mmd_model_test libMMD)
 

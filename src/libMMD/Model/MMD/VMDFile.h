@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -12,7 +12,7 @@
 #include <vector>
 #include <array>
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -40,15 +40,15 @@ namespace libmmd
 	{
 		VMDString<15>	m_boneName; ///< Bone name
 		uint32_t		m_frame; ///< Frame number
-		glm::vec3		m_translate; ///< Translation vector
-		glm::quat		m_quaternion; ///< Rotation quaternion
+		Eigen::Vector3f		m_translate; ///< Translation vector
+		Eigen::Quaternionf		m_quaternion; ///< Rotation quaternion
 		std::array<uint8_t, 64>	m_interpolation; ///< Interpolation data
 
 		explicit VMDMotion(
 			const VMDString<15>& boneName = VMDString<15>(),
 			const uint32_t frame = 0,
-			const glm::vec3& translate = glm::vec3(0.0f),
-			const glm::quat& quaternion = glm::quat(),
+			const Eigen::Vector3f& translate = Eigen::Vector3f::Zero(),
+			const Eigen::Quaternionf& quaternion = Eigen::Quaternionf::Identity(),
 			const std::array<uint8_t, 64>& interpolation = std::array<uint8_t, 64>()
 		) : m_boneName(boneName), m_frame(frame), m_translate(translate), m_quaternion(quaternion), m_interpolation(interpolation) {}
 	};
@@ -75,8 +75,8 @@ namespace libmmd
 	{
 		uint32_t		m_frame; ///< Frame number
 		float			m_distance; ///< Distance value
-		glm::vec3		m_interest; ///< Interest point
-		glm::vec3		m_rotate; ///< Rotation vector
+		Eigen::Vector3f		m_interest; ///< Interest point
+		Eigen::Vector3f		m_rotate; ///< Rotation vector
 		std::array<uint8_t, 24>	m_interpolation; ///< Interpolation data
 		uint32_t		m_viewAngle; ///< View angle
 		uint8_t			m_isPerspective; ///< Perspective flag
@@ -84,8 +84,8 @@ namespace libmmd
 		explicit VMDCamera(
 			const uint32_t frame = 0,
 			const float distance = 0.0f,
-			const glm::vec3& interest = glm::vec3(0.0f),
-			const glm::vec3& rotate = glm::vec3(0.0f),
+			const Eigen::Vector3f& interest = Eigen::Vector3f::Zero(),
+			const Eigen::Vector3f& rotate = Eigen::Vector3f::Zero(),
 			const uint32_t viewAngle = 0,
 			const uint8_t isPerspective = 0,
 			const std::array<uint8_t, 24>& interpolation = std::array<uint8_t, 24>()
@@ -98,13 +98,13 @@ namespace libmmd
 	struct VMDLight
 	{
 		uint32_t	m_frame; ///< Frame number
-		glm::vec3	m_color; ///< Color vector
-		glm::vec3	m_position; ///< Position vector
+		Eigen::Vector3f	m_color; ///< Color vector
+		Eigen::Vector3f	m_position; ///< Position vector
 
 		explicit VMDLight(
 			const uint32_t frame = 0,
-			const glm::vec3& color = glm::vec3(0.0f),
-			const glm::vec3& position = glm::vec3(0.0f)
+			const Eigen::Vector3f& color = Eigen::Vector3f::Zero(),
+			const Eigen::Vector3f& position = Eigen::Vector3f::Zero()
 		) : m_frame(frame), m_color(color), m_position(position) {}
 	};
 

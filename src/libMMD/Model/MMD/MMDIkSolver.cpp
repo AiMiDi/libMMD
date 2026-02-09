@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -6,8 +6,10 @@
 #include "MMDIkSolver.h"
 
 #include <algorithm>
+#include <cmath>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <functional>
-#include <glm/gtc/matrix_transform.hpp>
 
 namespace libmmd
 {
@@ -15,7 +17,7 @@ namespace libmmd
 		: m_ikNode(nullptr)
 		, m_ikTarget(nullptr)
 		, m_iterateCount(1)
-		, m_limitAngle(glm::pi<float>() * 2.0f)
+		, m_limitAngle(2.0f * static_cast<float>(EIGEN_PI))
 		, m_enable(true)
 		, m_baseAnimEnable(true)
 	{
@@ -25,19 +27,19 @@ namespace libmmd
 	{
 		m_chains.emplace_back(node,
 			isKnee,
-			isKnee ? glm::vec3(glm::radians(0.5f), 0, 0) : glm::vec3(0.0f),
-			isKnee ? glm::vec3(glm::radians(180.0f), 0, 0) : glm::vec3(0.0f),
-			glm::quat(1, 0, 0, 0));
+			isKnee ? Eigen::Vector3f(0.5f * static_cast<float>(EIGEN_PI) / 180.0f, 0, 0) : Eigen::Vector3f::Zero(),
+			isKnee ? Eigen::Vector3f(static_cast<float>(EIGEN_PI), 0, 0) : Eigen::Vector3f::Zero(),
+			Eigen::Quaternionf::Identity());
 	}
 
 	void MMDIkSolver::AddIKChain(
 		MMDNode * node,
 		const bool axisLimit,
-		const glm::vec3 & limitMin,
-		const glm::vec3 & limitMax
+		const Eigen::Vector3f & limitMin,
+		const Eigen::Vector3f & limitMax
 	)
 	{
-		m_chains.emplace_back(node, axisLimit, limitMin, limitMax, glm::quat(1, 0, 0, 0));
+		m_chains.emplace_back(node, axisLimit, limitMin, limitMax, Eigen::Quaternionf::Identity());
 	}
 
 	void MMDIkSolver::Solve()
@@ -56,8 +58,8 @@ namespace libmmd
 		// Initialize IKChain
 		for (auto& chain : m_chains)
 		{
-			chain.m_prevAngle = glm::vec3(0);
-			chain.m_node->SetIKRotate(glm::quat(1, 0, 0, 0));
+			chain.m_prevAngle = Eigen::Vector3f::Zero();
+			chain.m_node->SetIKRotate(Eigen::Quaternionf::Identity());
 			chain.m_planeModeAngle = 0;
 
 			chain.m_node->UpdateLocalTransform();
@@ -69,9 +71,9 @@ namespace libmmd
 		{
 			SolveCore(i);
 
-			auto targetPos = glm::vec3(m_ikTarget->GetGlobalTransform()[3]);
-			auto ikPos = glm::vec3(m_ikNode->GetGlobalTransform()[3]);
-			const float dist = length(targetPos - ikPos);
+			Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
+			Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
+			const float dist = (targetPos - ikPos).norm();
 			if (dist < maxDist)
 			{
 				maxDist = dist;
@@ -97,14 +99,15 @@ namespace libmmd
 	{
 		float NormalizeAngle(const float angle)
 		{
+			constexpr float two_pi = 2.0f * static_cast<float>(EIGEN_PI);
 			float ret = angle;
-			while (ret >= glm::two_pi<float>())
+			while (ret >= two_pi)
 			{
-				ret -= glm::two_pi<float>();
+				ret -= two_pi;
 			}
 			while (ret < 0)
 			{
-				ret += glm::two_pi<float>();
+				ret += two_pi;
 			}
 
 			return ret;
@@ -112,88 +115,90 @@ namespace libmmd
 
 		float DiffAngle(const float a, const float b)
 		{
+			constexpr float pi_f = static_cast<float>(EIGEN_PI);
+			constexpr float two_pi = 2.0f * static_cast<float>(EIGEN_PI);
 			const float diff = NormalizeAngle(a) - NormalizeAngle(b);
-			if (diff > glm::pi<float>())
+			if (diff > pi_f)
 			{
-				return diff - glm::two_pi<float>();
+				return diff - two_pi;
 			}
-			if (diff < -glm::pi<float>())
+			if (diff < -pi_f)
 			{
-				return diff + glm::two_pi<float>();
+				return diff + two_pi;
 			}
 			return diff;
 		}
 
-		glm::vec3 Decompose(const glm::mat3& m, const glm::vec3& before)
+		Eigen::Vector3f Decompose(const Eigen::Matrix3f& m, const Eigen::Vector3f& before)
 		{
-			glm::vec3 r;
-			float sy = -m[0][2];
+			constexpr float pi_f = static_cast<float>(EIGEN_PI);
+			Eigen::Vector3f r;
+			float sy = -m(2, 0);
 			constexpr float e = 1.0e-6f;
 			if (1.0f - std::abs(sy) < e)
 			{
-				r.y = std::asin(sy);
+				r.y() = std::asin(sy);
 				// 180°に近いほうを探す
-				float sx = std::sin(before.x);
-				float sz = std::sin(before.z);
+				float sx = std::sin(before.x());
+				float sz = std::sin(before.z());
 				if (std::abs(sx) < std::abs(sz))
 				{
 					// Xのほうが0または180
-					float cx = std::cos(before.x);
+					float cx = std::cos(before.x());
 					if (cx > 0)
 					{
-						r.x = 0;
-						r.z = std::asin(-m[1][0]);
+						r.x() = 0;
+						r.z() = std::asin(-m(0, 1));
 					}
 					else
 					{
-						r.x = glm::pi<float>();
-						r.z = std::asin(m[1][0]);
+						r.x() = pi_f;
+						r.z() = std::asin(m(0, 1));
 					}
 				}
 				else
 				{
-					float cz = std::cos(before.z);
+					float cz = std::cos(before.z());
 					if (cz > 0)
 					{
-						r.z = 0;
-						r.x = std::asin(-m[2][1]);
+						r.z() = 0;
+						r.x() = std::asin(-m(1, 2));
 					}
 					else
 					{
-						r.z = glm::pi<float>();
-						r.x = std::asin(m[2][1]);
+						r.z() = pi_f;
+						r.x() = std::asin(m(1, 2));
 					}
 				}
 			}
 			else
 			{
-				r.x = std::atan2(m[1][2], m[2][2]);
-				r.y = std::asin(-m[0][2]);
-				r.z = std::atan2(m[0][1], m[0][0]);
+				r.x() = std::atan2(m(2, 1), m(2, 2));
+				r.y() = std::asin(-m(2, 0));
+				r.z() = std::atan2(m(1, 0), m(0, 0));
 			}
 
-			constexpr auto pi = glm::pi<float>();
-			glm::vec3 tests[] =
+			Eigen::Vector3f tests[] =
 			{
-				{ r.x + pi, pi - r.y, r.z + pi },
-				{ r.x + pi, pi - r.y, r.z - pi },
-				{ r.x + pi, -pi - r.y, r.z + pi },
-				{ r.x + pi, -pi - r.y, r.z - pi },
-				{ r.x - pi, pi - r.y, r.z + pi },
-				{ r.x - pi, pi - r.y, r.z - pi },
-				{ r.x - pi, -pi - r.y, r.z + pi },
-				{ r.x - pi, -pi - r.y, r.z - pi },
+				Eigen::Vector3f(r.x() + pi_f, pi_f - r.y(), r.z() + pi_f),
+				Eigen::Vector3f(r.x() + pi_f, pi_f - r.y(), r.z() - pi_f),
+				Eigen::Vector3f(r.x() + pi_f, -pi_f - r.y(), r.z() + pi_f),
+				Eigen::Vector3f(r.x() + pi_f, -pi_f - r.y(), r.z() - pi_f),
+				Eigen::Vector3f(r.x() - pi_f, pi_f - r.y(), r.z() + pi_f),
+				Eigen::Vector3f(r.x() - pi_f, pi_f - r.y(), r.z() - pi_f),
+				Eigen::Vector3f(r.x() - pi_f, -pi_f - r.y(), r.z() + pi_f),
+				Eigen::Vector3f(r.x() - pi_f, -pi_f - r.y(), r.z() - pi_f),
 			};
 
-			float errX = std::abs(DiffAngle(r.x, before.x));
-			float errY = std::abs(DiffAngle(r.y, before.y));
-			float errZ = std::abs(DiffAngle(r.z, before.z));
+			float errX = std::abs(DiffAngle(r.x(), before.x()));
+			float errY = std::abs(DiffAngle(r.y(), before.y()));
+			float errZ = std::abs(DiffAngle(r.z(), before.z()));
 			float minErr = errX + errY + errZ;
 			for (const auto test : tests)
 			{
-				float err = std::abs(DiffAngle(test.x, before.x))
-					+ std::abs(DiffAngle(test.y, before.y))
-					+ std::abs(DiffAngle(test.z, before.z));
+				float err = std::abs(DiffAngle(test.x(), before.x()))
+					+ std::abs(DiffAngle(test.y(), before.y()))
+					+ std::abs(DiffAngle(test.z(), before.z()));
 				if (err < minErr)
 				{
 					minErr = err;
@@ -206,7 +211,7 @@ namespace libmmd
 
 	void MMDIkSolver::SolveCore(uint32_t iteration)
 	{
-		auto ikPos = glm::vec3(m_ikNode->GetGlobalTransform()[3]);
+		Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
 		//for (auto& chain : m_chains)
 		for (size_t chainIdx = 0; chainIdx < m_chains.size(); chainIdx++)
 		{
@@ -225,74 +230,75 @@ namespace libmmd
 			if (chain.m_enableAxisLimit)
 			{
 				// X,Y,Z 軸のいずれかしか回転しないものは専用の Solver を使用する
-				if ((chain.m_limitMin.x != 0 || chain.m_limitMax.x != 0) &&
-					(chain.m_limitMin.y == 0 || chain.m_limitMax.y == 0) &&
-					(chain.m_limitMin.z == 0 || chain.m_limitMax.z == 0)
+				if ((chain.m_limitMin.x() != 0 || chain.m_limitMax.x() != 0) &&
+					(chain.m_limitMin.y() == 0 || chain.m_limitMax.y() == 0) &&
+					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
 					)
 				{
 					SolvePlane(iteration, chainIdx, SolveAxis::X);
 					continue;
 				}
-				if ((chain.m_limitMin.y != 0 || chain.m_limitMax.y != 0) &&
-					(chain.m_limitMin.x == 0 || chain.m_limitMax.x == 0) &&
-					(chain.m_limitMin.z == 0 || chain.m_limitMax.z == 0)
+				if ((chain.m_limitMin.y() != 0 || chain.m_limitMax.y() != 0) &&
+					(chain.m_limitMin.x() == 0 || chain.m_limitMax.x() == 0) &&
+					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
 				)
 				{
 					SolvePlane(iteration, chainIdx, SolveAxis::Y);
 					continue;
 				}
-				if ((chain.m_limitMin.z != 0 || chain.m_limitMax.z != 0) &&
-					(chain.m_limitMin.x == 0 || chain.m_limitMax.x == 0) &&
-					(chain.m_limitMin.y == 0 || chain.m_limitMax.y == 0)
-					)
+				if ((chain.m_limitMin.z() != 0 || chain.m_limitMax.z() != 0) &&
+					(chain.m_limitMin.x() == 0 || chain.m_limitMax.x() == 0) &&
+					(chain.m_limitMin.y() == 0 || chain.m_limitMax.y() == 0)
+				)
 				{
 					SolvePlane(iteration, chainIdx, SolveAxis::Z);
 					continue;
 				}
 			}
 
-			auto targetPos = glm::vec3(m_ikTarget->GetGlobalTransform()[3]);
+			Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
 
-			auto invChain = inverse(chain.m_node->GetGlobalTransform());
+			Eigen::Matrix4f invChain = chain.m_node->GetGlobalTransform().inverse();
 
-			auto chainIkPos = glm::vec3(invChain * glm::vec4(ikPos, 1));
-			auto chainTargetPos = glm::vec3(invChain * glm::vec4(targetPos, 1));
+			Eigen::Vector3f chainIkPos = (invChain * Eigen::Vector4f(ikPos.x(), ikPos.y(), ikPos.z(), 1.0f)).head<3>();
+			Eigen::Vector3f chainTargetPos = (invChain * Eigen::Vector4f(targetPos.x(), targetPos.y(), targetPos.z(), 1.0f)).head<3>();
 
-			auto chainIkVec = normalize(chainIkPos);
-			auto chainTargetVec = normalize(chainTargetPos);
+			Eigen::Vector3f chainIkVec = chainIkPos.normalized();
+			Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
 
-			auto dot = glm::dot(chainTargetVec, chainIkVec);
-			dot = glm::clamp(dot, -1.0f, 1.0f);
+			float dot = chainTargetVec.dot(chainIkVec);
+			dot = std::clamp(dot, -1.0f, 1.0f);
 
 			float angle = std::acos(dot);
-			float angleDeg = glm::degrees(angle);
+			constexpr float pi_f = static_cast<float>(EIGEN_PI);
+			float angleDeg = angle * 180.0f / pi_f;
 			if (angleDeg < 1.0e-3f)
 			{
 				continue;
 			}
-			angle = glm::clamp(angle, -m_limitAngle, m_limitAngle);
-			auto cross = normalize(glm::cross(chainTargetVec, chainIkVec));
-			auto rot = rotate(glm::quat(1, 0, 0, 0), angle, cross);
+			angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
+			Eigen::Vector3f cross = chainTargetVec.cross(chainIkVec).normalized();
+			Eigen::Quaternionf rot = Eigen::Quaternionf(Eigen::AngleAxisf(angle, cross));
 
-			auto chainRot = chainNode->GetIKRotate() * chainNode->AnimateRotate() * rot;
+			Eigen::Quaternionf chainRot = chainNode->GetIKRotate() * chainNode->AnimateRotate() * rot;
 			if (chain.m_enableAxisLimit)
 			{
-				auto chainRotM = mat3_cast(chainRot);
+				Eigen::Matrix3f chainRotM = chainRot.toRotationMatrix();
 				auto rotXYZ = Decompose(chainRotM, chain.m_prevAngle);
-				glm::vec3 clampXYZ;
-				clampXYZ = clamp(rotXYZ, chain.m_limitMin, chain.m_limitMax);
+				Eigen::Vector3f clampXYZ;
+				clampXYZ = rotXYZ.cwiseMax(chain.m_limitMin).cwiseMin(chain.m_limitMax);
 
-				clampXYZ = clamp(clampXYZ - chain.m_prevAngle, -m_limitAngle, m_limitAngle) + chain.m_prevAngle;
-				auto r = rotate(glm::quat(1, 0, 0, 0), clampXYZ.x, glm::vec3(1, 0, 0));
-				r = rotate(r, clampXYZ.y, glm::vec3(0, 1, 0));
-				r = rotate(r, clampXYZ.z, glm::vec3(0, 0, 1));
-				chainRotM = mat3_cast(r);
+				clampXYZ = (clampXYZ - chain.m_prevAngle).cwiseMax(-m_limitAngle).cwiseMin(m_limitAngle) + chain.m_prevAngle;
+				Eigen::Quaternionf r = Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.x(), Eigen::Vector3f(1, 0, 0)));
+				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.y(), Eigen::Vector3f(0, 1, 0)));
+				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.z(), Eigen::Vector3f(0, 0, 1)));
+				chainRotM = r.toRotationMatrix();
 				chain.m_prevAngle = clampXYZ;
 
-				chainRot = quat_cast(chainRotM);
+				chainRot = Eigen::Quaternionf(chainRotM);
 			}
 
-			auto ikRot = chainRot * inverse(chainNode->AnimateRotate());
+			Eigen::Quaternionf ikRot = chainRot * chainNode->AnimateRotate().inverse();
 			chainNode->SetIKRotate(ikRot);
 
 			chainNode->UpdateLocalTransform();
@@ -303,54 +309,54 @@ namespace libmmd
 	void MMDIkSolver::SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis)
 	{
 		int RotateAxisIndex = 0; // X axis
-		auto RotateAxis = glm::vec3(1, 0, 0);
+		Eigen::Vector3f RotateAxis = Eigen::Vector3f(1, 0, 0);
 		switch (solveAxis)
 		{
 		case SolveAxis::X:
 			RotateAxisIndex = 0; // X axis
-			RotateAxis = glm::vec3(1, 0, 0);
+			RotateAxis = Eigen::Vector3f(1, 0, 0);
 			break;
 		case SolveAxis::Y:
 			RotateAxisIndex = 1; // Y axis
-			RotateAxis = glm::vec3(0, 1, 0);
+			RotateAxis = Eigen::Vector3f(0, 1, 0);
 			break;
 		case SolveAxis::Z:
 			RotateAxisIndex = 2; // Z axis
-			RotateAxis = glm::vec3(0, 0, 1);
+			RotateAxis = Eigen::Vector3f(0, 0, 1);
 			break;
 		default:
 			break;
 		}
 
 		auto& chain = m_chains[chainIdx];
-		auto ikPos = glm::vec3(m_ikNode->GetGlobalTransform()[3]);
+		Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
 
-		auto targetPos = glm::vec3(m_ikTarget->GetGlobalTransform()[3]);
+		Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
 
-		auto invChain = inverse(chain.m_node->GetGlobalTransform());
+		Eigen::Matrix4f invChain = chain.m_node->GetGlobalTransform().inverse();
 
-		auto chainIkPos = glm::vec3(invChain * glm::vec4(ikPos, 1));
-		auto chainTargetPos = glm::vec3(invChain * glm::vec4(targetPos, 1));
+		Eigen::Vector3f chainIkPos = (invChain * Eigen::Vector4f(ikPos.x(), ikPos.y(), ikPos.z(), 1.0f)).head<3>();
+		Eigen::Vector3f chainTargetPos = (invChain * Eigen::Vector4f(targetPos.x(), targetPos.y(), targetPos.z(), 1.0f)).head<3>();
 
-		auto chainIkVec = normalize(chainIkPos);
-		auto chainTargetVec = normalize(chainTargetPos);
+		Eigen::Vector3f chainIkVec = chainIkPos.normalized();
+		Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
 
-		auto dot = glm::dot(chainTargetVec, chainIkVec);
-		dot = glm::clamp(dot, -1.0f, 1.0f);
+		float dot = chainTargetVec.dot(chainIkVec);
+		dot = std::clamp(dot, -1.0f, 1.0f);
 
 		float angle = std::acos(dot);
 
-		angle = glm::clamp(angle, -m_limitAngle, m_limitAngle);
+		angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
 
-		auto rot1 = rotate(glm::quat(1, 0, 0, 0), angle, RotateAxis);
-		auto targetVec1 = rot1 * chainTargetVec;
-		auto dot1 = glm::dot(targetVec1, chainIkVec);
+		Eigen::Quaternionf rot1 = Eigen::Quaternionf(Eigen::AngleAxisf(angle, RotateAxis));
+		Eigen::Vector3f targetVec1 = rot1 * chainTargetVec;
+		float dot1 = targetVec1.dot(chainIkVec);
 
-		auto rot2 = rotate(glm::quat(1, 0, 0, 0), -angle, RotateAxis);
-		auto targetVec2 = rot2 * chainTargetVec;
-		auto dot2 = glm::dot(targetVec2, chainIkVec);
+		Eigen::Quaternionf rot2 = Eigen::Quaternionf(Eigen::AngleAxisf(-angle, RotateAxis));
+		Eigen::Vector3f targetVec2 = rot2 * chainTargetVec;
+		float dot2 = targetVec2.dot(chainIkVec);
 
-		auto newAngle = chain.m_planeModeAngle;
+		float newAngle = chain.m_planeModeAngle;
 		if (dot1 > dot2)
 		{
 			newAngle += angle;
@@ -370,7 +376,7 @@ namespace libmmd
 				else
 				{
 					auto halfRad = (chain.m_limitMin[RotateAxisIndex] + chain.m_limitMax[RotateAxisIndex]) * 0.5f;
-					if (glm::abs(halfRad - newAngle) > glm::abs(halfRad + newAngle))
+					if (std::abs(halfRad - newAngle) > std::abs(halfRad + newAngle))
 					{
 						newAngle *= -1;
 					}
@@ -378,10 +384,10 @@ namespace libmmd
 			}
 		}
 
-		newAngle = glm::clamp(newAngle, chain.m_limitMin[RotateAxisIndex], chain.m_limitMax[RotateAxisIndex]);
+		newAngle = std::clamp(newAngle, chain.m_limitMin[RotateAxisIndex], chain.m_limitMax[RotateAxisIndex]);
 		chain.m_planeModeAngle = newAngle;
 
-		auto ikRotM = rotate(glm::quat(1, 0, 0, 0), newAngle, RotateAxis) * inverse(chain.m_node->AnimateRotate());
+		Eigen::Quaternionf ikRotM = Eigen::Quaternionf(Eigen::AngleAxisf(newAngle, RotateAxis)) * chain.m_node->AnimateRotate().inverse();
 		chain.m_node->SetIKRotate(ikRotM);
 
 		chain.m_node->UpdateLocalTransform();

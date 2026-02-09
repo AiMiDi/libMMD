@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -7,7 +7,7 @@
 #define LIBMMD_MODEL_MMD_MMDNODE_H_
 
 #include <string>
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -91,85 +91,85 @@ namespace libmmd
 		 * @brief Set the translation of the node.
 		 * @param t The translation vector.
 		 */
-		void SetTranslate(const glm::vec3& t) { m_translate = t; }
+		void SetTranslate(const Eigen::Vector3f& t) { m_translate = t; }
 
 		/**
 		 * @brief Get the translation of the node.
 		 * @return The translation vector.
 		 */
-		const glm::vec3& GetTranslate() const { return m_translate; }
+		const Eigen::Vector3f& GetTranslate() const { return m_translate; }
 
 		/**
 		 * @brief Set the rotation of the node.
 		 * @param r The rotation quaternion.
 		 */
-		void SetRotate(const glm::quat& r) { m_rotate = r; }
+		void SetRotate(const Eigen::Quaternionf& r) { m_rotate = r; }
 
 		/**
 		 * @brief Get the rotation of the node.
 		 * @return The rotation quaternion.
 		 */
-		const glm::quat& GetRotate() const { return m_rotate; }
+		const Eigen::Quaternionf& GetRotate() const { return m_rotate; }
 
 		/**
 		 * @brief Set the scale of the node.
 		 * @param s The scale vector.
 		 */
-		void SetScale(const glm::vec3& s) { m_scale = s; }
+		void SetScale(const Eigen::Vector3f& s) { m_scale = s; }
 
 		/**
 		 * @brief Get the scale of the node.
 		 * @return The scale vector.
 		 */
-		const glm::vec3& GetScale() const { return m_scale; }
+		const Eigen::Vector3f& GetScale() const { return m_scale; }
 
 		/**
 		 * @brief Set the animation translation of the node.
 		 * @param t The animation translation vector.
 		 */
-		void SetAnimationTranslate(const glm::vec3& t) { m_animTranslate = t; }
+		void SetAnimationTranslate(const Eigen::Vector3f& t) { m_animTranslate = t; }
 
 		/**
 		 * @brief Get the animation translation of the node.
 		 * @return The animation translation vector.
 		 */
-		const glm::vec3& GetAnimationTranslate() const { return m_animTranslate; }
+		const Eigen::Vector3f& GetAnimationTranslate() const { return m_animTranslate; }
 
 		/**
 		 * @brief Set the animation rotation of the node.
 		 * @param q The animation rotation quaternion.
 		 */
-		void SetAnimationRotate(const glm::quat& q) { m_animRotate = q; }
+		void SetAnimationRotate(const Eigen::Quaternionf& q) { m_animRotate = q; }
 
 		/**
 		 * @brief Get the animation rotation of the node.
 		 * @return The animation rotation quaternion.
 		 */
-		const glm::quat& GetAnimationRotate() const { return m_animRotate; }
+		const Eigen::Quaternionf& GetAnimationRotate() const { return m_animRotate; }
 
 		/**
 		 * @brief Get the combined translation for animation.
 		 * @return The combined translation vector.
 		 */
-		glm::vec3 AnimateTranslate() const { return m_animTranslate + m_translate; }
+		Eigen::Vector3f AnimateTranslate() const { return m_animTranslate + m_translate; }
 
 		/**
 		 * @brief Get the combined rotation for animation.
 		 * @return The combined rotation quaternion.
 		 */
-		glm::quat AnimateRotate() const { return m_animRotate * m_rotate; }
+		Eigen::Quaternionf AnimateRotate() const { return m_animRotate * m_rotate; }
 
 		/**
 		 * @brief Set the IK rotation of the node.
 		 * @param ikr The IK rotation quaternion.
 		 */
-		void SetIKRotate(const glm::quat& ikr) { m_ikRotate = ikr; }
+		void SetIKRotate(const Eigen::Quaternionf& ikr) { m_ikRotate = ikr; }
 
 		/**
 		 * @brief Get the IK rotation of the node.
 		 * @return The IK rotation quaternion.
 		 */
-		const glm::quat& GetIKRotate() const { return m_ikRotate; }
+		const Eigen::Quaternionf& GetIKRotate() const { return m_ikRotate; }
 
 		/**
 		 * @brief Get the parent node.
@@ -199,25 +199,25 @@ namespace libmmd
 		 * @brief Set the local transform matrix.
 		 * @param m The local transform matrix.
 		 */
-		void SetLocalTransform(const glm::mat4& m) { m_local = m; }
+		void SetLocalTransform(const Eigen::Matrix4f& m) { m_local = m; }
 
 		/**
 		 * @brief Get the local transform matrix.
 		 * @return The local transform matrix.
 		 */
-		const glm::mat4& GetLocalTransform() const { return m_local; }
+		const Eigen::Matrix4f& GetLocalTransform() const { return m_local; }
 
 		/**
 		 * @brief Set the global transform matrix.
 		 * @param m The global transform matrix.
 		 */
-		void SetGlobalTransform(const glm::mat4& m) { m_global = m; }
+		void SetGlobalTransform(const Eigen::Matrix4f& m) { m_global = m; }
 
 		/**
 		 * @brief Get the global transform matrix.
 		 * @return The global transform matrix.
 		 */
-		const glm::mat4& GetGlobalTransform() const { return m_global; }
+		const Eigen::Matrix4f& GetGlobalTransform() const { return m_global; }
 
 		/**
 		 * @brief Calculate the inverse of the initial transform.
@@ -228,7 +228,7 @@ namespace libmmd
 		 * @brief Get the inverse of the initial transform.
 		 * @return The inverse of the initial transform matrix.
 		 */
-		const glm::mat4& GetInverseInitTransform() const { return m_inverseInit; }
+		const Eigen::Matrix4f& GetInverseInitTransform() const { return m_inverseInit; }
 
 		/**
 		 * @brief Save the initial translation, rotation, and scale.
@@ -248,27 +248,27 @@ namespace libmmd
 			m_translate = m_initTranslate;
 			m_rotate = m_initRotate;
 			m_scale = m_initScale;
-			//m_animTranslate = glm::vec3(0);
-			//m_animRotate = glm::quat(1, 0, 0, 0);
+			//m_animTranslate = Eigen::Vector3f::Zero();
+			//m_animRotate = Eigen::Quaternionf::Identity();
 		}
 
 		/**
 		 * @brief Get the initial translation.
 		 * @return The initial translation vector.
 		 */
-		const glm::vec3& GetInitialTranslate() const { return m_initTranslate; }
+		const Eigen::Vector3f& GetInitialTranslate() const { return m_initTranslate; }
 
 		/**
 		 * @brief Get the initial rotation.
 		 * @return The initial rotation quaternion.
 		 */
-		const glm::quat& GetInitialRotate() const { return m_initRotate; }
+		const Eigen::Quaternionf& GetInitialRotate() const { return m_initRotate; }
 
 		/**
 		 * @brief Get the initial scale.
 		 * @return The initial scale vector.
 		 */
-		const glm::vec3& GetInitialScale() const { return m_initScale; }
+		const Eigen::Vector3f& GetInitialScale() const { return m_initScale; }
 
 		/**
 		 * @brief Save the base animation state.
@@ -293,21 +293,21 @@ namespace libmmd
 		 */
 		void ClearBaseAnimation()
 		{
-			m_baseAnimTranslate = glm::vec3(0);
-			m_baseAnimRotate = glm::quat(1, 0, 0, 0);
+			m_baseAnimTranslate = Eigen::Vector3f::Zero();
+			m_baseAnimRotate = Eigen::Quaternionf::Identity();
 		}
 
 		/**
 		 * @brief Get the base animation translation.
 		 * @return The base animation translation vector.
 		 */
-		const glm::vec3& GetBaseAnimationTranslate() const { return m_baseAnimTranslate; }
+		const Eigen::Vector3f& GetBaseAnimationTranslate() const { return m_baseAnimTranslate; }
 
 		/**
 		 * @brief Get the base animation rotation.
 		 * @return The base animation rotation quaternion.
 		 */
-		const glm::quat& GetBaseAnimationRotate() const { return m_baseAnimRotate; }
+		const Eigen::Quaternionf& GetBaseAnimationRotate() const { return m_baseAnimRotate; }
 
 	protected:
 		/**
@@ -334,25 +334,25 @@ namespace libmmd
 		MMDNode*		m_next;
 		MMDNode*		m_prev;
 
-		glm::vec3	m_translate;
-		glm::quat	m_rotate;
-		glm::vec3	m_scale;
+		Eigen::Vector3f	m_translate;
+		Eigen::Quaternionf	m_rotate;
+		Eigen::Vector3f	m_scale;
 
-		glm::vec3	m_animTranslate;
-		glm::quat	m_animRotate;
+		Eigen::Vector3f	m_animTranslate;
+		Eigen::Quaternionf	m_animRotate;
 
-		glm::vec3	m_baseAnimTranslate;
-		glm::quat	m_baseAnimRotate;
+		Eigen::Vector3f	m_baseAnimTranslate;
+		Eigen::Quaternionf	m_baseAnimRotate;
 
-		glm::quat	m_ikRotate;
+		Eigen::Quaternionf	m_ikRotate;
 
-		glm::mat4		m_local;
-		glm::mat4		m_global;
-		glm::mat4		m_inverseInit;
+		Eigen::Matrix4f		m_local;
+		Eigen::Matrix4f		m_global;
+		Eigen::Matrix4f		m_inverseInit;
 
-		glm::vec3	m_initTranslate;
-		glm::quat	m_initRotate;
-		glm::vec3	m_initScale;
+		Eigen::Vector3f	m_initTranslate;
+		Eigen::Quaternionf	m_initRotate;
+		Eigen::Vector3f	m_initScale;
 	};
 }
 

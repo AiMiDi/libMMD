@@ -65,19 +65,19 @@ static void test_MMDNode_DefaultConstruction()
     TEST_ASSERT(!node.IsIK());
 
     // Default transform is identity-like
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().y);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().z);
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetTranslate().z());
 
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().x);
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().y);
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().z);
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().x());
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().y());
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetScale().z());
 
     // Default rotation is identity quaternion
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetRotate().w);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().x);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().y);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().z);
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetRotate().w());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetRotate().z());
 
     // No parent/child/sibling
     TEST_ASSERT(node.GetParent() == nullptr);
@@ -118,19 +118,19 @@ static void test_MMDNode_TranslateRotateScale()
     std::cout << "[test] MMDNode_TranslateRotateScale\n";
     libmmd::MMDNode node;
 
-    node.SetTranslate(glm::vec3(1.0f, 2.0f, 3.0f));
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetTranslate().y);
-    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetTranslate().z);
+    node.SetTranslate(Eigen::Vector3f(1.0f, 2.0f, 3.0f));
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetTranslate().z());
 
-    node.SetRotate(glm::quat(0.707f, 0.707f, 0.0f, 0.0f));
-    TEST_ASSERT_FLOAT_EQ(0.707f, node.GetRotate().w);
-    TEST_ASSERT_FLOAT_EQ(0.707f, node.GetRotate().x);
+    node.SetRotate(Eigen::Quaternionf(0.707f, 0.707f, 0.0f, 0.0f));
+    TEST_ASSERT_FLOAT_EQ(0.707f, node.GetRotate().w());
+    TEST_ASSERT_FLOAT_EQ(0.707f, node.GetRotate().x());
 
-    node.SetScale(glm::vec3(2.0f, 3.0f, 4.0f));
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetScale().x);
-    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetScale().y);
-    TEST_ASSERT_FLOAT_EQ(4.0f, node.GetScale().z);
+    node.SetScale(Eigen::Vector3f(2.0f, 3.0f, 4.0f));
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetScale().x());
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetScale().y());
+    TEST_ASSERT_FLOAT_EQ(4.0f, node.GetScale().z());
 }
 
 static void test_MMDNode_AnimationTranslateRotate()
@@ -138,14 +138,14 @@ static void test_MMDNode_AnimationTranslateRotate()
     std::cout << "[test] MMDNode_AnimationTranslateRotate\n";
     libmmd::MMDNode node;
 
-    node.SetAnimationTranslate(glm::vec3(10.0f, 20.0f, 30.0f));
-    TEST_ASSERT_FLOAT_EQ(10.0f, node.GetAnimationTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(20.0f, node.GetAnimationTranslate().y);
-    TEST_ASSERT_FLOAT_EQ(30.0f, node.GetAnimationTranslate().z);
+    node.SetAnimationTranslate(Eigen::Vector3f(10.0f, 20.0f, 30.0f));
+    TEST_ASSERT_FLOAT_EQ(10.0f, node.GetAnimationTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(20.0f, node.GetAnimationTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(30.0f, node.GetAnimationTranslate().z());
 
-    node.SetAnimationRotate(glm::quat(0.5f, 0.5f, 0.5f, 0.5f));
-    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetAnimationRotate().w);
-    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetAnimationRotate().x);
+    node.SetAnimationRotate(Eigen::Quaternionf(0.5f, 0.5f, 0.5f, 0.5f));
+    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetAnimationRotate().w());
+    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetAnimationRotate().x());
 }
 
 static void test_MMDNode_AnimateCombined()
@@ -153,13 +153,13 @@ static void test_MMDNode_AnimateCombined()
     std::cout << "[test] MMDNode_AnimateCombined\n";
     libmmd::MMDNode node;
 
-    node.SetTranslate(glm::vec3(1.0f, 0.0f, 0.0f));
-    node.SetAnimationTranslate(glm::vec3(0.0f, 2.0f, 0.0f));
+    node.SetTranslate(Eigen::Vector3f(1.0f, 0.0f, 0.0f));
+    node.SetAnimationTranslate(Eigen::Vector3f(0.0f, 2.0f, 0.0f));
 
     auto combined = node.AnimateTranslate();
-    TEST_ASSERT_FLOAT_EQ(1.0f, combined.x);
-    TEST_ASSERT_FLOAT_EQ(2.0f, combined.y);
-    TEST_ASSERT_FLOAT_EQ(0.0f, combined.z);
+    TEST_ASSERT_FLOAT_EQ(1.0f, combined.x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, combined.y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, combined.z());
 }
 
 static void test_MMDNode_IKRotate()
@@ -167,10 +167,10 @@ static void test_MMDNode_IKRotate()
     std::cout << "[test] MMDNode_IKRotate\n";
     libmmd::MMDNode node;
 
-    auto ik = glm::quat(0.0f, 1.0f, 0.0f, 0.0f);
+    auto ik = Eigen::Quaternionf(0.0f, 1.0f, 0.0f, 0.0f);
     node.SetIKRotate(ik);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetIKRotate().w);
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetIKRotate().x);
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetIKRotate().w());
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetIKRotate().x());
 }
 
 static void test_MMDNode_ParentChild()
@@ -197,28 +197,28 @@ static void test_MMDNode_SaveLoadInitialTRS()
     std::cout << "[test] MMDNode_SaveLoadInitialTRS\n";
     libmmd::MMDNode node;
 
-    node.SetTranslate(glm::vec3(5.0f, 6.0f, 7.0f));
-    node.SetRotate(glm::quat(0.5f, 0.5f, 0.5f, 0.5f));
-    node.SetScale(glm::vec3(2.0f, 2.0f, 2.0f));
+    node.SetTranslate(Eigen::Vector3f(5.0f, 6.0f, 7.0f));
+    node.SetRotate(Eigen::Quaternionf(0.5f, 0.5f, 0.5f, 0.5f));
+    node.SetScale(Eigen::Vector3f(2.0f, 2.0f, 2.0f));
     node.SaveInitialTRS();
 
     // Modify current values
-    node.SetTranslate(glm::vec3(0.0f, 0.0f, 0.0f));
-    node.SetRotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-    node.SetScale(glm::vec3(1.0f, 1.0f, 1.0f));
+    node.SetTranslate(Eigen::Vector3f(0.0f, 0.0f, 0.0f));
+    node.SetRotate(Eigen::Quaternionf::Identity());
+    node.SetScale(Eigen::Vector3f(1.0f, 1.0f, 1.0f));
 
     // Verify getters for saved initial state
-    TEST_ASSERT_FLOAT_EQ(5.0f, node.GetInitialTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(6.0f, node.GetInitialTranslate().y);
-    TEST_ASSERT_FLOAT_EQ(7.0f, node.GetInitialTranslate().z);
-    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetInitialRotate().w);
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetInitialScale().x);
+    TEST_ASSERT_FLOAT_EQ(5.0f, node.GetInitialTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(6.0f, node.GetInitialTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(7.0f, node.GetInitialTranslate().z());
+    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetInitialRotate().w());
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetInitialScale().x());
 
     // Load back initial values
     node.LoadInitialTRS();
-    TEST_ASSERT_FLOAT_EQ(5.0f, node.GetTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetRotate().w);
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetScale().x);
+    TEST_ASSERT_FLOAT_EQ(5.0f, node.GetTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(0.5f, node.GetRotate().w());
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetScale().x());
 }
 
 static void test_MMDNode_SaveLoadBaseAnimation()
@@ -226,24 +226,24 @@ static void test_MMDNode_SaveLoadBaseAnimation()
     std::cout << "[test] MMDNode_SaveLoadBaseAnimation\n";
     libmmd::MMDNode node;
 
-    node.SetAnimationTranslate(glm::vec3(1.0f, 2.0f, 3.0f));
-    node.SetAnimationRotate(glm::quat(0.0f, 0.0f, 0.707f, 0.707f));
+    node.SetAnimationTranslate(Eigen::Vector3f(1.0f, 2.0f, 3.0f));
+    node.SetAnimationRotate(Eigen::Quaternionf(0.0f, 0.0f, 0.707f, 0.707f));
     node.SaveBaseAnimation();
 
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetBaseAnimationTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetBaseAnimationTranslate().y);
-    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetBaseAnimationTranslate().z);
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetBaseAnimationRotate().w);
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetBaseAnimationTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetBaseAnimationTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetBaseAnimationTranslate().z());
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetBaseAnimationRotate().w());
 
     // Modify and then load back
-    node.SetAnimationTranslate(glm::vec3(0.0f, 0.0f, 0.0f));
+    node.SetAnimationTranslate(Eigen::Vector3f(0.0f, 0.0f, 0.0f));
     node.LoadBaseAnimation();
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetAnimationTranslate().x);
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetAnimationTranslate().x());
 
     // Clear
     node.ClearBaseAnimation();
-    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetBaseAnimationTranslate().x);
-    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetBaseAnimationRotate().w);
+    TEST_ASSERT_FLOAT_EQ(0.0f, node.GetBaseAnimationTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetBaseAnimationRotate().w());
 }
 
 static void test_MMDNode_LocalGlobalTransform()
@@ -251,13 +251,13 @@ static void test_MMDNode_LocalGlobalTransform()
     std::cout << "[test] MMDNode_LocalGlobalTransform\n";
     libmmd::MMDNode node;
 
-    auto localMat = glm::mat4(2.0f);
+    auto localMat = Eigen::Matrix4f::Identity() * 2.0f;
     node.SetLocalTransform(localMat);
-    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetLocalTransform()[0][0]);
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetLocalTransform()(0, 0));
 
-    auto globalMat = glm::mat4(3.0f);
+    auto globalMat = Eigen::Matrix4f::Identity() * 3.0f;
     node.SetGlobalTransform(globalMat);
-    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetGlobalTransform()[0][0]);
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetGlobalTransform()(0, 0));
 }
 
 // ===========================================================================
@@ -386,13 +386,13 @@ static void test_MMDMaterial_DefaultConstruction()
     libmmd::MMDMaterial mat;
 
     // Defaults from MMDMaterial constructor
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.x);
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.y);
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.z);
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.x());
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.y());
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.z());
     TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_alpha);
-    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_specular.x);
+    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_specular.x());
     TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_specularPower);
-    TEST_ASSERT_FLOAT_EQ(0.2f, mat.m_ambient.x);
+    TEST_ASSERT_FLOAT_EQ(0.2f, mat.m_ambient.x());
     TEST_ASSERT_EQ(uint8_t(0), mat.m_edgeFlag);
     TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_edgeSize);
     TEST_ASSERT(mat.m_texture.empty());
@@ -403,13 +403,13 @@ static void test_MMDMaterial_DefaultConstruction()
     TEST_ASSERT(mat.m_shadowCaster);
     TEST_ASSERT(mat.m_shadowReceiver);
     // Mul factors default to 1
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_textureMulFactor.x);
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_spTextureMulFactor.x);
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_toonTextureMulFactor.x);
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_textureMulFactor.x());
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_spTextureMulFactor.x());
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_toonTextureMulFactor.x());
     // Add factors default to 0
-    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_textureAddFactor.x);
-    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_spTextureAddFactor.x);
-    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_toonTextureAddFactor.x);
+    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_textureAddFactor.x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_spTextureAddFactor.x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, mat.m_toonTextureAddFactor.x());
 }
 
 static void test_MMDMaterial_SetFields()
@@ -417,19 +417,19 @@ static void test_MMDMaterial_SetFields()
     std::cout << "[test] MMDMaterial_SetFields\n";
     libmmd::MMDMaterial mat;
 
-    mat.m_diffuse = glm::vec3(1.0f, 0.5f, 0.0f);
+    mat.m_diffuse = Eigen::Vector3f(1.0f, 0.5f, 0.0f);
     mat.m_alpha = 0.8f;
-    mat.m_specular = glm::vec3(1.0f, 1.0f, 1.0f);
+    mat.m_specular = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
     mat.m_specularPower = 50.0f;
-    mat.m_ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    mat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
     mat.m_texture = "tex.png";
     mat.m_bothFace = true;
     mat.m_groundShadow = true;
     mat.m_shadowCaster = true;
     mat.m_shadowReceiver = false;
 
-    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.x);
-    TEST_ASSERT_FLOAT_EQ(0.5f, mat.m_diffuse.y);
+    TEST_ASSERT_FLOAT_EQ(1.0f, mat.m_diffuse.x());
+    TEST_ASSERT_FLOAT_EQ(0.5f, mat.m_diffuse.y());
     TEST_ASSERT_FLOAT_EQ(0.8f, mat.m_alpha);
     TEST_ASSERT_FLOAT_EQ(50.0f, mat.m_specularPower);
     TEST_ASSERT_EQ(std::string("tex.png"), mat.m_texture);

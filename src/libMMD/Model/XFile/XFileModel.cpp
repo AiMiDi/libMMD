@@ -1,11 +1,12 @@
-﻿#include "XFileModel.h"
+#include "XFileModel.h"
 
 #define TINYXLOADER_IMPLEMENTATION
 #include <tinyxfileloader.h>
 
 #include <map>
 #include <sstream>
-#include <glm/gtc/matrix_transform.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include "../../Base/Path.h"
 #include "../../Base/File.h"
@@ -15,9 +16,10 @@ namespace libmmd
 {
 	namespace
 	{
-		glm::mat4 InvZ(const glm::mat4& m)
+		Eigen::Matrix4f InvZ(const Eigen::Matrix4f& m)
 		{
-			const glm::mat4 invZ = scale(glm::mat4(1), glm::vec3(1, 1, -1));
+			Eigen::Matrix4f invZ = Eigen::Matrix4f::Identity();
+			invZ(2, 2) = -1.0f;
 			return invZ * m * invZ;
 		}
 	}
@@ -62,25 +64,25 @@ namespace libmmd
 			frame->m_parent = nullptr;
 			frame->m_child = nullptr;
 			frame->m_next = nullptr;
-			frame->m_local[0][0] = xfileFrame->m_transform.m[0];
-			frame->m_local[0][1] = xfileFrame->m_transform.m[1];
-			frame->m_local[0][2] = xfileFrame->m_transform.m[2];
-			frame->m_local[0][3] = xfileFrame->m_transform.m[3];
+			frame->m_local(0, 0) = xfileFrame->m_transform.m[0];
+			frame->m_local(1, 0) = xfileFrame->m_transform.m[1];
+			frame->m_local(2, 0) = xfileFrame->m_transform.m[2];
+			frame->m_local(3, 0) = xfileFrame->m_transform.m[3];
 
-			frame->m_local[1][0] = xfileFrame->m_transform.m[4];
-			frame->m_local[1][1] = xfileFrame->m_transform.m[5];
-			frame->m_local[1][2] = xfileFrame->m_transform.m[6];
-			frame->m_local[1][3] = xfileFrame->m_transform.m[7];
+			frame->m_local(0, 1) = xfileFrame->m_transform.m[4];
+			frame->m_local(1, 1) = xfileFrame->m_transform.m[5];
+			frame->m_local(2, 1) = xfileFrame->m_transform.m[6];
+			frame->m_local(3, 1) = xfileFrame->m_transform.m[7];
 
-			frame->m_local[2][0] = xfileFrame->m_transform.m[8];
-			frame->m_local[2][1] = xfileFrame->m_transform.m[9];
-			frame->m_local[2][2] = xfileFrame->m_transform.m[10];
-			frame->m_local[2][3] = xfileFrame->m_transform.m[11];
+			frame->m_local(0, 2) = xfileFrame->m_transform.m[8];
+			frame->m_local(1, 2) = xfileFrame->m_transform.m[9];
+			frame->m_local(2, 2) = xfileFrame->m_transform.m[10];
+			frame->m_local(3, 2) = xfileFrame->m_transform.m[11];
 
-			frame->m_local[3][0] = xfileFrame->m_transform.m[12];
-			frame->m_local[3][1] = xfileFrame->m_transform.m[13];
-			frame->m_local[3][2] = xfileFrame->m_transform.m[14];
-			frame->m_local[3][3] = xfileFrame->m_transform.m[15];
+			frame->m_local(0, 3) = xfileFrame->m_transform.m[12];
+			frame->m_local(1, 3) = xfileFrame->m_transform.m[13];
+			frame->m_local(2, 3) = xfileFrame->m_transform.m[14];
+			frame->m_local(3, 3) = xfileFrame->m_transform.m[15];
 
 			frame->m_local = InvZ(frame->m_local);
 
@@ -111,29 +113,29 @@ namespace libmmd
 				mesh->m_name = xfileMesh.m_name;
 				
 				// position
-				m_bboxMax = glm::vec3(-std::numeric_limits<float>::max());
-				m_bboxMin = glm::vec3(std::numeric_limits<float>::max());
+				m_bboxMax = Eigen::Vector3f::Constant(-std::numeric_limits<float>::max());
+				m_bboxMin = Eigen::Vector3f::Constant(std::numeric_limits<float>::max());
 				mesh->m_positions.reserve(xfileMesh.m_positions.size());
 				for (const auto& xfilePos : xfileMesh.m_positions)
 				{
-					auto pos = glm::vec3(xfilePos.x, xfilePos.y, -xfilePos.z) * 10.0f;
+					Eigen::Vector3f pos = Eigen::Vector3f(xfilePos.x, xfilePos.y, -xfilePos.z) * 10.0f;
 					mesh->m_positions.push_back(pos);
-					m_bboxMax = max(m_bboxMax, pos);
-					m_bboxMin = min(m_bboxMin, pos);
+					m_bboxMax = m_bboxMax.cwiseMax(pos);
+					m_bboxMin = m_bboxMin.cwiseMin(pos);
 				}
 
 				// normal
 				mesh->m_normals.reserve(xfileMesh.m_normals.size());
 				for (const auto& xfileNor : xfileMesh.m_normals)
 				{
-					mesh->m_normals.emplace_back(glm::vec3(xfileNor.x, xfileNor.y, -xfileNor.z));
+					mesh->m_normals.emplace_back(Eigen::Vector3f(xfileNor.x, xfileNor.y, -xfileNor.z));
 				}
 
 				// uv
 				mesh->m_uvs.reserve(xfileMesh.m_textureCoords.size());
 				for (const auto& xfileUV : xfileMesh.m_textureCoords)
 				{
-					mesh->m_uvs.emplace_back(glm::vec2(xfileUV.x, 1.0f - xfileUV.y));
+					mesh->m_uvs.emplace_back(Eigen::Vector2f(xfileUV.x, 1.0f - xfileUV.y));
 				}
 
 				// material
@@ -141,10 +143,10 @@ namespace libmmd
 				for (const auto& xfileMat : xfileMesh.m_materials)
 				{
 					Material mat;
-					mat.m_diffuse = glm::vec4(xfileMat.m_diffuse.r, xfileMat.m_diffuse.g, xfileMat.m_diffuse.b, xfileMat.m_diffuse.a);
-					mat.m_specular = glm::vec3(xfileMat.m_specular.r, xfileMat.m_specular.g, xfileMat.m_specular.b);
+					mat.m_diffuse = Eigen::Vector4f(xfileMat.m_diffuse.r, xfileMat.m_diffuse.g, xfileMat.m_diffuse.b, xfileMat.m_diffuse.a);
+					mat.m_specular = Eigen::Vector3f(xfileMat.m_specular.r, xfileMat.m_specular.g, xfileMat.m_specular.b);
 					mat.m_speculatPower = xfileMat.m_specularPower;
-					mat.m_emissive = glm::vec3(xfileMat.m_emissive.r, xfileMat.m_emissive.g, xfileMat.m_emissive.b);
+					mat.m_emissive = Eigen::Vector3f(xfileMat.m_emissive.r, xfileMat.m_emissive.g, xfileMat.m_emissive.b);
 					mat.m_spTextureMode = Material::SpTextureMode::None;
 					if (!xfileMat.m_texture.empty())
 					{

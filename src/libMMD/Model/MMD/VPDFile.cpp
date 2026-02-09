@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -162,9 +162,9 @@ namespace libmmd
 					auto numStr1 = line.substr(delim1, delim2 - delim1);
 					auto numStr2 = line.substr(delim3, delim4 - delim3);
 					auto numStr3 = line.substr(delim5, delim6 - delim5);
-					bones[boneIdx].m_translate.x = std::stof(numStr1);
-					bones[boneIdx].m_translate.y = std::stof(numStr2);
-					bones[boneIdx].m_translate.z = std::stof(numStr3);
+				bones[boneIdx].m_translate.x() = std::stof(numStr1);
+				bones[boneIdx].m_translate.y() = std::stof(numStr2);
+				bones[boneIdx].m_translate.z() = std::stof(numStr3);
 				}
 				catch (std::exception& e)
 				{
@@ -223,10 +223,10 @@ namespace libmmd
 					auto numStr2 = line.substr(delim3, delim4 - delim3);
 					auto numStr3 = line.substr(delim5, delim6 - delim5);
 					auto numStr4 = line.substr(delim7, delim8 - delim7);
-					bones[boneIdx].m_quaternion.x = std::stof(numStr1);
-					bones[boneIdx].m_quaternion.y = std::stof(numStr2);
-					bones[boneIdx].m_quaternion.z = std::stof(numStr3);
-					bones[boneIdx].m_quaternion.w = std::stof(numStr4);
+				bones[boneIdx].m_quaternion.x() = std::stof(numStr1);
+				bones[boneIdx].m_quaternion.y() = std::stof(numStr2);
+				bones[boneIdx].m_quaternion.z() = std::stof(numStr3);
+				bones[boneIdx].m_quaternion.w() = std::stof(numStr4);
 				}
 				catch (std::exception& e)
 				{

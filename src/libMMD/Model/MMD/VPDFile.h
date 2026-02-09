@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 
-#include <glm/gtc/quaternion.hpp>
+#include <Eigen/Geometry>
 
 namespace libmmd
 {
@@ -19,8 +19,8 @@ namespace libmmd
 	struct VPDBone
 	{
 		std::string	m_boneName; ///< Bone name
-		glm::vec3	m_translate; ///< Translation vector
-		glm::quat	m_quaternion; ///< Rotation quaternion
+		Eigen::Vector3f	m_translate; ///< Translation vector
+		Eigen::Quaternionf	m_quaternion; ///< Rotation quaternion
 	};
 
 	/**

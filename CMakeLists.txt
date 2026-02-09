@@ -12,6 +12,7 @@ else()
 endif()
 option (LIBMMD_BUILD_X_MODEL "Build x model." on)
 set (LIBMMD_BULLET_ROOT "" CACHE PATH "Bullet Root Directory")
+set (LIBMMD_EIGEN_ROOT "" CACHE PATH "Eigen Root Directory")
 option (LIBMMD_ENABLE_TEST "Enable CTest." on)
 option (LIBMMD_INSTALL "libMMD install." off)
 
@@ -59,8 +60,8 @@ endif()
 # Install
 if (LIBMMD_INSTALL)
     install (DIRECTORY src/libMMD DESTINATION include  FILES_MATCHING PATTERN "*.h")
-    # copy glm to include
-    install (DIRECTORY external/glm/glm DESTINATION include)
+    # copy Eigen to include
+    install (DIRECTORY ${LIBMMD_EIGEN_ROOT}/Eigen DESTINATION include)
     if (LIBMMD_BUILD_MMD2OBJ)
         install (TARGETS mmd2obj RUNTIME DESTINATION bin)
     endif()

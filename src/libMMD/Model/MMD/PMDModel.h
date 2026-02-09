@@ -136,9 +136,9 @@ namespace libmmd
 		struct MorphVertex
 		{
 			uint32_t	m_index;
-			glm::vec3	m_position;
+			Eigen::Vector3f	m_position;
 
-			explicit  MorphVertex(const uint32_t index = 0, const glm::vec3& position = glm::vec3{0});
+			explicit  MorphVertex(const uint32_t index = 0, const Eigen::Vector3f& position = Eigen::Vector3f::Zero());
 		};
 
 		/**

@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -11,7 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <limits>
-#include <glm/glm.hpp>
+#include <Eigen/Core>
 #include <tiny_obj_loader.h>
 
 namespace libmmd
@@ -171,18 +171,18 @@ namespace libmmd
 
 		if (!m_positions.empty())
 		{
-			m_bboxMin = glm::vec3(std::numeric_limits<float>::max());
-			m_bboxMax = glm::vec3(-std::numeric_limits<float>::max());
+			m_bboxMin = Eigen::Vector3f::Constant(std::numeric_limits<float>::max());
+			m_bboxMax = Eigen::Vector3f::Constant(-std::numeric_limits<float>::max());
 			for (const auto& vec : m_positions)
 			{
-				m_bboxMin = glm::min(m_bboxMin, vec);
-				m_bboxMax = glm::max(m_bboxMax, vec);
+				m_bboxMin = m_bboxMin.cwiseMin(vec);
+				m_bboxMax = m_bboxMax.cwiseMax(vec);
 			}
 		}
 		else
 		{
-			m_bboxMin = glm::vec3(0);
-			m_bboxMax = glm::vec3(0);
+			m_bboxMin = Eigen::Vector3f::Zero();
+			m_bboxMax = Eigen::Vector3f::Zero();
 		}
 
 		int emptyMatIdx = -1;
@@ -211,8 +211,8 @@ namespace libmmd
 						LIBMMD_INFO("Material Not Assigned.");
 						Material emptyMat;
 						emptyMatIdx = (int)m_materials.size();
-						emptyMat.m_ambient = glm::vec3(0.2f);
-						emptyMat.m_diffuse = glm::vec3(0.5f);
+						emptyMat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
+						emptyMat.m_diffuse = Eigen::Vector3f(0.5f, 0.5f, 0.5f);
 						emptyMat.m_specularPower = 1.0f;
 						m_materials.push_back(emptyMat);
 					}
