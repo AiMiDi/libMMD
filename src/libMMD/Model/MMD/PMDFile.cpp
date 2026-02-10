@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -16,7 +16,7 @@ namespace libmmd
 	namespace
 	{
 		template <typename T>
-		bool Read(T* data, File& file)
+		bool Read(T* data, MemoryReader& file)
 		{
 			return file.Read(data);
 		}
@@ -27,7 +27,7 @@ namespace libmmd
 			return file.Write(data);
 		}
 
-		bool ReadHeader(PMDFile* pmdFile, File& file)
+		bool ReadHeader(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -68,7 +68,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadVertex(PMDFile* pmdFile, File& file)
+		bool ReadVertex(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -116,7 +116,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadFace(PMDFile* pmdFile, File& file)
+		bool ReadFace(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -156,7 +156,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadMaterial(PMDFile* pmdFile, File& file)
+		bool ReadMaterial(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -208,7 +208,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBone(PMDFile* pmdFile, File& file)
+		bool ReadBone(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -254,7 +254,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadIK(PMDFile* pmdFile, File& file)
+		bool ReadIK(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -309,7 +309,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBlendShape(PMDFile* pmdFile, File& file)
+		bool ReadBlendShape(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -369,7 +369,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBlendShapeDisplayList(PMDFile* pmdFile, File& file)
+		bool ReadBlendShapeDisplayList(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -404,7 +404,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBoneDisplayList(PMDFile* pmdFile, File& file)
+		bool ReadBoneDisplayList(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -494,7 +494,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadExt(PMDFile* pmdFile, File& file)
+		bool ReadExt(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -581,7 +581,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadToonTextureName(PMDFile* pmdFile, File& file)
+		bool ReadToonTextureName(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -606,7 +606,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadRigidBodyExt(PMDFile* pmdFile, File& file)
+		bool ReadRigidBodyExt(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -671,7 +671,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadJointExt(PMDFile* pmdFile, File& file)
+		bool ReadJointExt(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (file.IsBad())
 			{
@@ -726,7 +726,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadPMDFile(PMDFile* pmdFile, File& file)
+		bool ReadPMDFile(PMDFile* pmdFile, MemoryReader& file)
 		{
 			if (!ReadHeader(pmdFile, file))
 			{
@@ -926,9 +926,18 @@ namespace libmmd
 			return false;
 		}
 
-		if (!ReadPMDFile(pmdFile, file))
+		std::vector<uint8_t> buffer;
+		if (!file.ReadAll(&buffer))
 		{
 			LIBMMD_INFO("PMD File Read Fail. {}", filename);
+			return false;
+		}
+		file.Close();
+
+		MemoryReader reader(buffer.data(), buffer.size());
+		if (!ReadPMDFile(pmdFile, reader))
+		{
+			LIBMMD_INFO("PMD File Parse Fail. {}", filename);
 			return false;
 		}
 		LIBMMD_INFO("PMD File Read Successed. {}", filename);

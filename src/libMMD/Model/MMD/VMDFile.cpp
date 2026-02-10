@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -13,7 +13,7 @@ namespace libmmd
 	namespace
 	{
 		template <typename T>
-		bool Read(T* val, File& file)
+		bool Read(T* val, MemoryReader& file)
 		{
 			return file.Read(val);
 		}
@@ -24,7 +24,7 @@ namespace libmmd
 			return file.Write(val);
 		}
 
-		bool ReadHeader(VMDFile* vmd, File& file)
+		bool ReadHeader(VMDFile* vmd, MemoryReader& file)
 		{
 			Read(&vmd->m_header.m_header, file);
 			Read(&vmd->m_header.m_modelName, file);
@@ -47,7 +47,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadMotion(VMDFile* vmd, File& file)
+		bool ReadMotion(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t motionCount = 0;
 			if (!Read(&motionCount, file))
@@ -88,7 +88,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBlendShape(VMDFile* vmd, File& file)
+		bool ReadBlendShape(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t blendShapeCount = 0;
 			if (!Read(&blendShapeCount, file))
@@ -125,7 +125,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadCamera(VMDFile* vmd, File& file)
+		bool ReadCamera(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t cameraCount = 0;
 			if (!Read(&cameraCount, file))
@@ -170,7 +170,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadLight(VMDFile* vmd, File& file)
+		bool ReadLight(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t lightCount = 0;
 			if (!Read(&lightCount, file))
@@ -207,7 +207,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadShadow(VMDFile* vmd, File& file)
+		bool ReadShadow(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t shadowCount = 0;
 			if (!Read(&shadowCount, file))
@@ -244,7 +244,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadIK(VMDFile* vmd, File& file)
+		bool ReadIK(VMDFile* vmd, MemoryReader& file)
 		{
 			uint32_t ikCount = 0;
 			if (!Read(&ikCount, file))
@@ -300,7 +300,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadVMDFile(VMDFile* vmd, File& file)
+		bool ReadVMDFile(VMDFile* vmd, MemoryReader& file)
 		{
 			if (!ReadHeader(vmd, file))
 			{
@@ -419,7 +419,16 @@ namespace libmmd
 			return false;
 		}
 
-		return ReadVMDFile(vmd, file);
+		std::vector<uint8_t> buffer;
+		if (!file.ReadAll(&buffer))
+		{
+			LIBMMD_WARN("VMD File Read Fail. {}", filename);
+			return false;
+		}
+		file.Close();
+
+		MemoryReader reader(buffer.data(), buffer.size());
+		return ReadVMDFile(vmd, reader);
 	}
 
 	bool WriteVMDFile(const VMDFile* vmd, const char* filename)

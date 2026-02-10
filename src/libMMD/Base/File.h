@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -7,6 +7,7 @@
 #define LIBMMD_BASE_FILE_H_
 
 #include <cstdio>
+#include <cstring>
 #include <vector>
 #include <cstdint>
 #include <string>
@@ -111,6 +112,85 @@ namespace libmmd
 		FILE*	m_fp;
 		Offset	m_fileSize;
 		bool	m_badFlag;
+	};
+
+	class MemoryReader
+	{
+	public:
+		using Offset = int64_t;
+
+		MemoryReader() : m_data(nullptr), m_size(0), m_pos(0), m_badFlag(false) {}
+		MemoryReader(const uint8_t* data, size_t size)
+			: m_data(data), m_size(size), m_pos(0), m_badFlag(false) {}
+
+		MemoryReader(const MemoryReader&) = delete;
+		MemoryReader& operator=(const MemoryReader&) = delete;
+
+		MemoryReader(MemoryReader&&) noexcept = default;
+		MemoryReader& operator=(MemoryReader&&) noexcept = default;
+
+		bool IsBad() const { return m_badFlag; }
+		void ClearBadFlag() { m_badFlag = false; }
+		bool IsEOF() const { return m_pos >= m_size; }
+		Offset GetSize() const { return static_cast<Offset>(m_size); }
+		Offset Tell() const { return static_cast<Offset>(m_pos); }
+
+		enum class SeekDir
+		{
+			Begin,
+			Current,
+			End,
+		};
+
+		bool Seek(Offset offset, SeekDir origin)
+		{
+			int64_t newPos;
+			switch (origin)
+			{
+			case SeekDir::Begin:
+				newPos = offset;
+				break;
+			case SeekDir::Current:
+				newPos = static_cast<int64_t>(m_pos) + offset;
+				break;
+			case SeekDir::End:
+				newPos = static_cast<int64_t>(m_size) + offset;
+				break;
+			default:
+				return false;
+			}
+			if (newPos < 0 || static_cast<size_t>(newPos) > m_size)
+			{
+				m_badFlag = true;
+				return false;
+			}
+			m_pos = static_cast<size_t>(newPos);
+			return true;
+		}
+
+		template <typename T>
+		bool Read(T* buffer, size_t count = 1)
+		{
+			if (buffer == nullptr)
+			{
+				return false;
+			}
+			const size_t bytes = sizeof(T) * count;
+			if (m_pos + bytes > m_size)
+			{
+				m_badFlag = true;
+				return false;
+			}
+			std::memcpy(buffer, m_data + m_pos, bytes);
+			m_pos += bytes;
+			return true;
+		}
+
+	private:
+		const uint8_t*	m_data;
+		size_t			m_size;
+		size_t			m_pos;
+		bool			m_badFlag;
 	};
 
 	class TextFileReader

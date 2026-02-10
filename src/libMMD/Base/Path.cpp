@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -6,46 +6,25 @@
 #include "Path.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <cctype>
 
 #if _WIN32
 #include <Windows.h>
 #elif __APPLE__
 #include <mach-o/dyld.h>
-#include <unistd.h>
-#include <cstdlib>
+#include <climits>
 #elif __linux
 #include <unistd.h>
 #endif
 
-#include "UnicodeUtil.h"
+namespace fs = std::filesystem;
 
 namespace libmmd
 {
-	namespace
-	{
-#if _WIN32
-		constexpr char PathDelimiter = '\\';
-		auto PathDelimiters = "\\/";
-#else
-		const char PathDelimiter = '/';
-		const char* PathDelimiters = "/";
-#endif
-	}
-
 	std::string PathUtil::GetCWD()
 	{
-		std::string workDir;
-#if _WIN32
-		const DWORD sz = GetCurrentDirectoryW(0, nullptr);
-		std::vector<wchar_t> buffer(sz);
-		GetCurrentDirectory(sz, &buffer[0]);
-		workDir = ToUtf8String(&buffer[0]);
-#else // _WIN32
-		char* buffer = getcwd(nullptr, 0);
-		workDir = buffer;
-		free(buffer);
-#endif // _WIN32
-		return workDir;
+		return fs::current_path().u8string();
 	}
 
 	std::string PathUtil::GetExecutablePath()
@@ -56,7 +35,7 @@ namespace libmmd
 		{
 			return "";
 		}
-		return ToUtf8String(modulePath.data());
+		return fs::path(modulePath.data()).u8string();
 #elif __APPLE__
 		char pathbuf[PATH_MAX + 1];
 		uint32_t bufsize = sizeof(pathbuf);
@@ -72,10 +51,7 @@ namespace libmmd
 		{
 			return "";
 		}
-		else
-		{
-			pathbuf[sz] = '\0';
-		}
+		pathbuf[sz] = '\0';
 		return pathbuf;
 #else
 		return "";
@@ -84,98 +60,69 @@ namespace libmmd
 
 	std::string PathUtil::Combine(const std::vector<std::string>& parts)
 	{
-		std::string result;
-		for (const auto part : parts)
+		fs::path result;
+		for (const auto& part : parts)
 		{
 			if (!part.empty())
 			{
-				const auto pos = part.find_last_not_of(PathDelimiters);
-				if (pos != std::string::npos)
+				if (result.empty())
 				{
-					if (!result.empty())
-					{
-						result.append(&PathDelimiter, 1);
-					}
-					result.append(part.c_str(), pos + 1);
+					result = fs::u8path(part);
+				}
+				else
+				{
+					result /= fs::u8path(part);
 				}
 			}
 		}
-		return result;
+		return result.u8string();
 	}
 
-	std::string PathUtil::Combine(const std::string & a, const std::string & b)
+	std::string PathUtil::Combine(const std::string& a, const std::string& b)
 	{
-		return Combine({ a, b });
+		if (a.empty()) return b;
+		if (b.empty()) return a;
+		return (fs::u8path(a) / fs::u8path(b)).u8string();
 	}
 
-	std::string PathUtil::GetDirectoryName(const std::string & path)
+	std::string PathUtil::GetDirectoryName(const std::string& path)
 	{
-		const auto pos = path.find_last_of(PathDelimiters);
-		if (pos == std::string::npos)
+		return fs::u8path(path).parent_path().u8string();
+	}
+
+	std::string PathUtil::GetFilename(const std::string& path)
+	{
+		return fs::u8path(path).filename().u8string();
+	}
+
+	std::string PathUtil::GetFilenameWithoutExt(const std::string& path)
+	{
+		return fs::u8path(path).stem().u8string();
+	}
+
+	std::string PathUtil::GetExt(const std::string& path)
+	{
+		std::string ext = fs::u8path(path).extension().u8string();
+		// extension() returns with leading dot (e.g. ".txt"), strip it
+		if (!ext.empty() && ext[0] == '.')
 		{
-			return "";
+			ext = ext.substr(1);
 		}
-
-		return path.substr(0, pos);
-	}
-
-	std::string PathUtil::GetFilename(const std::string & path)
-	{
-		const auto pos = path.find_last_of(PathDelimiters);
-		if (pos == std::string::npos)
-		{
-			return path;
-		}
-
-		return path.substr(pos + 1, path.size() - pos);
-	}
-
-	std::string PathUtil::GetFilenameWithoutExt(const std::string & path)
-	{
-		const std::string filename = GetFilename(path);
-		const auto pos = filename.find_last_of('.');
-		if (pos == std::string::npos)
-		{
-			return filename;
-		}
-
-		return filename.substr(0, pos);
-	}
-
-	std::string PathUtil::GetExt(const std::string & path)
-	{
-		const auto pos = path.find_last_of('.');
-		if (pos == std::string::npos)
-		{
-			return "";
-		}
-
-		std::string ext = path.substr(pos + 1, path.size() - pos);
 		for (auto& ch : ext)
 		{
-			ch = static_cast<char>(tolower(ch));
+			ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
 		}
 		return ext;
 	}
 
 	std::string PathUtil::GetDelimiter()
 	{
-#if _WIN32
-		return "\\";
-#else // _WIN32
-		return "/";
-#endif
+		return std::string(1, static_cast<char>(fs::path::preferred_separator));
 	}
 
-	std::string PathUtil::Normalize(const std::string & path)
+	std::string PathUtil::Normalize(const std::string& path)
 	{
-		std::string result = path;
-#if _WIN32
-		std::replace(result.begin(), result.end(), '/', '\\');
-#else // _WIN32
-		std::replace(result.begin(), result.end(), '\\', '/');
-#endif
-		return result;
+		return fs::u8path(path).make_preferred().u8string();
 	}
 
 }

@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -17,18 +17,18 @@ namespace libmmd
 	{
 
 		template <typename T>
-		bool Read(T* val, File& file)
+		bool Read(T* val, MemoryReader& file)
 		{
 			return file.Read(val);
 		}
 
 		template <typename T>
-		bool Read(T* valArray, size_t size, File& file)
+		bool Read(T* valArray, size_t size, MemoryReader& file)
 		{
 			return file.Read(valArray, size);
 		}
 
-		bool ReadString(const PMXFile* pmx, std::string* val, File& file)
+		bool ReadString(const PMXFile* pmx, std::string* val, MemoryReader& file)
 		{
 			uint32_t bufSize;
 			if (!Read(&bufSize, file))
@@ -64,7 +64,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadIndex(int32_t* index, const uint8_t indexSize, File& file)
+		bool ReadIndex(int32_t* index, const uint8_t indexSize, MemoryReader& file)
 		{
 			switch (indexSize)
 			{
@@ -109,7 +109,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadHeader(PMXFile* pmxFile, File& file)
+		bool ReadHeader(PMXFile* pmxFile, MemoryReader& file)
 		{
 			auto& header = pmxFile->m_header;
 
@@ -131,7 +131,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadInfo(PMXFile* pmx, File& file)
+		bool ReadInfo(PMXFile* pmx, MemoryReader& file)
 		{
 			auto& info = pmx->m_info;
 
@@ -143,7 +143,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadVertex(PMXFile* pmx, File& file)
+		bool ReadVertex(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t vertexCount;
 			if (!Read(&vertexCount, file))
@@ -213,7 +213,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadFace(PMXFile* pmx, File& file)
+		bool ReadFace(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t faceCount = 0;
 			if (!Read(&faceCount, file))
@@ -269,7 +269,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadTexture(PMXFile* pmx, File& file)
+		bool ReadTexture(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t texCount = 0;
 			if (!Read(&texCount, file))
@@ -287,7 +287,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadMaterial(PMXFile* pmx, File& file)
+		bool ReadMaterial(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t matCount = 0;
 			if (!Read(&matCount, file))
@@ -340,7 +340,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadBone(PMXFile* pmx, File& file)
+		bool ReadBone(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t boneCount;
 			if (!Read(&boneCount, file))
@@ -423,7 +423,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadMorph(PMXFile* pmx, File& file)
+		bool ReadMorph(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t morphCount;
 			if (!Read(&morphCount, file))
@@ -537,7 +537,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadDisplayFrame(PMXFile* pmx, File& file)
+		bool ReadDisplayFrame(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t displayFrameCount;
 			if (!Read(&displayFrameCount, file))
@@ -580,7 +580,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadRigidbody(PMXFile* pmx, File& file)
+		bool ReadRigidbody(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t rbCount;
 			if (!Read(&rbCount, file))
@@ -617,7 +617,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadJoint(PMXFile* pmx, File& file)
+		bool ReadJoint(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t jointCount;
 			if (!Read(&jointCount, file))
@@ -651,7 +651,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadSoftbody(PMXFile* pmx, File& file)
+		bool ReadSoftbody(PMXFile* pmx, MemoryReader& file)
 		{
 			int32_t sbCount;
 			if (!Read(&sbCount, file))
@@ -740,7 +740,7 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool ReadPMXFile(PMXFile * pmxFile, File& file)
+		bool ReadPMXFile(PMXFile * pmxFile, MemoryReader& file)
 		{
 			if (!ReadHeader(pmxFile, file))
 			{
@@ -1582,9 +1582,18 @@ namespace libmmd
 			return false;
 		}
 
-		if (!ReadPMXFile(pmxFile, file))
+		std::vector<uint8_t> buffer;
+		if (!file.ReadAll(&buffer))
 		{
 			LIBMMD_INFO("PMX File Read Fail. {}", filename);
+			return false;
+		}
+		file.Close();
+
+		MemoryReader reader(buffer.data(), buffer.size());
+		if (!ReadPMXFile(pmxFile, reader))
+		{
+			LIBMMD_INFO("PMX File Parse Fail. {}", filename);
 			return false;
 		}
 		LIBMMD_INFO("PMX File Read Successed. {}", filename);

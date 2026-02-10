@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -296,29 +296,47 @@ namespace libmmd
 	void TextFileReader::ReadAllLines(std::vector<std::string>& lines)
 	{
 		lines.clear();
-		if (!IsOpen() || IsEof())
+		std::string all = ReadAll();
+		if (all.empty())
 		{
 			return;
 		}
-		while (!IsEof())
+
+		size_t start = 0;
+		for (size_t i = 0; i < all.size(); i++)
 		{
-			lines.emplace_back(ReadLine());
+			if (all[i] == '\n' || all[i] == '\r')
+			{
+				lines.emplace_back(all.substr(start, i - start));
+				if (all[i] == '\r' && i + 1 < all.size() && all[i + 1] == '\n')
+				{
+					i++;
+				}
+				start = i + 1;
+			}
+		}
+		if (start < all.size())
+		{
+			lines.emplace_back(all.substr(start));
 		}
 	}
 
 	std::string TextFileReader::ReadAll()
 	{
-		std::string all;
-
-		if (m_file.IsOpen())
+		if (!m_file.IsOpen())
 		{
-			int ch = fgetc(m_file.GetFilePointer());
-			while (ch != EOF)
-			{
-				all.push_back(static_cast<char>(ch));
-				ch = fgetc(m_file.GetFilePointer());
-			}
+			return "";
 		}
+
+		auto size = m_file.GetSize();
+		if (size <= 0)
+		{
+			return "";
+		}
+
+		std::string all(static_cast<size_t>(size), '\0');
+		size_t bytesRead = fread(all.data(), 1, static_cast<size_t>(size), m_file.GetFilePointer());
+		all.resize(bytesRead);
 		return all;
 	}
 
