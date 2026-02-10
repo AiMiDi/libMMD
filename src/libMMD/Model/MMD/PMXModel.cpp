@@ -572,17 +572,15 @@ namespace libmmd
 				auto* parent = m_nodeMan.GetNode(bone.m_parentBoneIndex);
 				parent->AddChild(node);
 				Eigen::Vector3f localPos = bone.m_position - parentBone.m_position;
-				localPos.z() *= -1;
 				node->SetTranslate(localPos);
 			}
 			else
 			{
 				auto localPos = bone.m_position;
-				localPos.z() *= -1;
 				node->SetTranslate(localPos);
 			}
 			Eigen::Matrix4f init = Eigen::Matrix4f::Identity();
-			init.block<3,1>(0,3) = bone.m_position.cwiseProduct(Eigen::Vector3f(1, 1, -1));
+			init.block<3,1>(0,3) = bone.m_position;
 			node->SetGlobalTransform(init);
 			node->CalculateInverseInitTransform();
 

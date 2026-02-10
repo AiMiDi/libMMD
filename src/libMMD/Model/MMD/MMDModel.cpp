@@ -129,22 +129,6 @@ namespace libmmd
 		}
 	}
 
-	namespace
-	{
-		Eigen::Matrix3f InvZ(const Eigen::Matrix3f& m)
-		{
-			Eigen::Matrix3f invZ = Eigen::Matrix3f::Identity();
-			invZ(2, 2) = -1.0f;
-			return invZ * m * invZ;
-		}
-		Eigen::Quaternionf InvZ(const Eigen::Quaternionf& q)
-		{
-			const auto rot0 = q.toRotationMatrix();
-			const auto rot1 = InvZ(rot0);
-			return Eigen::Quaternionf(rot1);
-		}
-	}
-
 	void MMDModel::UpdateAllAnimation(const VMDAnimation * vmdAnim, const float vmdFrame, const float physicsElapsed)
 	{
 		if (vmdAnim != nullptr)
@@ -194,9 +178,9 @@ namespace libmmd
 				const auto node = GetNodeManager()->GetMMDNode(bone.m_boneName);
 				poses.emplace_back(node,
 					node->GetAnimationTranslate(),
-					bone.m_translate.cwiseProduct(Eigen::Vector3f(1, 1, -1)),
+					bone.m_translate,
 					node->GetAnimationRotate(),
-					InvZ(bone.m_quaternion));
+					bone.m_quaternion);
 			}
 		}
 

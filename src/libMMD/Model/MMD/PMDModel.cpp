@@ -344,19 +344,15 @@ namespace libmmd
 				auto* parentNode = m_nodeMan.GetNode(m_parent);
 				parentNode->AddChild(node);
 				Eigen::Vector3f localPos = m_position - parentBone.m_position;
-				localPos.z() *= -1;
-
 				node->SetTranslate(localPos);
 			}
 			else
 			{
 				Eigen::Vector3f localPos = m_position;
-				localPos.z() *= -1;
-
 				node->SetTranslate(localPos);
 			}
 			Eigen::Matrix4f init = Eigen::Matrix4f::Identity();
-			init.block<3,1>(0,3) = m_position.cwiseProduct(Eigen::Vector3f(1, 1, -1));
+			init.block<3,1>(0,3) = m_position;
 			node->SetGlobalTransform(init);
 			node->CalculateInverseInitTransform();
 			node->SaveInitialTRS();

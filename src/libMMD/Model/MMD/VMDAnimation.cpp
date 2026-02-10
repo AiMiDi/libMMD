@@ -31,13 +31,6 @@ namespace libmmd
 			bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
 		}
 
-		// Helper function to invert Z axis transformation
-		Eigen::Matrix3f InvZ(const Eigen::Matrix3f& m)
-		{
-			Eigen::Matrix3f invZ = Eigen::Matrix3f::Identity();
-			invZ(2, 2) = -1.0f;
-			return invZ * m * invZ;
-		}
 	} // namespace
 
 	float VMDBezier::EvalX(const float t) const
@@ -563,12 +556,9 @@ namespace libmmd
 	{
 		m_time = static_cast<int32_t>(motion.m_frame);
 
-		m_translate = motion.m_translate.cwiseProduct(Eigen::Vector3f(1, 1, -1));
+		m_translate = motion.m_translate;
 
-		const Eigen::Quaternionf q = motion.m_quaternion;
-		const auto rot0 = q.toRotationMatrix();
-		const auto rot1 = InvZ(rot0);
-		m_rotate = Eigen::Quaternionf(rot1);
+		m_rotate = motion.m_quaternion;
 
 		SetVMDBezier(m_txBezier, &motion.m_interpolation[0]);
 		SetVMDBezier(m_tyBezier, &motion.m_interpolation[1]);

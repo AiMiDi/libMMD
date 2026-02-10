@@ -14,16 +14,6 @@
 
 namespace libmmd
 {
-	namespace
-	{
-		Eigen::Matrix4f InvZ(const Eigen::Matrix4f& m)
-		{
-			Eigen::Matrix4f invZ = Eigen::Matrix4f::Identity();
-			invZ(2, 2) = -1.0f;
-			return invZ * m * invZ;
-		}
-	}
-
 	bool XFileModel::Load(const char* filepath)
 	{
 		Destroy();
@@ -84,8 +74,6 @@ namespace libmmd
 			frame->m_local(2, 3) = xfileFrame->m_transform.m[14];
 			frame->m_local(3, 3) = xfileFrame->m_transform.m[15];
 
-			frame->m_local = InvZ(frame->m_local);
-
 			if (xfileFrame->m_mesh.m_positions.size() != 0)
 			{
 				const auto& xfileMesh = xfileFrame->m_mesh;
@@ -118,7 +106,7 @@ namespace libmmd
 				mesh->m_positions.reserve(xfileMesh.m_positions.size());
 				for (const auto& xfilePos : xfileMesh.m_positions)
 				{
-					Eigen::Vector3f pos = Eigen::Vector3f(xfilePos.x, xfilePos.y, -xfilePos.z) * 10.0f;
+					Eigen::Vector3f pos = Eigen::Vector3f(xfilePos.x, xfilePos.y, xfilePos.z) * 10.0f;
 					mesh->m_positions.push_back(pos);
 					m_bboxMax = m_bboxMax.cwiseMax(pos);
 					m_bboxMin = m_bboxMin.cwiseMin(pos);
@@ -128,7 +116,7 @@ namespace libmmd
 				mesh->m_normals.reserve(xfileMesh.m_normals.size());
 				for (const auto& xfileNor : xfileMesh.m_normals)
 				{
-					mesh->m_normals.emplace_back(Eigen::Vector3f(xfileNor.x, xfileNor.y, -xfileNor.z));
+					mesh->m_normals.emplace_back(Eigen::Vector3f(xfileNor.x, xfileNor.y, xfileNor.z));
 				}
 
 				// uv

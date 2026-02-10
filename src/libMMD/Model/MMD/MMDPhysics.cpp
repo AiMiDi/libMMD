@@ -27,16 +27,6 @@ namespace libmmd
 		virtual void ReflectGlobalTransform() = 0;
 	};
 
-	namespace
-	{
-		Eigen::Matrix4f InvZ(const Eigen::Matrix4f& m)
-		{
-			Eigen::Matrix4f invZ = Eigen::Matrix4f::Identity();
-			invZ(2, 2) = -1.0f;
-			return invZ * m * invZ;
-		}
-	}
-
 	struct MMDFilterCallback final : btOverlapFilterCallback
 	{
 		bool needBroadphaseCollision(btBroadphaseProxy* proxy0, btBroadphaseProxy* proxy1) const override
@@ -213,8 +203,7 @@ namespace libmmd
 	public:
 		explicit DefaultMotionState(const Eigen::Matrix4f& transform)
 		{
-			Eigen::Matrix4f trans = InvZ(transform);
-			m_transform.setFromOpenGLMatrix(trans.data());
+			m_transform.setFromOpenGLMatrix(transform.data());
 			m_initialTransform = m_transform;
 		}
 
@@ -267,7 +256,7 @@ namespace libmmd
 
 		void Reset() override
 		{
-			Eigen::Matrix4f global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			Eigen::Matrix4f global = m_node->GetGlobalTransform() * m_offset;
 			m_transform.setFromOpenGLMatrix(global.data());
 		}
 
@@ -275,7 +264,7 @@ namespace libmmd
 		{
 			alignas(16) Eigen::Matrix4f world;
 			m_transform.getOpenGLMatrix(world.data());
-			const Eigen::Matrix4f btGlobal = InvZ(world) * m_invOffset;
+			const Eigen::Matrix4f btGlobal = world * m_invOffset;
 
 			if (m_override)
 			{
@@ -316,7 +305,7 @@ namespace libmmd
 
 		void Reset() override
 		{
-			Eigen::Matrix4f global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			Eigen::Matrix4f global = m_node->GetGlobalTransform() * m_offset;
 			m_transform.setFromOpenGLMatrix(global.data());
 		}
 
@@ -324,7 +313,7 @@ namespace libmmd
 		{
 			alignas(16) Eigen::Matrix4f world;
 			m_transform.getOpenGLMatrix(world.data());
-			Eigen::Matrix4f btGlobal = InvZ(world) * m_invOffset;
+			Eigen::Matrix4f btGlobal = world * m_invOffset;
 			Eigen::Matrix4f global = m_node->GetGlobalTransform();
 			btGlobal.col(3) = global.col(3);
 
@@ -364,7 +353,6 @@ namespace libmmd
 			{
 				m = m_offset;
 			}
-			m = InvZ(m);
 			worldTransform.setFromOpenGLMatrix(m.data());
 		}
 
@@ -447,19 +435,7 @@ namespace libmmd
 		Eigen::Matrix4f translateMat = Eigen::Matrix4f::Identity();
 		translateMat.block<3,1>(0,3) = pmdRigidBody.m_pos;
 
-		Eigen::Matrix4f rbMat = translateMat * rotMat;
-		if (node != nullptr)
-		{
-			const Eigen::Matrix4f global = node->GetGlobalTransform();
-			rbMat = InvZ(global) * rbMat;
-		}
-		else
-		{
-			const MMDNode* root = model->GetNodeManager()->GetMMDNode(0);
-			const Eigen::Matrix4f global = root->GetGlobalTransform();
-			rbMat = InvZ(global) * rbMat;
-		}
-		rbMat = InvZ(rbMat);
+		const Eigen::Matrix4f rbMat = translateMat * rotMat;
 
 		if (node != nullptr)
 		{
@@ -577,7 +553,7 @@ namespace libmmd
 		Eigen::Matrix4f translateMat = Eigen::Matrix4f::Identity();
 		translateMat.block<3,1>(0,3) = pmxRigidBody.m_translate;
 
-		const Eigen::Matrix4f rbMat = InvZ(translateMat * rotMat);
+		const Eigen::Matrix4f rbMat = translateMat * rotMat;
 
 		MMDNode* kinematicNode = nullptr;
 		if (node != nullptr)
@@ -742,7 +718,7 @@ namespace libmmd
 		const btTransform transform = m_rigidBody->getCenterOfMassTransform();
 		alignas(16) Eigen::Matrix4f mat;
 		transform.getOpenGLMatrix(mat.data());
-		return InvZ(mat);
+		return mat;
 	}
 
 
@@ -814,7 +790,7 @@ namespace libmmd
 		if (pmdJoint.m_springPos.z() != 0)
 		{
 			constraint->enableSpring(2, true);
-			constraint->setStiffness(2, -pmdJoint.m_springPos.z());
+			constraint->setStiffness(2, pmdJoint.m_springPos.z());
 		}
 		if (pmdJoint.m_springRot.x() != 0)
 		{

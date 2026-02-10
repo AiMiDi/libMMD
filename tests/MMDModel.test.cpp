@@ -757,6 +757,155 @@ static void test_VMDAnimation_CreateAndDestroy()
 }
 
 // ===========================================================================
+// Coordinate System Consistency tests
+// (After removing Z-negation, all transforms should use original PMX space)
+// ===========================================================================
+
+static void test_CoordSystem_NodeTranslateNoZNegation()
+{
+    std::cout << "[test] CoordSystem_NodeTranslateNoZNegation\n";
+    libmmd::MMDNode node;
+
+    // Setting translate should preserve Z value as-is (no negation)
+    node.SetTranslate(Eigen::Vector3f(1.0f, 2.0f, 3.0f));
+    TEST_ASSERT_FLOAT_EQ(1.0f, node.GetTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, node.GetTranslate().y());
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetTranslate().z());  // Z should be +3, not -3
+}
+
+static void test_CoordSystem_GlobalTransformNoZNegation()
+{
+    std::cout << "[test] CoordSystem_GlobalTransformNoZNegation\n";
+    libmmd::MMDNode node;
+
+    // Set a global transform with positive Z translation
+    Eigen::Matrix4f global = Eigen::Matrix4f::Identity();
+    global(0, 3) = 10.0f;
+    global(1, 3) = 20.0f;
+    global(2, 3) = 30.0f;
+    node.SetGlobalTransform(global);
+
+    // Z should be preserved as-is
+    TEST_ASSERT_FLOAT_EQ(10.0f, node.GetGlobalTransform()(0, 3));
+    TEST_ASSERT_FLOAT_EQ(20.0f, node.GetGlobalTransform()(1, 3));
+    TEST_ASSERT_FLOAT_EQ(30.0f, node.GetGlobalTransform()(2, 3));
+}
+
+static void test_CoordSystem_LocalTransformNoZNegation()
+{
+    std::cout << "[test] CoordSystem_LocalTransformNoZNegation\n";
+    libmmd::MMDNode node;
+
+    // Set a local transform with positive Z
+    Eigen::Matrix4f local = Eigen::Matrix4f::Identity();
+    local(0, 3) = 5.0f;
+    local(1, 3) = 10.0f;
+    local(2, 3) = 15.0f;
+    node.SetLocalTransform(local);
+
+    // Z should be preserved
+    TEST_ASSERT_FLOAT_EQ(5.0f, node.GetLocalTransform()(0, 3));
+    TEST_ASSERT_FLOAT_EQ(10.0f, node.GetLocalTransform()(1, 3));
+    TEST_ASSERT_FLOAT_EQ(15.0f, node.GetLocalTransform()(2, 3));
+}
+
+static void test_CoordSystem_AnimationTranslateNoZNegation()
+{
+    std::cout << "[test] CoordSystem_AnimationTranslateNoZNegation\n";
+    libmmd::MMDNode node;
+
+    // Animation translate should pass through without Z-negation
+    node.SetAnimationTranslate(Eigen::Vector3f(1.0f, 2.0f, 3.0f));
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.GetAnimationTranslate().z());
+
+    // Combined translate should also preserve Z
+    node.SetTranslate(Eigen::Vector3f(0.0f, 0.0f, 5.0f));
+    auto combined = node.AnimateTranslate();
+    TEST_ASSERT_FLOAT_EQ(8.0f, combined.z());  // 5 + 3 = 8, not negated
+}
+
+static void test_CoordSystem_ParentChildTransformConsistency()
+{
+    std::cout << "[test] CoordSystem_ParentChildTransformConsistency\n";
+    libmmd::MMDNode parent;
+    libmmd::MMDNode child;
+    parent.SetName("parent");
+    child.SetName("child");
+    parent.AddChild(&child);
+
+    // Parent at (10, 0, 20) in original PMX coordinates
+    parent.SetTranslate(Eigen::Vector3f(10.0f, 0.0f, 20.0f));
+    Eigen::Matrix4f parentGlobal = Eigen::Matrix4f::Identity();
+    parentGlobal(0, 3) = 10.0f;
+    parentGlobal(2, 3) = 20.0f;
+    parent.SetGlobalTransform(parentGlobal);
+
+    // Child at (5, 0, 10) relative to parent
+    child.SetTranslate(Eigen::Vector3f(5.0f, 0.0f, 10.0f));
+    Eigen::Matrix4f childGlobal = Eigen::Matrix4f::Identity();
+    childGlobal(0, 3) = 15.0f;  // 10 + 5
+    childGlobal(2, 3) = 30.0f;  // 20 + 10
+    child.SetGlobalTransform(childGlobal);
+
+    // Verify no Z negation in child global
+    TEST_ASSERT_FLOAT_EQ(15.0f, child.GetGlobalTransform()(0, 3));
+    TEST_ASSERT_FLOAT_EQ(30.0f, child.GetGlobalTransform()(2, 3));
+
+    // Verify initial translate is stored correctly
+    child.SaveInitialTRS();
+    TEST_ASSERT_FLOAT_EQ(5.0f, child.GetInitialTranslate().x());
+    TEST_ASSERT_FLOAT_EQ(10.0f, child.GetInitialTranslate().z());  // No Z negation
+}
+
+static void test_CoordSystem_RotationMatrixIdentityPreserved()
+{
+    std::cout << "[test] CoordSystem_RotationMatrixIdentityPreserved\n";
+    libmmd::MMDNode node;
+
+    // An identity rotation should produce an identity rotation block
+    node.SetRotate(Eigen::Quaternionf::Identity());
+    Eigen::Matrix4f global = Eigen::Matrix4f::Identity();
+    node.SetGlobalTransform(global);
+
+    // The 3x3 rotation block should be identity
+    for (int r = 0; r < 3; ++r)
+    {
+        for (int c = 0; c < 3; ++c)
+        {
+            if (r == c)
+                TEST_ASSERT_FLOAT_EQ(1.0f, node.GetGlobalTransform()(r, c));
+            else
+                TEST_ASSERT_FLOAT_EQ(0.0f, node.GetGlobalTransform()(r, c));
+        }
+    }
+}
+
+static void test_CoordSystem_InverseInitTransformConsistency()
+{
+    std::cout << "[test] CoordSystem_InverseInitTransformConsistency\n";
+    libmmd::MMDNode node;
+
+    // Set global transform with Z translation (original PMX space)
+    Eigen::Matrix4f global = Eigen::Matrix4f::Identity();
+    global(0, 3) = 1.0f;
+    global(1, 3) = 2.0f;
+    global(2, 3) = 3.0f;
+    node.SetGlobalTransform(global);
+    node.CalculateInverseInitTransform();
+
+    // Inverse init * global should give identity
+    Eigen::Matrix4f product = node.GetInverseInitTransform() * global;
+    for (int r = 0; r < 4; ++r)
+    {
+        for (int c = 0; c < 4; ++c)
+        {
+            float expected = (r == c) ? 1.0f : 0.0f;
+            TEST_ASSERT_FLOAT_EQ(expected, product(r, c));
+        }
+    }
+}
+
+// ===========================================================================
 // main
 // ===========================================================================
 
@@ -837,6 +986,15 @@ int main()
     test_VMDAnimation_DefaultConstruction();
     test_VMDAnimation_DestroyWithoutCreate();
     test_VMDAnimation_CreateAndDestroy();
+
+    // Coordinate System Consistency
+    test_CoordSystem_NodeTranslateNoZNegation();
+    test_CoordSystem_GlobalTransformNoZNegation();
+    test_CoordSystem_LocalTransformNoZNegation();
+    test_CoordSystem_AnimationTranslateNoZNegation();
+    test_CoordSystem_ParentChildTransformConsistency();
+    test_CoordSystem_RotationMatrixIdentityPreserved();
+    test_CoordSystem_InverseInitTransformConsistency();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";

@@ -208,7 +208,7 @@ namespace libmmd
 		{
 			VMDCameraAnimationKey key{};
 			key.m_time = static_cast<int32_t>(m_frame);
-			key.m_interest = m_interest.cwiseProduct(Eigen::Vector3f(1, 1, -1));
+			key.m_interest = m_interest;
 			key.m_rotate = m_rotate;
 			key.m_distance = m_distance;
 			key.m_fov = static_cast<float>(m_viewAngle) * static_cast<float>(EIGEN_PI) / 180.0f;
