@@ -41,7 +41,7 @@ namespace libmmd
 				return true;
 			}
 			bool collides = (proxy0->m_collisionFilterGroup & proxy1->m_collisionFilterMask) != 0;
-			collides = collides && proxy1->m_collisionFilterGroup & proxy0->m_collisionFilterMask;
+			collides = collides && (proxy1->m_collisionFilterGroup & proxy0->m_collisionFilterMask) != 0;
 			return collides;
 		}
 
@@ -50,7 +50,7 @@ namespace libmmd
 
 	static btITaskScheduler* InitTaskScheduler()
 	{
-		btITaskScheduler* scheduler;
+		btITaskScheduler* scheduler = nullptr;
 #ifdef BT_USE_PPL
 		scheduler = btGetPPLTaskScheduler();
 		if (!scheduler)
@@ -60,8 +60,11 @@ namespace libmmd
 #endif
 		if (!scheduler)
 			scheduler = btGetSequentialTaskScheduler();
-		btSetTaskScheduler(scheduler);
-		btGetTaskScheduler()->setNumThreads(scheduler->getMaxNumThreads());
+		if (scheduler)
+		{
+			btSetTaskScheduler(scheduler);
+			scheduler->setNumThreads(scheduler->getMaxNumThreads());
+		}
 		return scheduler;
 	}
 
@@ -120,14 +123,16 @@ namespace libmmd
 			m_world->removeRigidBody(m_groundRB.get());
 		}
 
-		m_broadphase = nullptr;
-		m_collisionConfig = nullptr;
-		m_dispatcher = nullptr;
-		m_solver = nullptr;
+		// m_world must be destroyed before its dependencies
 		m_world = nullptr;
-		m_groundShape = nullptr;
-		m_groundMS = nullptr;
 		m_groundRB = nullptr;
+		m_groundMS = nullptr;
+		m_groundShape = nullptr;
+		m_filterCB = nullptr;
+		m_solver = nullptr;
+		m_dispatcher = nullptr;
+		m_collisionConfig = nullptr;
+		m_broadphase = nullptr;
 	}
 
 	void MMDPhysics::SetFPS(const float fps)
@@ -161,21 +166,27 @@ namespace libmmd
 
 	void MMDPhysics::AddRigidBody(const MMDRigidBody * mmdRB) const
 	{
-		m_world->addRigidBody(
-			mmdRB->GetRigidBody(),
-			1 << mmdRB->GetGroup(),
-			mmdRB->GetGroupMask()
-		);
+		if (m_world != nullptr && mmdRB != nullptr)
+		{
+			m_world->addRigidBody(
+				mmdRB->GetRigidBody(),
+				1 << mmdRB->GetGroup(),
+				mmdRB->GetGroupMask()
+			);
+		}
 	}
 
 	void MMDPhysics::RemoveRigidBody(const MMDRigidBody * mmdRB) const
 	{
-		m_world->removeRigidBody(mmdRB->GetRigidBody());
+		if (m_world != nullptr && mmdRB != nullptr)
+		{
+			m_world->removeRigidBody(mmdRB->GetRigidBody());
+		}
 	}
 
 	void MMDPhysics::AddJoint(const MMDJoint * mmdJoint) const
 	{
-		if (mmdJoint->GetConstraint() != nullptr)
+		if (m_world != nullptr && mmdJoint != nullptr && mmdJoint->GetConstraint() != nullptr)
 		{
 			m_world->addConstraint(mmdJoint->GetConstraint());
 		}
@@ -183,7 +194,7 @@ namespace libmmd
 
 	void MMDPhysics::RemoveJoint(const MMDJoint * mmdJoint) const
 	{
-		if (mmdJoint->GetConstraint() != nullptr)
+		if (m_world != nullptr && mmdJoint != nullptr && mmdJoint->GetConstraint() != nullptr)
 		{
 			m_world->removeConstraint(mmdJoint->GetConstraint());
 		}
@@ -910,6 +921,10 @@ namespace libmmd
 
 	Eigen::Vector3f MMDJoint::GetPosition() const
 	{
+		if (m_constraint == nullptr)
+		{
+			return Eigen::Vector3f::Zero();
+		}
 		const auto& position_a = m_constraint->getRigidBodyA().getCenterOfMassPosition();
 		const auto& position_b = m_constraint->getRigidBodyB().getCenterOfMassPosition();
 		const auto position = position_a.lerp(position_b, 0.5f);
