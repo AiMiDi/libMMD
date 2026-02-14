@@ -58,6 +58,8 @@ jobs:
             -DBUILD_EXTRAS=Off `
             -DUSE_GRAPHICAL_BENCHMARK=Off `
             -DBUILD_PYBULLET=Off `
+            -DBULLET2_MULTITHREADING=ON `
+            -DBULLET2_USE_PPL_MULTITHREADING=ON `
             -DCMAKE_INSTALL_PREFIX=../install `
             -DINSTALL_LIBS=ON
           cmake --build . --config ${{ matrix.build_type }}
