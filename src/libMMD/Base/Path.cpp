@@ -122,7 +122,13 @@ namespace libmmd
 
 	std::string PathUtil::Normalize(const std::string& path)
 	{
-		return fs::u8path(path).make_preferred().u8string();
+		std::string result = path;
+#if _WIN32
+		std::replace(result.begin(), result.end(), '/', '\\');
+#else
+		std::replace(result.begin(), result.end(), '\\', '/');
+#endif
+		return result;
 	}
 
 }
