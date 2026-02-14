@@ -203,9 +203,9 @@ bool MMD2Obj(const std::vector<std::string>& args)
 		const auto& m = materials[i];
 		mtlFile << "newmtl " << i << "\n";
 
-		mtlFile << "Ka " << m.m_ambient.r << " " << m.m_ambient.g << " " << m.m_ambient.b << "\n";
-		mtlFile << "Kd " << m.m_diffuse.r << " " << m.m_diffuse.g << " " << m.m_diffuse.b << "\n";
-		mtlFile << "Ks " << m.m_specular.r << " " << m.m_specular.g << " " << m.m_specular.b << "\n";
+		mtlFile << "Ka " << m.m_ambient.x() << " " << m.m_ambient.y() << " " << m.m_ambient.z() << "\n";
+		mtlFile << "Kd " << m.m_diffuse.x() << " " << m.m_diffuse.y() << " " << m.m_diffuse.z() << "\n";
+		mtlFile << "Ks " << m.m_specular.x() << " " << m.m_specular.y() << " " << m.m_specular.z() << "\n";
 		mtlFile << "d " << m.m_alpha << "\n";
 		mtlFile << "map_Kd " << libmmd::PathUtil::GetFilename(m.m_texture) << "\n";
 		mtlFile << "\n";
