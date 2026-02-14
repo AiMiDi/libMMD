@@ -107,17 +107,9 @@ namespace libmmd
 			Material mat;
 			mat.m_name = objMat.name;
 
-			mat.m_ambient.r = objMat.ambient[0];
-			mat.m_ambient.g = objMat.ambient[1];
-			mat.m_ambient.b = objMat.ambient[2];
-
-			mat.m_diffuse.r = objMat.diffuse[0];
-			mat.m_diffuse.g = objMat.diffuse[1];
-			mat.m_diffuse.b = objMat.diffuse[2];
-
-			mat.m_specular.r = objMat.specular[0];
-			mat.m_specular.g = objMat.specular[1];
-			mat.m_specular.b = objMat.specular[2];
+			mat.m_ambient = Eigen::Vector3f(objMat.ambient[0], objMat.ambient[1], objMat.ambient[2]);
+			mat.m_diffuse = Eigen::Vector3f(objMat.diffuse[0], objMat.diffuse[1], objMat.diffuse[2]);
+			mat.m_specular = Eigen::Vector3f(objMat.specular[0], objMat.specular[1], objMat.specular[2]);
 
 			mat.m_specularPower = objMat.shininess;
 
@@ -153,20 +145,20 @@ namespace libmmd
 
 		for (size_t posIdx = 0; posIdx < posCount; posIdx++)
 		{
-			m_positions[posIdx].x = attrib.vertices[posIdx * 3 + 0];
-			m_positions[posIdx].y = attrib.vertices[posIdx * 3 + 1];
-			m_positions[posIdx].z = attrib.vertices[posIdx * 3 + 2];
+			m_positions[posIdx].x() = attrib.vertices[posIdx * 3 + 0];
+			m_positions[posIdx].y() = attrib.vertices[posIdx * 3 + 1];
+			m_positions[posIdx].z() = attrib.vertices[posIdx * 3 + 2];
 		}
 		for (size_t norIdx = 0; norIdx < norCount; norIdx++)
 		{
-			m_normals[norIdx].x = attrib.normals[norIdx * 3 + 0];
-			m_normals[norIdx].y = attrib.normals[norIdx * 3 + 1];
-			m_normals[norIdx].z = attrib.normals[norIdx * 3 + 2];
+			m_normals[norIdx].x() = attrib.normals[norIdx * 3 + 0];
+			m_normals[norIdx].y() = attrib.normals[norIdx * 3 + 1];
+			m_normals[norIdx].z() = attrib.normals[norIdx * 3 + 2];
 		}
 		for (size_t uvIdx = 0; uvIdx < uvCount; uvIdx++)
 		{
-			m_uvs[uvIdx].x = attrib.texcoords[uvIdx * 2 + 0];
-			m_uvs[uvIdx].y = 1.0f - attrib.texcoords[uvIdx * 2 + 1];
+			m_uvs[uvIdx].x() = attrib.texcoords[uvIdx * 2 + 0];
+			m_uvs[uvIdx].y() = 1.0f - attrib.texcoords[uvIdx * 2 + 1];
 		}
 
 		if (!m_positions.empty())
