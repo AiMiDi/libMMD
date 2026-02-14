@@ -1,4 +1,4 @@
-name: saba-build-actions
+name: libMMD-build
 on: [push, pull_request]
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake libbullet-dev libgl1-mesa-dev libglu1-mesa-dev
+        sudo apt-get install -y build-essential cmake libbullet-dev
 
     - name: Install dependencies (macOS)
       if: matrix.os == 'macos-latest'
@@ -40,12 +40,9 @@ jobs:
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        choco install cmake
         if (-Not (Test-Path "bullet3/install")) {
-          # Download and build Bullet Physics only if not cached
           git clone https://github.com/bulletphysics/bullet3.git
           cd bullet3
-          # Create a version file for cache key
           git rev-parse HEAD | Out-File -FilePath "../bullet3-version" -Encoding ASCII
           mkdir build
           cd build
@@ -105,7 +102,7 @@ jobs:
               -DLIBMMD_ENABLE_TEST=ON \
               -DLIBMMD_BUILD_MMD2OBJ=ON
           fi
-        else 
+        else
           cmake .. \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DLIBMMD_BULLET_ROOT="$(brew --prefix bullet)" \
@@ -127,7 +124,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: saba-${{ matrix.os }}-${{ matrix.build_type }}
+        name: libMMD-${{ matrix.os }}-${{ matrix.build_type }}
         path: |
           build/src/
           build/mmd2obj*

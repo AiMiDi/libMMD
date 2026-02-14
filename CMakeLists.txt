@@ -12,7 +12,7 @@ else()
 endif()
 option (LIBMMD_BUILD_X_MODEL "Build x model." on)
 set (LIBMMD_BULLET_ROOT "" CACHE PATH "Bullet Root Directory")
-set (LIBMMD_EIGEN_ROOT "" CACHE PATH "Eigen Root Directory")
+set (LIBMMD_EIGEN_ROOT "${PROJECT_SOURCE_DIR}/external/eigen" CACHE PATH "Eigen Root Directory")
 option (LIBMMD_ENABLE_TEST "Enable CTest." on)
 option (LIBMMD_INSTALL "libMMD install." off)
 
