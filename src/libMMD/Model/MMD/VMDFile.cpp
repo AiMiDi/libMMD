@@ -431,6 +431,12 @@ namespace libmmd
 		return ReadVMDFile(vmd, reader);
 	}
 
+	bool ReadVMDFile(VMDFile* vmd, const uint8_t* data, size_t size)
+	{
+		MemoryReader reader(data, size);
+		return ReadVMDFile(vmd, reader);
+	}
+
 	bool WriteVMDFile(const VMDFile* vmd, const char* filename)
 	{
 		File file;

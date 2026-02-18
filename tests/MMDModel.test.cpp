@@ -5,12 +5,17 @@
 #include <libMMD/Model/MMD/MMDMorph.h>
 #include <libMMD/Model/MMD/MMDIkSolver.h>
 #include <libMMD/Model/MMD/MMDMaterial.h>
+#include <libMMD/Model/MMD/PMXFile.h>
+#include <libMMD/Model/MMD/VMDFile.h>
+#include <libMMD/Base/File.h>
 
 #include <iostream>
 #include <memory>
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <vector>
+#include <fstream>
 
 // ---------------------------------------------------------------------------
 // Minimal test framework for CTest
@@ -906,6 +911,402 @@ static void test_CoordSystem_InverseInitTransformConsistency()
 }
 
 // ===========================================================================
+// Helper: read file into byte vector
+// ===========================================================================
+
+static bool ReadFileToBuffer(const std::string& path, std::vector<uint8_t>& buffer)
+{
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
+    if (!ifs.is_open()) return false;
+    auto size = ifs.tellg();
+    if (size <= 0) return false;
+    buffer.resize(static_cast<size_t>(size));
+    ifs.seekg(0, std::ios::beg);
+    ifs.read(reinterpret_cast<char*>(buffer.data()), size);
+    return ifs.good();
+}
+
+// ===========================================================================
+// PMXFile reading/parsing tests
+// ===========================================================================
+
+static const std::string g_pmxTestFile = std::string(TEST_DATA_DIR) + "/pmx_test/test.pmx";
+
+static void test_PMXFile_ReadFromPath()
+{
+    std::cout << "[test] PMXFile_ReadFromPath\n";
+    libmmd::PMXFile pmx;
+    bool ok = libmmd::ReadPMXFile(&pmx, g_pmxTestFile.c_str());
+    TEST_ASSERT(ok);
+}
+
+static void test_PMXFile_ReadFromBuffer()
+{
+    std::cout << "[test] PMXFile_ReadFromBuffer\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    std::string error;
+    bool ok = libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size(), &error);
+    if (!ok)
+    {
+        std::cerr << "  Parse error detail: " << error << "\n";
+    }
+    TEST_ASSERT(ok);
+}
+
+static void test_PMXFile_HeaderValid()
+{
+    std::cout << "[test] PMXFile_HeaderValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    TEST_ASSERT(pmx.m_header.m_magic.m_buffer[0] == 'P');
+    TEST_ASSERT(pmx.m_header.m_magic.m_buffer[1] == 'M');
+    TEST_ASSERT(pmx.m_header.m_magic.m_buffer[2] == 'X');
+    TEST_ASSERT(pmx.m_header.m_magic.m_buffer[3] == ' ');
+
+    TEST_ASSERT(pmx.m_header.m_version >= 2.0f);
+    TEST_ASSERT(pmx.m_header.m_version < 3.0f);
+
+    TEST_ASSERT(pmx.m_header.m_encode == 0 || pmx.m_header.m_encode == 1);
+    TEST_ASSERT(pmx.m_header.m_dataSize == 8);
+    TEST_ASSERT(pmx.m_header.m_addUVNum <= 4);
+}
+
+static void test_PMXFile_InfoNonEmpty()
+{
+    std::cout << "[test] PMXFile_InfoNonEmpty\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    TEST_ASSERT(!pmx.m_info.m_modelName.empty());
+    std::cout << "    Model name: " << pmx.m_info.m_modelName << "\n";
+}
+
+static void test_PMXFile_SectionsNonEmpty()
+{
+    std::cout << "[test] PMXFile_SectionsNonEmpty\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    std::cout << "    Vertices:      " << pmx.m_vertices.size() << "\n";
+    std::cout << "    Faces:         " << pmx.m_faces.size() << "\n";
+    std::cout << "    Textures:      " << pmx.m_textures.size() << "\n";
+    std::cout << "    Materials:     " << pmx.m_materials.size() << "\n";
+    std::cout << "    Bones:         " << pmx.m_bones.size() << "\n";
+    std::cout << "    Morphs:        " << pmx.m_morphs.size() << "\n";
+    std::cout << "    DisplayFrames: " << pmx.m_displayFrames.size() << "\n";
+    std::cout << "    Rigidbodies:   " << pmx.m_rigidbodies.size() << "\n";
+    std::cout << "    Joints:        " << pmx.m_joints.size() << "\n";
+
+    TEST_ASSERT(!pmx.m_vertices.empty());
+    TEST_ASSERT(!pmx.m_faces.empty());
+    TEST_ASSERT(!pmx.m_materials.empty());
+    TEST_ASSERT(!pmx.m_bones.empty());
+}
+
+static void test_PMXFile_VertexDataValid()
+{
+    std::cout << "[test] PMXFile_VertexDataValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    for (size_t i = 0; i < std::min(pmx.m_vertices.size(), size_t(10)); ++i)
+    {
+        const auto& v = pmx.m_vertices[i];
+        TEST_ASSERT(static_cast<uint8_t>(v.m_weightType) <= 4);
+        TEST_ASSERT(!std::isnan(v.m_position.x()));
+        TEST_ASSERT(!std::isnan(v.m_position.y()));
+        TEST_ASSERT(!std::isnan(v.m_position.z()));
+        TEST_ASSERT(!std::isnan(v.m_normal.x()));
+        TEST_ASSERT(!std::isnan(v.m_uv.x()));
+    }
+}
+
+static void test_PMXFile_FaceIndicesValid()
+{
+    std::cout << "[test] PMXFile_FaceIndicesValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    uint32_t vertexCount = static_cast<uint32_t>(pmx.m_vertices.size());
+    for (const auto& face : pmx.m_faces)
+    {
+        TEST_ASSERT(face.m_vertices[0] < vertexCount);
+        TEST_ASSERT(face.m_vertices[1] < vertexCount);
+        TEST_ASSERT(face.m_vertices[2] < vertexCount);
+    }
+}
+
+static void test_PMXFile_BoneParentIndicesValid()
+{
+    std::cout << "[test] PMXFile_BoneParentIndicesValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    int32_t boneCount = static_cast<int32_t>(pmx.m_bones.size());
+    for (const auto& bone : pmx.m_bones)
+    {
+        TEST_ASSERT(bone.m_parentBoneIndex < boneCount);
+    }
+}
+
+static void test_PMXFile_BufferAndPathProduceSameResult()
+{
+    std::cout << "[test] PMXFile_BufferAndPathProduceSameResult\n";
+
+    libmmd::PMXFile pmxFromPath;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmxFromPath, g_pmxTestFile.c_str()));
+
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+    libmmd::PMXFile pmxFromBuf;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmxFromBuf, buffer.data(), buffer.size()));
+
+    TEST_ASSERT_FLOAT_EQ(pmxFromPath.m_header.m_version, pmxFromBuf.m_header.m_version);
+    TEST_ASSERT_EQ(pmxFromPath.m_header.m_encode, pmxFromBuf.m_header.m_encode);
+    TEST_ASSERT_EQ(pmxFromPath.m_vertices.size(), pmxFromBuf.m_vertices.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_faces.size(), pmxFromBuf.m_faces.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_textures.size(), pmxFromBuf.m_textures.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_materials.size(), pmxFromBuf.m_materials.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_bones.size(), pmxFromBuf.m_bones.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_morphs.size(), pmxFromBuf.m_morphs.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_rigidbodies.size(), pmxFromBuf.m_rigidbodies.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_joints.size(), pmxFromBuf.m_joints.size());
+    TEST_ASSERT_EQ(pmxFromPath.m_info.m_modelName, pmxFromBuf.m_info.m_modelName);
+}
+
+static void test_PMXFile_ErrorReportOnTruncatedData()
+{
+    std::cout << "[test] PMXFile_ErrorReportOnTruncatedData\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    // Truncate to just 4 bytes (not even a full header)
+    std::vector<uint8_t> truncated(buffer.begin(), buffer.begin() + 4);
+    libmmd::PMXFile pmx;
+    std::string error;
+    bool ok = libmmd::ReadPMXFile(&pmx, truncated.data(), truncated.size(), &error);
+    TEST_ASSERT(!ok);
+    TEST_ASSERT(!error.empty());
+    std::cout << "    Expected error: " << error << "\n";
+}
+
+static void test_PMXFile_ErrorReportOnEmptyData()
+{
+    std::cout << "[test] PMXFile_ErrorReportOnEmptyData\n";
+    libmmd::PMXFile pmx;
+    std::string error;
+    bool ok = libmmd::ReadPMXFile(&pmx, nullptr, 0, &error);
+    TEST_ASSERT(!ok);
+    TEST_ASSERT(!error.empty());
+    std::cout << "    Expected error: " << error << "\n";
+}
+
+static void test_PMXFile_MaterialFaceVertexCountConsistent()
+{
+    std::cout << "[test] PMXFile_MaterialFaceVertexCountConsistent\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_pmxTestFile, buffer));
+
+    libmmd::PMXFile pmx;
+    TEST_ASSERT(libmmd::ReadPMXFile(&pmx, buffer.data(), buffer.size()));
+
+    int32_t totalFaceVertices = 0;
+    for (const auto& mat : pmx.m_materials)
+    {
+        TEST_ASSERT(mat.m_numFaceVertices >= 0);
+        totalFaceVertices += mat.m_numFaceVertices;
+    }
+    TEST_ASSERT_EQ(static_cast<size_t>(totalFaceVertices), pmx.m_faces.size() * 3);
+}
+
+// ===========================================================================
+// VMDFile reading/parsing tests
+// ===========================================================================
+
+static const std::string g_vmdBoneFile = std::string(TEST_DATA_DIR) + "/vmd_test/bone.vmd";
+static const std::string g_vmdCamFile  = std::string(TEST_DATA_DIR) + "/vmd_test/cam.vmd";
+
+static void test_VMDFile_ReadBoneFromPath()
+{
+    std::cout << "[test] VMDFile_ReadBoneFromPath\n";
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, g_vmdBoneFile.c_str()));
+}
+
+static void test_VMDFile_ReadBoneFromBuffer()
+{
+    std::cout << "[test] VMDFile_ReadBoneFromBuffer\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdBoneFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+}
+
+static void test_VMDFile_ReadCamFromPath()
+{
+    std::cout << "[test] VMDFile_ReadCamFromPath\n";
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, g_vmdCamFile.c_str()));
+}
+
+static void test_VMDFile_ReadCamFromBuffer()
+{
+    std::cout << "[test] VMDFile_ReadCamFromBuffer\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdCamFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+}
+
+static void test_VMDFile_BoneHeaderValid()
+{
+    std::cout << "[test] VMDFile_BoneHeaderValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdBoneFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+
+    std::string header = vmd.m_header.m_header.ToString();
+    TEST_ASSERT(header.find("Vocaloid Motion Data") != std::string::npos);
+    std::cout << "    Header: " << header << "\n";
+    std::cout << "    Model:  " << vmd.m_header.m_modelName.ToUtf8String() << "\n";
+}
+
+static void test_VMDFile_BoneMotionsNonEmpty()
+{
+    std::cout << "[test] VMDFile_BoneMotionsNonEmpty\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdBoneFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+
+    std::cout << "    Motions: " << vmd.m_motions.size() << "\n";
+    std::cout << "    Morphs:  " << vmd.m_morphs.size() << "\n";
+    std::cout << "    Cameras: " << vmd.m_cameras.size() << "\n";
+    std::cout << "    Lights:  " << vmd.m_lights.size() << "\n";
+    std::cout << "    IKs:     " << vmd.m_iks.size() << "\n";
+
+    TEST_ASSERT(!vmd.m_motions.empty());
+}
+
+static void test_VMDFile_BoneMotionDataValid()
+{
+    std::cout << "[test] VMDFile_BoneMotionDataValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdBoneFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+
+    for (size_t i = 0; i < std::min(vmd.m_motions.size(), size_t(10)); ++i)
+    {
+        const auto& m = vmd.m_motions[i];
+        TEST_ASSERT(!std::isnan(m.m_translate.x()));
+        TEST_ASSERT(!std::isnan(m.m_translate.y()));
+        TEST_ASSERT(!std::isnan(m.m_translate.z()));
+        TEST_ASSERT(!std::isnan(m.m_quaternion.w()));
+        TEST_ASSERT(!std::isnan(m.m_quaternion.x()));
+    }
+}
+
+static void test_VMDFile_CamCamerasNonEmpty()
+{
+    std::cout << "[test] VMDFile_CamCamerasNonEmpty\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdCamFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+
+    std::cout << "    Motions: " << vmd.m_motions.size() << "\n";
+    std::cout << "    Cameras: " << vmd.m_cameras.size() << "\n";
+    std::cout << "    Lights:  " << vmd.m_lights.size() << "\n";
+
+    TEST_ASSERT(!vmd.m_cameras.empty());
+}
+
+static void test_VMDFile_CamCameraDataValid()
+{
+    std::cout << "[test] VMDFile_CamCameraDataValid\n";
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdCamFile, buffer));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmd, buffer.data(), buffer.size()));
+
+    for (size_t i = 0; i < std::min(vmd.m_cameras.size(), size_t(10)); ++i)
+    {
+        const auto& c = vmd.m_cameras[i];
+        TEST_ASSERT(!std::isnan(c.m_distance));
+        TEST_ASSERT(!std::isnan(c.m_interest.x()));
+        TEST_ASSERT(!std::isnan(c.m_rotate.x()));
+    }
+}
+
+static void test_VMDFile_BoneBufferAndPathSameResult()
+{
+    std::cout << "[test] VMDFile_BoneBufferAndPathSameResult\n";
+
+    libmmd::VMDFile vmdFromPath;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmdFromPath, g_vmdBoneFile.c_str()));
+
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdBoneFile, buffer));
+    libmmd::VMDFile vmdFromBuf;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmdFromBuf, buffer.data(), buffer.size()));
+
+    TEST_ASSERT_EQ(vmdFromPath.m_motions.size(), vmdFromBuf.m_motions.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_morphs.size(), vmdFromBuf.m_morphs.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_cameras.size(), vmdFromBuf.m_cameras.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_lights.size(), vmdFromBuf.m_lights.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_shadows.size(), vmdFromBuf.m_shadows.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_iks.size(), vmdFromBuf.m_iks.size());
+}
+
+static void test_VMDFile_CamBufferAndPathSameResult()
+{
+    std::cout << "[test] VMDFile_CamBufferAndPathSameResult\n";
+
+    libmmd::VMDFile vmdFromPath;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmdFromPath, g_vmdCamFile.c_str()));
+
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(ReadFileToBuffer(g_vmdCamFile, buffer));
+    libmmd::VMDFile vmdFromBuf;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmdFromBuf, buffer.data(), buffer.size()));
+
+    TEST_ASSERT_EQ(vmdFromPath.m_motions.size(), vmdFromBuf.m_motions.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_cameras.size(), vmdFromBuf.m_cameras.size());
+    TEST_ASSERT_EQ(vmdFromPath.m_lights.size(), vmdFromBuf.m_lights.size());
+}
+
+// ===========================================================================
 // main
 // ===========================================================================
 
@@ -995,6 +1396,35 @@ int main()
     test_CoordSystem_ParentChildTransformConsistency();
     test_CoordSystem_RotationMatrixIdentityPreserved();
     test_CoordSystem_InverseInitTransformConsistency();
+
+    // PMXFile reading/parsing
+    test_PMXFile_ReadFromPath();
+    test_PMXFile_ReadFromBuffer();
+    test_PMXFile_HeaderValid();
+    test_PMXFile_InfoNonEmpty();
+    test_PMXFile_SectionsNonEmpty();
+    test_PMXFile_VertexDataValid();
+    test_PMXFile_FaceIndicesValid();
+    test_PMXFile_BoneParentIndicesValid();
+    test_PMXFile_BufferAndPathProduceSameResult();
+    test_PMXFile_ErrorReportOnTruncatedData();
+    test_PMXFile_ErrorReportOnEmptyData();
+    test_PMXFile_MaterialFaceVertexCountConsistent();
+
+    // VMDFile reading/parsing (bone)
+    test_VMDFile_ReadBoneFromPath();
+    test_VMDFile_ReadBoneFromBuffer();
+    test_VMDFile_BoneHeaderValid();
+    test_VMDFile_BoneMotionsNonEmpty();
+    test_VMDFile_BoneMotionDataValid();
+    test_VMDFile_BoneBufferAndPathSameResult();
+
+    // VMDFile reading/parsing (camera)
+    test_VMDFile_ReadCamFromPath();
+    test_VMDFile_ReadCamFromBuffer();
+    test_VMDFile_CamCamerasNonEmpty();
+    test_VMDFile_CamCameraDataValid();
+    test_VMDFile_CamBufferAndPathSameResult();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";

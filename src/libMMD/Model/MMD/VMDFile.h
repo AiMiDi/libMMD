@@ -187,6 +187,15 @@ namespace libmmd
 	bool ReadVMDFile(VMDFile* vmd, const char* filename);
 
 	/**
+	 * @brief Read a VMD file from a memory buffer.
+	 * @param vmd Pointer to the VMDFile structure to store the read data.
+	 * @param data Pointer to the buffer containing the VMD file data.
+	 * @param size Size of the buffer in bytes.
+	 * @return True if the data is parsed successfully, false otherwise.
+	 */
+	bool ReadVMDFile(VMDFile* vmd, const uint8_t* data, size_t size);
+
+	/**
 	 * @brief Write a VMD file to the specified filename.
 	 * @param vmd Pointer to the VMDFile structure containing the data to write.
 	 * @param filename The name of the file to write.

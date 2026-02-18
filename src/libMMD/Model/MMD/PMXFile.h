@@ -643,6 +643,16 @@ namespace libmmd
 	bool ReadPMXFile(PMXFile* pmxFile, const char* filename);
 
 	/**
+	 * @brief Reads a PMX file from a memory buffer.
+	 * @param pmxFile Pointer to the PMXFile structure to store the read data.
+	 * @param data Pointer to the buffer containing the PMX file data.
+	 * @param size Size of the buffer in bytes.
+	 * @param outError Optional pointer to receive a description of the parsing failure.
+	 * @return True if the data was parsed successfully, false otherwise.
+	 */
+	bool ReadPMXFile(PMXFile* pmxFile, const uint8_t* data, size_t size, std::string* outError = nullptr);
+
+	/**
 	 * @brief Writes a PMX file.
 	 * @param pmxFile Pointer to the PMXFile structure containing the data to write.
 	 * @param filename The name of the file to write.

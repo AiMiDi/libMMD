@@ -7,6 +7,9 @@ if (LIBMMD_ENABLE_TEST)
         ${PROJECT_SOURCE_DIR}/external/spdlog/include
         ${LIBMMD_EIGEN_ROOT}
     )
+    target_compile_definitions(mmd_model_test PRIVATE
+        TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
     target_link_libraries(mmd_model_test libMMD)
 
     add_test(

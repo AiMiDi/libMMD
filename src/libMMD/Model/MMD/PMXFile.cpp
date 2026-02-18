@@ -808,7 +808,7 @@ namespace libmmd
 				return false;
 			}
 
-			if (file.Tell() < file.GetSize())
+			if (pmxFile->m_header.m_version > 2.0f && file.Tell() < file.GetSize())
 			{
 				if (!ReadSoftbody(pmxFile, file))
 				{
@@ -1597,6 +1597,38 @@ namespace libmmd
 			return false;
 		}
 		LIBMMD_INFO("PMX File Read Successed. {}", filename);
+
+		return true;
+	}
+
+	bool ReadPMXFile(PMXFile* pmxFile, const uint8_t* data, size_t size, std::string* outError)
+	{
+		MemoryReader reader(data, size);
+
+		#define PMX_PARSE_STEP(func, name) \
+			if (!func(pmxFile, reader)) { \
+				if (outError) *outError = name " failed at offset " + std::to_string(reader.Tell()); \
+				return false; \
+			}
+
+		PMX_PARSE_STEP(ReadHeader, "ReadHeader")
+		PMX_PARSE_STEP(ReadInfo, "ReadInfo")
+		PMX_PARSE_STEP(ReadVertex, "ReadVertex")
+		PMX_PARSE_STEP(ReadFace, "ReadFace")
+		PMX_PARSE_STEP(ReadTexture, "ReadTexture")
+		PMX_PARSE_STEP(ReadMaterial, "ReadMaterial")
+		PMX_PARSE_STEP(ReadBone, "ReadBone")
+		PMX_PARSE_STEP(ReadMorph, "ReadMorph")
+		PMX_PARSE_STEP(ReadDisplayFrame, "ReadDisplayFrame")
+		PMX_PARSE_STEP(ReadRigidbody, "ReadRigidbody")
+		PMX_PARSE_STEP(ReadJoint, "ReadJoint")
+
+		if (pmxFile->m_header.m_version > 2.0f && reader.Tell() < reader.GetSize())
+		{
+			PMX_PARSE_STEP(ReadSoftbody, "ReadSoftbody")
+		}
+
+		#undef PMX_PARSE_STEP
 
 		return true;
 	}

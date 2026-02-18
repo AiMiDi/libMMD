@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -91,6 +91,19 @@ namespace libmmd
 	bool Read(MMDFileString<Size>* str, File& file)
 	{
 		return file.Read(str->m_buffer, Size);
+	}
+
+	/**
+	 * @brief Read MMDFileString from MemoryReader.
+	 * @tparam Size Size of the string buffer.
+	 * @param str Pointer to the MMDFileString.
+	 * @param reader Reference to the MemoryReader.
+	 * @return True if read successfully, false otherwise.
+	 */
+	template <size_t Size>
+	bool Read(MMDFileString<Size>* str, MemoryReader& reader)
+	{
+		return reader.Read(str->m_buffer, Size);
 	}
 
 	/**
