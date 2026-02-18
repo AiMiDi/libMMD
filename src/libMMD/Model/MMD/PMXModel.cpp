@@ -645,8 +645,8 @@ namespace libmmd
 					auto* linkNode = m_nodeMan.GetNode(ikLink.m_ikBoneIndex);
 					if (ikLink.m_enableLimit)
 					{
-						Eigen::Vector3f limitMax = -ikLink.m_limitMin;
 						Eigen::Vector3f limitMin = -ikLink.m_limitMax;
+						Eigen::Vector3f limitMax = -ikLink.m_limitMin;
 						solver->AddIKChain(linkNode, true, limitMin, limitMax);
 					}
 					else

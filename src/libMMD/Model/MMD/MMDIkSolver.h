@@ -140,22 +140,22 @@ namespace libmmd
 			Eigen::Quaternionf	m_saveIKRot; ///< Saved IK rotation
 			float		m_planeModeAngle; ///< Plane mode angle
 
-			IKChain(
-				MMDNode* node = nullptr,
-				const bool enableAxisLimit = false,
-				const Eigen::Vector3f& limitMax = Eigen::Vector3f::Zero(),
-				const Eigen::Vector3f& limitMin = Eigen::Vector3f::Zero(),
-				const Eigen::Quaternionf& saveIKRot = Eigen::Quaternionf::Identity(),
-				const Eigen::Vector3f& prevAngle = Eigen::Vector3f::Zero(),
-				const float planeModeAngle = 0.0f
-			)
-				: m_node(node),
-				  m_enableAxisLimit(enableAxisLimit),
-				  m_limitMax(limitMax),
-				  m_limitMin(limitMin),
-				  m_prevAngle(prevAngle),
-				  m_saveIKRot(saveIKRot),
-				  m_planeModeAngle(planeModeAngle)
+		IKChain(
+			MMDNode* node = nullptr,
+			const bool enableAxisLimit = false,
+			const Eigen::Vector3f& limitMin = Eigen::Vector3f::Zero(),
+			const Eigen::Vector3f& limitMax = Eigen::Vector3f::Zero(),
+			const Eigen::Quaternionf& saveIKRot = Eigen::Quaternionf::Identity(),
+			const Eigen::Vector3f& prevAngle = Eigen::Vector3f::Zero(),
+			const float planeModeAngle = 0.0f
+		)
+			: m_node(node),
+			  m_enableAxisLimit(enableAxisLimit),
+			  m_limitMin(limitMin),
+			  m_limitMax(limitMax),
+			  m_prevAngle(prevAngle),
+			  m_saveIKRot(saveIKRot),
+			  m_planeModeAngle(planeModeAngle)
 			{
 			}
 		};
