@@ -27,8 +27,8 @@ namespace libmmd
 	{
 		m_chains.emplace_back(node,
 			isKnee,
-			isKnee ? Eigen::Vector3f(0.5f * static_cast<float>(EIGEN_PI) / 180.0f, 0, 0) : Eigen::Vector3f::Zero(),
-			isKnee ? Eigen::Vector3f(static_cast<float>(EIGEN_PI), 0, 0) : Eigen::Vector3f::Zero(),
+			isKnee ? Eigen::Vector3f(-static_cast<float>(EIGEN_PI), 0, 0) : Eigen::Vector3f::Zero(),
+			isKnee ? Eigen::Vector3f(-0.5f * static_cast<float>(EIGEN_PI) / 180.0f, 0, 0) : Eigen::Vector3f::Zero(),
 			Eigen::Quaternionf::Identity());
 	}
 

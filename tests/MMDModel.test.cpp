@@ -1,3 +1,6 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include <libMMD/Model/MMD/PMXModel.h>
 #include <libMMD/Model/MMD/PMDModel.h>
 #include <libMMD/Model/MMD/VMDAnimation.h>
@@ -12,7 +15,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <cmath>
 #include <cstdlib>
 #include <vector>
 #include <fstream>
@@ -1307,6 +1309,1052 @@ static void test_VMDFile_CamBufferAndPathSameResult()
 }
 
 // ===========================================================================
+// MMDNode UpdateLocalTransform / UpdateGlobalTransform tests
+// ===========================================================================
+
+static void test_MMDNode_UpdateLocalTransform_IdentityPose()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_IdentityPose\n";
+    libmmd::MMDNode node;
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(r == c ? 1.0f : 0.0f, local(r, c));
+}
+
+static void test_MMDNode_UpdateLocalTransform_WithTranslation()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_WithTranslation\n";
+    libmmd::MMDNode node;
+    node.SetTranslate(Eigen::Vector3f(3.0f, 5.0f, 7.0f));
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    // T * R * S with R=I, S=I => translation in col(3)
+    TEST_ASSERT_FLOAT_EQ(3.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(5.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(7.0f, local(2, 3));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(3, 3));
+    // 3x3 block should be identity
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(2, 2));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(0, 1));
+}
+
+static void test_MMDNode_UpdateLocalTransform_WithRotation90Y()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_WithRotation90Y\n";
+    libmmd::MMDNode node;
+
+    // 90-degree rotation around Y axis
+    const float angle = static_cast<float>(M_PI) / 2.0f;
+    Eigen::Quaternionf q(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY()));
+    node.SetRotate(q);
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    // After 90-deg Y rotation: X->-Z, Y->Y, Z->X
+    // R = [cos(90) 0 sin(90)]   [0  0  1]
+    //     [  0     1   0    ] =  [0  1  0]
+    //     [-sin(90) 0 cos(90)]   [-1 0  0]
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(0, 0));    // cos(90)
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 2));    // sin(90)
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(-1.0f, local(2, 0));   // -sin(90)
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(2, 2));    // cos(90)
+    // Translation should be zero
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(2, 3));
+}
+
+static void test_MMDNode_UpdateLocalTransform_WithAnimationData()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_WithAnimationData\n";
+    libmmd::MMDNode node;
+
+    // Base translate + animation translate should be combined
+    node.SetTranslate(Eigen::Vector3f(1.0f, 0.0f, 0.0f));
+    node.SetAnimationTranslate(Eigen::Vector3f(0.0f, 2.0f, 0.0f));
+
+    // 45-degree rotation around Z axis as animation rotation
+    const float angle = static_cast<float>(M_PI) / 4.0f;
+    Eigen::Quaternionf animQ(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()));
+    node.SetAnimationRotate(animQ);
+
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    // Translation = AnimateTranslate() = base(1,0,0) + anim(0,2,0) = (1,2,0)
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(2.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(2, 3));
+
+    // Rotation = AnimateRotate() = animQ * baseQ(identity) = animQ
+    // 45-deg Z rotation: cos(45)=sin(45)≈0.7071
+    const float c = std::cos(angle);
+    const float s = std::sin(angle);
+    TEST_ASSERT_FLOAT_EQ(c, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(-s, local(0, 1));
+    TEST_ASSERT_FLOAT_EQ(s, local(1, 0));
+    TEST_ASSERT_FLOAT_EQ(c, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(2, 2));
+}
+
+static void test_MMDNode_UpdateLocalTransform_WithScale()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_WithScale\n";
+    libmmd::MMDNode node;
+    node.SetTranslate(Eigen::Vector3f(1.0f, 0.0f, 0.0f));
+    node.SetScale(Eigen::Vector3f(2.0f, 3.0f, 4.0f));
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    // m_local = T * R * S, with R = I
+    // Scale appears on the diagonal of the 3x3 block
+    TEST_ASSERT_FLOAT_EQ(2.0f, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(3.0f, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(4.0f, local(2, 2));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(1, 3));
+}
+
+static void test_MMDNode_UpdateLocalTransform_IKRotateApplied()
+{
+    std::cout << "[test] MMDNode_UpdateLocalTransform_IKRotateApplied\n";
+    libmmd::MMDNode node;
+    node.EnableIK(true);
+
+    // Set a 90-degree IK rotation around X axis
+    const float angle = static_cast<float>(M_PI) / 2.0f;
+    Eigen::Quaternionf ikQ(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitX()));
+    node.SetIKRotate(ikQ);
+
+    node.UpdateLocalTransform();
+    const auto& local = node.GetLocalTransform();
+
+    // With IK enabled: R = ikRotMat * animRotMat
+    // animRotate = identity, so R = ikRotMat = 90-deg X rotation
+    // R_x(90) = [[1,0,0],[0,0,-1],[0,1,0]]
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(-1.0f, local(1, 2));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(2, 1));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(2, 2));
+}
+
+static void test_MMDNode_UpdateGlobalTransform_SingleRoot()
+{
+    std::cout << "[test] MMDNode_UpdateGlobalTransform_SingleRoot\n";
+    libmmd::MMDNode root;
+    root.SetTranslate(Eigen::Vector3f(10.0f, 0.0f, 0.0f));
+    root.UpdateLocalTransform();
+    root.UpdateGlobalTransform();
+
+    // Root: global = local
+    const auto& global = root.GetGlobalTransform();
+    TEST_ASSERT_FLOAT_EQ(10.0f, global(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, global(1, 3));
+}
+
+static void test_MMDNode_UpdateGlobalTransform_ParentChild()
+{
+    std::cout << "[test] MMDNode_UpdateGlobalTransform_ParentChild\n";
+    libmmd::MMDNode parent;
+    libmmd::MMDNode child;
+    parent.SetName("parent");
+    child.SetName("child");
+    parent.AddChild(&child);
+
+    parent.SetTranslate(Eigen::Vector3f(10.0f, 0.0f, 0.0f));
+    child.SetTranslate(Eigen::Vector3f(5.0f, 3.0f, 0.0f));
+
+    parent.UpdateLocalTransform();
+    child.UpdateLocalTransform();
+    parent.UpdateGlobalTransform();
+
+    // child.global = parent.global * child.local
+    // = T(10,0,0) * T(5,3,0) = T(15,3,0)
+    const auto& childGlobal = child.GetGlobalTransform();
+    TEST_ASSERT_FLOAT_EQ(15.0f, childGlobal(0, 3));
+    TEST_ASSERT_FLOAT_EQ(3.0f, childGlobal(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, childGlobal(2, 3));
+}
+
+static void test_MMDNode_UpdateGlobalTransform_ParentRotation()
+{
+    std::cout << "[test] MMDNode_UpdateGlobalTransform_ParentRotation\n";
+    libmmd::MMDNode parent;
+    libmmd::MMDNode child;
+    parent.AddChild(&child);
+
+    // Parent at origin with 90-deg Y rotation
+    const float angle = static_cast<float>(M_PI) / 2.0f;
+    parent.SetRotate(Eigen::Quaternionf(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY())));
+    // Child offset of (5, 0, 0) in parent-local space
+    child.SetTranslate(Eigen::Vector3f(5.0f, 0.0f, 0.0f));
+
+    parent.UpdateLocalTransform();
+    child.UpdateLocalTransform();
+    parent.UpdateGlobalTransform();
+
+    // After 90-deg Y rotation, parent's local X -> global Z
+    // So child at (5,0,0) in parent space -> (0,0,-5) in world? No:
+    // 90-deg Y: [0 0 1; 0 1 0; -1 0 0] * [5;0;0] = [0;0;-5]
+    // Actually parent.global * child.local:
+    // parent.global has rotation 90-deg Y and no translation
+    // child.local = T(5,0,0)
+    // global = parent.R * child.T = rotation applied to translation
+    // child_global_pos = R * (5,0,0) = (0, 0, -5)
+    const auto& childGlobal = child.GetGlobalTransform();
+    TEST_ASSERT_FLOAT_EQ(0.0f, childGlobal(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, childGlobal(1, 3));
+    TEST_ASSERT_FLOAT_EQ(-5.0f, childGlobal(2, 3));
+}
+
+static void test_MMDNode_UpdateGlobalTransform_ThreeLevelHierarchy()
+{
+    std::cout << "[test] MMDNode_UpdateGlobalTransform_ThreeLevelHierarchy\n";
+    libmmd::MMDNode root;
+    libmmd::MMDNode mid;
+    libmmd::MMDNode leaf;
+    root.AddChild(&mid);
+    mid.AddChild(&leaf);
+
+    root.SetTranslate(Eigen::Vector3f(0.0f, 10.0f, 0.0f));
+    mid.SetTranslate(Eigen::Vector3f(0.0f, 5.0f, 0.0f));
+    leaf.SetTranslate(Eigen::Vector3f(0.0f, 3.0f, 0.0f));
+
+    root.UpdateLocalTransform();
+    mid.UpdateLocalTransform();
+    leaf.UpdateLocalTransform();
+    root.UpdateGlobalTransform();
+
+    TEST_ASSERT_FLOAT_EQ(10.0f, root.GetGlobalTransform()(1, 3));
+    TEST_ASSERT_FLOAT_EQ(15.0f, mid.GetGlobalTransform()(1, 3));
+    TEST_ASSERT_FLOAT_EQ(18.0f, leaf.GetGlobalTransform()(1, 3));
+}
+
+// ===========================================================================
+// VMD Animation Integration tests
+// Builds minimal PMX models programmatically and runs the full animation
+// pipeline to verify end-to-end correctness.
+// ===========================================================================
+
+// Helper: build linear interpolation data (all 4 channels linear)
+static std::array<uint8_t, 64> MakeLinearInterpolation()
+{
+    std::array<uint8_t, 64> interp{};
+    // Layout per channel: offset +0 = cp1.x, +4 = cp1.y, +8 = cp2.x, +12 = cp2.y
+    // Channels: 0=TX, 1=TY, 2=TZ, 3=Rot
+    for (int ch = 0; ch < 4; ++ch)
+    {
+        interp[ch + 0]  = 20;   // cp1.x
+        interp[ch + 4]  = 20;   // cp1.y
+        interp[ch + 8]  = 107;  // cp2.x
+        interp[ch + 12] = 107;  // cp2.y
+    }
+    return interp;
+}
+
+// Helper: build a minimal PMXFile with a simple bone hierarchy
+// Returns: root(0) at origin, child(1) at (0, boneLength, 0) relative to root
+static libmmd::PMXFile MakeSimplePMXFile(float boneLength = 10.0f)
+{
+    libmmd::PMXFile file{};
+
+    libmmd::PMXBone root{};
+    root.m_name = "root";
+    root.m_englishName = "root";
+    root.m_position = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    root.m_parentBoneIndex = -1;
+    root.m_deformDepth = 0;
+    root.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    root.m_appendBoneIndex = -1;
+    root.m_appendWeight = 0.0f;
+
+    libmmd::PMXBone child{};
+    child.m_name = "child";
+    child.m_englishName = "child";
+    child.m_position = Eigen::Vector3f(0.0f, boneLength, 0.0f);
+    child.m_parentBoneIndex = 0;
+    child.m_deformDepth = 0;
+    child.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    child.m_appendBoneIndex = -1;
+    child.m_appendWeight = 0.0f;
+
+    file.m_bones.push_back(std::move(root));
+    file.m_bones.push_back(std::move(child));
+
+    // Minimal material to avoid empty-array issues
+    libmmd::PMXMaterial mat{};
+    mat.m_numFaceVertices = 0;
+    mat.m_textureIndex = -1;
+    mat.m_sphereTextureIndex = -1;
+    mat.m_toonTextureIndex = -1;
+    mat.m_sphereMode = libmmd::PMXSphereMode::None;
+    mat.m_toonMode = libmmd::PMXToonMode::Common;
+    mat.m_drawMode = static_cast<libmmd::PMXDrawModeFlags>(0);
+    mat.m_diffuse = Eigen::Vector4f(1, 1, 1, 1);
+    mat.m_specular = Eigen::Vector3f::Zero();
+    mat.m_specularPower = 1.0f;
+    mat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
+    mat.m_edgeColor = Eigen::Vector4f::Zero();
+    mat.m_edgeSize = 0.0f;
+    file.m_materials.push_back(std::move(mat));
+
+    return file;
+}
+
+// Helper: build a VMDFile with a single motion key for the named bone
+static libmmd::VMDFile MakeSingleKeyVMD(
+    const char* boneName,
+    uint32_t frame,
+    const Eigen::Vector3f& translate,
+    const Eigen::Quaternionf& rotation)
+{
+    libmmd::VMDFile vmd{};
+    libmmd::VMDMotion motion{};
+    motion.m_boneName.Set(boneName);
+    motion.m_frame = frame;
+    motion.m_translate = translate;
+    motion.m_quaternion = rotation;
+    motion.m_interpolation = MakeLinearInterpolation();
+    vmd.m_motions.push_back(std::move(motion));
+    return vmd;
+}
+
+// Helper: build a VMDFile with two motion keys (for interpolation tests)
+static libmmd::VMDFile MakeTwoKeyVMD(
+    const char* boneName,
+    uint32_t frame0, const Eigen::Vector3f& t0, const Eigen::Quaternionf& q0,
+    uint32_t frame1, const Eigen::Vector3f& t1, const Eigen::Quaternionf& q1)
+{
+    libmmd::VMDFile vmd{};
+    auto interp = MakeLinearInterpolation();
+
+    libmmd::VMDMotion m0{};
+    m0.m_boneName.Set(boneName);
+    m0.m_frame = frame0;
+    m0.m_translate = t0;
+    m0.m_quaternion = q0;
+    m0.m_interpolation = interp;
+    vmd.m_motions.push_back(std::move(m0));
+
+    libmmd::VMDMotion m1{};
+    m1.m_boneName.Set(boneName);
+    m1.m_frame = frame1;
+    m1.m_translate = t1;
+    m1.m_quaternion = q1;
+    m1.m_interpolation = interp;
+    vmd.m_motions.push_back(std::move(m1));
+
+    return vmd;
+}
+
+static void test_Integration_VMD_SingleBoneRotationAtFrame0()
+{
+    std::cout << "[test] Integration_VMD_SingleBoneRotationAtFrame0\n";
+
+    // Build model
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+    TEST_ASSERT_EQ(size_t(2), model->GetNodeManager()->GetNodeCount());
+
+    // Build VMD: rotate "child" bone by 90 degrees around Z at frame 0
+    const float angle = static_cast<float>(M_PI) / 2.0f;
+    Eigen::Quaternionf rotZ(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()));
+    auto vmd = MakeSingleKeyVMD("child", 0, Eigen::Vector3f::Zero(), rotZ);
+
+    // Create animation
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+    TEST_ASSERT_EQ(int32_t(1), anim.GetNodeKeyNum());
+
+    // Run full pipeline at frame 0
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(0.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    // Verify child node's local transform has the rotation applied
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    TEST_ASSERT(childNode != nullptr);
+    const auto& local = childNode->GetLocalTransform();
+
+    // The rotation part should be a 90-deg Z rotation:
+    const float c = std::cos(angle);
+    const float s = std::sin(angle);
+    TEST_ASSERT_FLOAT_EQ(c, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(-s, local(0, 1));
+    TEST_ASSERT_FLOAT_EQ(s, local(1, 0));
+    TEST_ASSERT_FLOAT_EQ(c, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(2, 2));
+
+    // Translation should be initial translate (0, 10, 0) since animTranslate is zero
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(10.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(2, 3));
+}
+
+static void test_Integration_VMD_SingleBoneTranslationAtFrame0()
+{
+    std::cout << "[test] Integration_VMD_SingleBoneTranslationAtFrame0\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Translate "child" by (1, 2, 3) at frame 0
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(0.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& local = childNode->GetLocalTransform();
+
+    // Translation = AnimateTranslate() = base(0,10,0) + anim(1,2,3) = (1,12,3)
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(12.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(3.0f, local(2, 3));
+
+    // Rotation should be identity
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 0));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(1, 1));
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(2, 2));
+    TEST_ASSERT_FLOAT_EQ(0.0f, local(0, 1));
+}
+
+static void test_Integration_VMD_RootBoneUnaffectedWhenNoKey()
+{
+    std::cout << "[test] Integration_VMD_RootBoneUnaffectedWhenNoKey\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Only animate "child", root should stay at identity pose
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(0.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* rootNode = model->GetNodeManager()->GetMMDNode(size_t(0));
+    const auto& rootLocal = rootNode->GetLocalTransform();
+
+    // Root should be identity (translate = (0,0,0), no animation applied)
+    TEST_ASSERT_FLOAT_EQ(0.0f, rootLocal(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, rootLocal(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, rootLocal(2, 3));
+    TEST_ASSERT_FLOAT_EQ(1.0f, rootLocal(0, 0));
+    TEST_ASSERT_FLOAT_EQ(1.0f, rootLocal(1, 1));
+    TEST_ASSERT_FLOAT_EQ(1.0f, rootLocal(2, 2));
+}
+
+static void test_Integration_VMD_TwoKeyLinearInterpolation()
+{
+    std::cout << "[test] Integration_VMD_TwoKeyLinearInterpolation\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Frame 0: translate (0,0,0), Frame 30: translate (30,0,0)
+    auto vmd = MakeTwoKeyVMD("child",
+        0, Eigen::Vector3f::Zero(), Eigen::Quaternionf::Identity(),
+        30, Eigen::Vector3f(30.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    // Evaluate at frame 15 (midpoint)
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(15.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+
+    // With linear interpolation, midpoint should be ~(15, 0, 0) for anim translate
+    // Total translate = base(0, 10, 0) + anim(~15, 0, 0) = (~15, 10, 0)
+    const auto& animT = childNode->GetAnimationTranslate();
+    // Allow tolerance for bezier approximation with control points at (20/127, 107/127)
+    TEST_ASSERT(std::fabs(animT.x() - 15.0f) < 2.0f);
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.z());
+}
+
+static void test_Integration_VMD_TwoKeyRotationSlerp()
+{
+    std::cout << "[test] Integration_VMD_TwoKeyRotationSlerp\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Frame 0: no rotation, Frame 30: 90-deg Z rotation
+    const float angle90 = static_cast<float>(M_PI) / 2.0f;
+    Eigen::Quaternionf q90(Eigen::AngleAxisf(angle90, Eigen::Vector3f::UnitZ()));
+    auto vmd = MakeTwoKeyVMD("child",
+        0, Eigen::Vector3f::Zero(), Eigen::Quaternionf::Identity(),
+        30, Eigen::Vector3f::Zero(), q90);
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    // Evaluate at frame 15 (midpoint)
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(15.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& animQ = childNode->GetAnimationRotate();
+
+    // At midpoint with approximately linear interpolation,
+    // the rotation should be roughly 45 degrees around Z
+    Eigen::AngleAxisf resultAA(animQ);
+    float resultAngle = resultAA.angle();
+    Eigen::Vector3f resultAxis = resultAA.axis();
+
+    // The axis should be approximately Z (allow for numerical imprecision)
+    TEST_ASSERT(std::fabs(resultAxis.z()) > 0.9f);
+    // The angle should be roughly pi/4 (45 degrees), tolerance for bezier curve
+    TEST_ASSERT(std::fabs(resultAngle - static_cast<float>(M_PI) / 4.0f) < 0.3f);
+}
+
+static void test_Integration_VMD_GlobalTransformHierarchy()
+{
+    std::cout << "[test] Integration_VMD_GlobalTransformHierarchy\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Rotate root by 90 deg around Z, translate child by (5,0,0)
+    const float angle = static_cast<float>(M_PI) / 2.0f;
+    Eigen::Quaternionf rotZ(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()));
+
+    libmmd::VMDFile vmd{};
+    auto interp = MakeLinearInterpolation();
+
+    // Root rotation key
+    libmmd::VMDMotion rootMotion{};
+    rootMotion.m_boneName.Set("root");
+    rootMotion.m_frame = 0;
+    rootMotion.m_translate = Eigen::Vector3f::Zero();
+    rootMotion.m_quaternion = rotZ;
+    rootMotion.m_interpolation = interp;
+    vmd.m_motions.push_back(std::move(rootMotion));
+
+    // Child translation key
+    libmmd::VMDMotion childMotion{};
+    childMotion.m_boneName.Set("child");
+    childMotion.m_frame = 0;
+    childMotion.m_translate = Eigen::Vector3f(5.0f, 0.0f, 0.0f);
+    childMotion.m_quaternion = Eigen::Quaternionf::Identity();
+    childMotion.m_interpolation = interp;
+    vmd.m_motions.push_back(std::move(childMotion));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(0.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    // Root local: T(0,0,0) * R(90Z) * S(1)
+    auto* rootNode = model->GetNodeManager()->GetMMDNode(size_t(0));
+    const auto& rootGlobal = rootNode->GetGlobalTransform();
+
+    // Child local translate = base(0,10,0) + anim(5,0,0) = (5,10,0)
+    // Child local = T(5,10,0) * I
+    // Child global = rootGlobal * childLocal
+    // rootGlobal rotates 90 deg Z: X->Y, Y->-X
+    // So child global pos = R_90Z * (5, 10, 0) = (-10, 5, 0)
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& childGlobal = childNode->GetGlobalTransform();
+
+    TEST_ASSERT(std::fabs(childGlobal(0, 3) - (-10.0f)) < 1e-4f);
+    TEST_ASSERT(std::fabs(childGlobal(1, 3) - 5.0f) < 1e-4f);
+    TEST_ASSERT(std::fabs(childGlobal(2, 3) - 0.0f) < 1e-4f);
+}
+
+static void test_Integration_VMD_UpdateAllAnimation()
+{
+    std::cout << "[test] Integration_VMD_UpdateAllAnimation\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Simple translation on child at frame 0
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    // Use the full UpdateAllAnimation pipeline (same as C4D code path)
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& local = childNode->GetLocalTransform();
+
+    // Same result as manual pipeline
+    TEST_ASSERT_FLOAT_EQ(1.0f, local(0, 3));
+    TEST_ASSERT_FLOAT_EQ(12.0f, local(1, 3));
+    TEST_ASSERT_FLOAT_EQ(3.0f, local(2, 3));
+}
+
+// ===========================================================================
+// C4D Matrix Extraction Pattern verification
+// This tests the exact code pattern used in mmd_bone.cpp Execute() to
+// extract translation delta and rotation from GetLocalTransform().
+// ===========================================================================
+
+static void test_Integration_C4DMatrixExtractionPattern_Translation()
+{
+    std::cout << "[test] Integration_C4DMatrixExtractionPattern_Translation\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& transform = childNode->GetLocalTransform();
+
+    // This is the exact extraction pattern from mmd_bone.cpp:
+    // translate = transform.col(3).head<3>() - mmd_node_->GetInitialTranslate()
+    const Eigen::Vector3f translate = transform.col(3).head<3>() - childNode->GetInitialTranslate();
+
+    // Initial translate is (0, 10, 0) (relative to parent in PMX)
+    // Local transform col(3) = AnimateTranslate() = (0,10,0) + (1,2,3) = (1,12,3)
+    // Delta = (1,12,3) - (0,10,0) = (1,2,3) — should match the VMD anim translate
+    TEST_ASSERT_FLOAT_EQ(1.0f, translate.x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, translate.y());
+    TEST_ASSERT_FLOAT_EQ(3.0f, translate.z());
+}
+
+static void test_Integration_C4DMatrixExtractionPattern_Rotation()
+{
+    std::cout << "[test] Integration_C4DMatrixExtractionPattern_Rotation\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // 45-degree rotation around X
+    const float angle = static_cast<float>(M_PI) / 4.0f;
+    Eigen::Quaternionf rotX(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitX()));
+    auto vmd = MakeSingleKeyVMD("child", 0, Eigen::Vector3f::Zero(), rotX);
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& transform = childNode->GetLocalTransform();
+
+    // Extract rotation axes (column-major: col 0,1,2 are the 3 rotation axes)
+    // This is the pattern from mmd_bone.cpp SetRelMl:
+    //   v1 = Vector(transform(0,0), transform(1,0), transform(2,0))
+    //   v2 = Vector(transform(0,1), transform(1,1), transform(2,1))
+    //   v3 = Vector(transform(0,2), transform(1,2), transform(2,2))
+    Eigen::Matrix3f rotBlock = transform.block<3, 3>(0, 0);
+    Eigen::Matrix3f expectedRot = rotX.toRotationMatrix();
+
+    for (int r = 0; r < 3; ++r)
+        for (int c = 0; c < 3; ++c)
+            TEST_ASSERT(std::fabs(rotBlock(r, c) - expectedRot(r, c)) < 1e-5f);
+}
+
+static void test_Integration_C4DMatrixExtractionPattern_CombinedTranslateRotate()
+{
+    std::cout << "[test] Integration_C4DMatrixExtractionPattern_CombinedTranslateRotate\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    const float angle = static_cast<float>(M_PI) / 6.0f;  // 30 degrees
+    Eigen::Quaternionf rotY(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY()));
+    Eigen::Vector3f animTranslate(2.0f, 0.0f, -1.0f);
+    auto vmd = MakeSingleKeyVMD("child", 0, animTranslate, rotY);
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& transform = childNode->GetLocalTransform();
+
+    // Verify the translation delta extraction
+    const Eigen::Vector3f translate = transform.col(3).head<3>() - childNode->GetInitialTranslate();
+    TEST_ASSERT(std::fabs(translate.x() - animTranslate.x()) < 1e-5f);
+    TEST_ASSERT(std::fabs(translate.y() - animTranslate.y()) < 1e-5f);
+    TEST_ASSERT(std::fabs(translate.z() - animTranslate.z()) < 1e-5f);
+
+    // Verify rotation matrix
+    Eigen::Matrix3f rotBlock = transform.block<3, 3>(0, 0);
+    Eigen::Matrix3f expectedRot = rotY.toRotationMatrix();
+    for (int r = 0; r < 3; ++r)
+        for (int c = 0; c < 3; ++c)
+            TEST_ASSERT(std::fabs(rotBlock(r, c) - expectedRot(r, c)) < 1e-5f);
+}
+
+// ===========================================================================
+// Real file integration test
+// ===========================================================================
+
+static void test_Integration_RealFile_LoadPMXAndApplyVMD()
+{
+    std::cout << "[test] Integration_RealFile_LoadPMXAndApplyVMD\n";
+
+    // Load real PMX model
+    auto model = std::make_shared<libmmd::PMXModel>();
+    if (!model->Load(g_pmxTestFile, ""))
+    {
+        std::cerr << "  SKIP: Could not load PMX file\n";
+        return;
+    }
+
+    size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+    TEST_ASSERT(nodeCount > 0);
+    std::cout << "    Loaded PMX with " << nodeCount << " bones\n";
+
+    // Load real VMD file
+    libmmd::VMDFile vmdFile;
+    if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load VMD file\n";
+        return;
+    }
+    TEST_ASSERT(!vmdFile.m_motions.empty());
+    std::cout << "    Loaded VMD with " << vmdFile.m_motions.size() << " motions\n";
+
+    // Create animation and add VMD data
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdFile));
+    std::cout << "    VMD bound " << anim.GetNodeKeyNum() << " node controllers\n";
+    TEST_ASSERT(anim.GetNodeKeyNum() > 0);
+
+    // Run InitializeAnimation to set up initial pose
+    model->InitializeAnimation();
+
+    // Run full UpdateAllAnimation at frame 0
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    // Verify all bones have valid (non-NaN) transforms
+    for (size_t i = 0; i < nodeCount; ++i)
+    {
+        auto* node = model->GetNodeManager()->GetMMDNode(i);
+        const auto& local = node->GetLocalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(local(r, c)));
+
+        const auto& global = node->GetGlobalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(global(r, c)));
+    }
+
+    // Run at a middle frame
+    float midFrame = static_cast<float>(anim.GetMaxKeyTime()) / 2.0f;
+    model->UpdateAllAnimation(&anim, midFrame, 1.0f / 30.0f);
+
+    for (size_t i = 0; i < nodeCount; ++i)
+    {
+        auto* node = model->GetNodeManager()->GetMMDNode(i);
+        const auto& local = node->GetLocalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(local(r, c)));
+    }
+
+    // Run at the last frame
+    model->UpdateAllAnimation(&anim, static_cast<float>(anim.GetMaxKeyTime()), 1.0f / 30.0f);
+
+    for (size_t i = 0; i < nodeCount; ++i)
+    {
+        auto* node = model->GetNodeManager()->GetMMDNode(i);
+        const auto& local = node->GetLocalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(local(r, c)));
+    }
+
+    std::cout << "    All frames produced valid transforms\n";
+}
+
+static void test_Integration_RealFile_LocalTransformDeltaConsistency()
+{
+    std::cout << "[test] Integration_RealFile_LocalTransformDeltaConsistency\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    if (!model->Load(g_pmxTestFile, ""))
+    {
+        std::cerr << "  SKIP: Could not load PMX file\n";
+        return;
+    }
+
+    libmmd::VMDFile vmdFile;
+    if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load VMD file\n";
+        return;
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdFile));
+
+    model->InitializeAnimation();
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    // For each bone, verify:
+    //   1. The C4D extraction pattern gives a finite translation delta
+    //   2. The 3x3 rotation block is a valid rotation matrix (det ≈ 1, orthonormal)
+    size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+    for (size_t i = 0; i < nodeCount; ++i)
+    {
+        auto* node = model->GetNodeManager()->GetMMDNode(i);
+        const auto& transform = node->GetLocalTransform();
+
+        // Translation delta (C4D extraction pattern)
+        Eigen::Vector3f delta = transform.col(3).head<3>() - node->GetInitialTranslate();
+        TEST_ASSERT(!std::isnan(delta.x()));
+        TEST_ASSERT(!std::isnan(delta.y()));
+        TEST_ASSERT(!std::isnan(delta.z()));
+        TEST_ASSERT(!std::isinf(delta.x()));
+        TEST_ASSERT(!std::isinf(delta.y()));
+        TEST_ASSERT(!std::isinf(delta.z()));
+
+        // Rotation block validity: det should be close to 1 for proper rotation
+        Eigen::Matrix3f rotBlock = transform.block<3, 3>(0, 0);
+        float det = rotBlock.determinant();
+        TEST_ASSERT(std::fabs(det - 1.0f) < 0.01f);
+
+        // Columns should be approximately unit length
+        for (int c = 0; c < 3; ++c)
+        {
+            float colLen = rotBlock.col(c).norm();
+            TEST_ASSERT(std::fabs(colLen - 1.0f) < 0.01f);
+        }
+    }
+
+    std::cout << "    All bones passed rotation/translation validity checks\n";
+}
+
+static void test_Integration_VMD_EvaluatePastLastKey()
+{
+    std::cout << "[test] Integration_VMD_EvaluatePastLastKey\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Single key at frame 10: translate (5, 0, 0)
+    auto vmd = MakeSingleKeyVMD("child", 10,
+        Eigen::Vector3f(5.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    // Evaluate at frame 100 (well past the single key)
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(100.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& animT = childNode->GetAnimationTranslate();
+
+    // Past last key: should hold last key value
+    TEST_ASSERT_FLOAT_EQ(5.0f, animT.x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.z());
+}
+
+static void test_Integration_VMD_EvaluateBeforeFirstKey()
+{
+    std::cout << "[test] Integration_VMD_EvaluateBeforeFirstKey\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Single key at frame 30: translate (10, 0, 0)
+    auto vmd = MakeSingleKeyVMD("child", 30,
+        Eigen::Vector3f(10.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    // Evaluate at frame 0 (before the key at frame 30)
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    anim.Evaluate(0.0f);
+    model->UpdateMorphAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& animT = childNode->GetAnimationTranslate();
+
+    // Before first key: should use first key value
+    TEST_ASSERT_FLOAT_EQ(10.0f, animT.x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, animT.z());
+}
+
+static void test_Integration_VMD_NonexistentBoneNameIgnored()
+{
+    std::cout << "[test] Integration_VMD_NonexistentBoneNameIgnored\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // VMD references a bone that doesn't exist in the model
+    auto vmd = MakeSingleKeyVMD("nonexistent_bone", 0,
+        Eigen::Vector3f(100.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    // No node controllers should be created
+    TEST_ASSERT_EQ(int32_t(0), anim.GetNodeKeyNum());
+
+    // Evaluating should not crash
+    model->InitializeAnimation();
+    model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+    // Bones should remain in initial pose
+    auto* rootNode = model->GetNodeManager()->GetMMDNode(size_t(0));
+    TEST_ASSERT_FLOAT_EQ(0.0f, rootNode->GetLocalTransform()(0, 3));
+}
+
+static void test_Integration_VMD_MultipleConsecutiveFrames()
+{
+    std::cout << "[test] Integration_VMD_MultipleConsecutiveFrames\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto vmd = MakeTwoKeyVMD("child",
+        0, Eigen::Vector3f::Zero(), Eigen::Quaternionf::Identity(),
+        60, Eigen::Vector3f(60.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+
+    // Run multiple consecutive frames like C4D would
+    float prevTranslateX = 0.0f;
+    for (int frame = 0; frame <= 60; frame += 10)
+    {
+        model->UpdateAllAnimation(&anim, static_cast<float>(frame), 1.0f / 30.0f);
+
+        auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+        float currentX = childNode->GetAnimationTranslate().x();
+
+        // Animation translate X should be monotonically increasing
+        if (frame > 0)
+        {
+            TEST_ASSERT(currentX >= prevTranslateX - 1e-5f);
+        }
+        prevTranslateX = currentX;
+
+        // No NaN in transforms
+        const auto& local = childNode->GetLocalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(local(r, c)));
+    }
+}
+
+// ===========================================================================
 // main
 // ===========================================================================
 
@@ -1425,6 +2473,40 @@ int main()
     test_VMDFile_CamCamerasNonEmpty();
     test_VMDFile_CamCameraDataValid();
     test_VMDFile_CamBufferAndPathSameResult();
+
+    // MMDNode UpdateLocalTransform / UpdateGlobalTransform
+    test_MMDNode_UpdateLocalTransform_IdentityPose();
+    test_MMDNode_UpdateLocalTransform_WithTranslation();
+    test_MMDNode_UpdateLocalTransform_WithRotation90Y();
+    test_MMDNode_UpdateLocalTransform_WithAnimationData();
+    test_MMDNode_UpdateLocalTransform_WithScale();
+    test_MMDNode_UpdateLocalTransform_IKRotateApplied();
+    test_MMDNode_UpdateGlobalTransform_SingleRoot();
+    test_MMDNode_UpdateGlobalTransform_ParentChild();
+    test_MMDNode_UpdateGlobalTransform_ParentRotation();
+    test_MMDNode_UpdateGlobalTransform_ThreeLevelHierarchy();
+
+    // VMD Animation Integration
+    test_Integration_VMD_SingleBoneRotationAtFrame0();
+    test_Integration_VMD_SingleBoneTranslationAtFrame0();
+    test_Integration_VMD_RootBoneUnaffectedWhenNoKey();
+    test_Integration_VMD_TwoKeyLinearInterpolation();
+    test_Integration_VMD_TwoKeyRotationSlerp();
+    test_Integration_VMD_GlobalTransformHierarchy();
+    test_Integration_VMD_UpdateAllAnimation();
+    test_Integration_VMD_EvaluatePastLastKey();
+    test_Integration_VMD_EvaluateBeforeFirstKey();
+    test_Integration_VMD_NonexistentBoneNameIgnored();
+    test_Integration_VMD_MultipleConsecutiveFrames();
+
+    // C4D Matrix Extraction Pattern
+    test_Integration_C4DMatrixExtractionPattern_Translation();
+    test_Integration_C4DMatrixExtractionPattern_Rotation();
+    test_Integration_C4DMatrixExtractionPattern_CombinedTranslateRotate();
+
+    // Real File Integration
+    test_Integration_RealFile_LoadPMXAndApplyVMD();
+    test_Integration_RealFile_LocalTransformDeltaConsistency();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";
