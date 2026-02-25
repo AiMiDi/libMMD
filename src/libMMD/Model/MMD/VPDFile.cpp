@@ -6,6 +6,8 @@
 #include "VPDFile.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <string>
 
 #include <libMMD/Base/Log.h>
 #include <libMMD/Base/File.h>
@@ -359,6 +361,80 @@ namespace libmmd
 
 		vpd->m_morphs = std::move(morphs);
 
+		return true;
+	}
+
+	static std::string ConvertU8ToSjis(const std::string& u8Str)
+	{
+		std::u16string u16Str;
+		if (!ConvU8ToU16(u8Str, u16Str))
+		{
+			return u8Str;
+		}
+		return ConvertU16ToSjisString(u16Str);
+	}
+
+	bool WriteVPDFile(const VPDFile* vpd, const char* filename)
+	{
+		File file;
+		if (!file.Create(filename))
+		{
+			LIBMMD_INFO("VPD File Open Fail. {}", filename);
+			return false;
+		}
+
+		auto writeLine = [&file](const std::string& line) -> bool
+		{
+			std::string lineWithCRLF = line + "\r\n";
+			return file.Write(lineWithCRLF.data(), lineWithCRLF.size());
+		};
+
+		writeLine("Vocaloid Pose Data file");
+		writeLine("");
+		writeLine("miku.osm;\t\t\t\t// parent file name");
+
+		int totalBones = static_cast<int>(vpd->m_bones.size());
+		writeLine(std::to_string(totalBones) + ";\t\t\t\t\t\t\t// total bones");
+		writeLine("");
+
+		for (int i = 0; i < totalBones; i++)
+		{
+			const auto& bone = vpd->m_bones[i];
+			std::string sjisName = ConvertU8ToSjis(bone.m_boneName);
+
+			writeLine("Bone" + std::to_string(i) + "{" + sjisName);
+
+			char buf[256];
+			std::snprintf(buf, sizeof(buf), "  %f,%f,%f;",
+				bone.m_translate.x(), bone.m_translate.y(), bone.m_translate.z());
+			writeLine(buf);
+
+			std::snprintf(buf, sizeof(buf), "  %f,%f,%f,%f;",
+				bone.m_quaternion.x(), bone.m_quaternion.y(),
+				bone.m_quaternion.z(), bone.m_quaternion.w());
+			writeLine(buf);
+
+			writeLine("}");
+			writeLine("");
+		}
+
+		int totalMorphs = static_cast<int>(vpd->m_morphs.size());
+		for (int i = 0; i < totalMorphs; i++)
+		{
+			const auto& morph = vpd->m_morphs[i];
+			std::string sjisName = ConvertU8ToSjis(morph.m_morphName);
+
+			writeLine("Morph" + std::to_string(i) + "{" + sjisName);
+
+			char buf[64];
+			std::snprintf(buf, sizeof(buf), "  %f;", morph.m_weight);
+			writeLine(buf);
+
+			writeLine("}");
+			writeLine("");
+		}
+
+		LIBMMD_INFO("VPD File Write Successed. {}", filename);
 		return true;
 	}
 }

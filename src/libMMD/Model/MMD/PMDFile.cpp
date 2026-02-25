@@ -60,10 +60,10 @@ namespace libmmd
 		bool WriteHeader(const PMDFile* pmdFile, File& file)
 		{
 			const auto& [m_magic, m_version, m_modelName, m_comment, m_haveEnglishNameExt, m_englishModelNameExt, m_englishCommentExt] = pmdFile->m_header;
-			Write(&m_magic, file);
+			Write(m_magic, file);
 			Write(&m_version, file);
-			Write(&m_modelName, file);
-			Write(&m_comment, file);
+			Write(m_modelName, file);
+			Write(m_comment, file);
 
 			return !file.IsBad();
 		}
@@ -202,7 +202,7 @@ namespace libmmd
 				Write(&m_toonIndex, file);
 				Write(&m_edgeFlag, file);
 				Write(&m_faceVertexCount, file);
-				Write(&m_textureName, file);
+				Write(m_textureName, file);
 			}
 
 			return !file.IsBad();
@@ -243,7 +243,7 @@ namespace libmmd
 
 			for (const auto& [m_boneName, m_parent, m_tail, m_boneType, m_ikParent, m_position, m_englishBoneNameExt] : pmdFile->m_bones)
 			{
-				Write(&m_boneName, file);
+				Write(m_boneName, file);
 				Write(&m_parent, file);
 				Write(&m_tail, file);
 				Write(&m_boneType, file);
@@ -352,7 +352,7 @@ namespace libmmd
 
 			for (const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] : pmdFile->m_morphs)
 			{
-				Write(&m_morphName, file);
+				Write(m_morphName, file);
 
 				uint32_t vertexCount = static_cast<uint32_t>(m_vertices.size());
 				Write(&vertexCount, file);
@@ -464,7 +464,7 @@ namespace libmmd
 				}
 				else
 				{
-					Write(&m_name, file);
+					Write(m_name, file);
 				}
 			}
 
@@ -475,19 +475,14 @@ namespace libmmd
 			}
 			Write(&displayCount, file);
 
-			for (uint32_t displayIdx = 0; displayIdx < displayCount; displayIdx++)
+			for (const auto& displayList : pmdFile->m_boneDisplayLists)
 			{
-				uint16_t boneIdx = 0;
-				uint8_t frameIdx = 0;
-				for (const auto& displayList : pmdFile->m_boneDisplayLists)
+				uint8_t frameIdx = static_cast<uint8_t>(&displayList - &pmdFile->m_boneDisplayLists[0]);
+				for (const auto& bone : displayList.m_displayList)
 				{
-					for (const auto& bone : displayList.m_displayList)
-					{
-						boneIdx = bone;
-						frameIdx = static_cast<uint8_t>(&displayList - &pmdFile->m_boneDisplayLists[0]);
-						Write(&boneIdx, file);
-						Write(&frameIdx, file);
-					}
+					uint16_t boneIdx = bone;
+					Write(&boneIdx, file);
+					Write(&frameIdx, file);
 				}
 			}
 
@@ -550,15 +545,15 @@ namespace libmmd
 			if (pmdFile->m_header.m_haveEnglishNameExt != 0)
 			{
 				// ModelName
-				Write(&pmdFile->m_header.m_englishModelNameExt, file);
+				Write(pmdFile->m_header.m_englishModelNameExt, file);
 
 				// Comment
-				Write(&pmdFile->m_header.m_englishCommentExt, file);
+				Write(pmdFile->m_header.m_englishCommentExt, file);
 
 				// BoneName
 				for (const auto& [m_boneName, m_parent, m_tail, m_boneType, m_ikParent, m_position, m_englishBoneNameExt] : pmdFile->m_bones)
 				{
-					Write(&m_englishBoneNameExt, file);
+					Write(m_englishBoneNameExt, file);
 				}
 
 				// BlendShape Name
@@ -566,7 +561,7 @@ namespace libmmd
 				for (size_t bsIdx = 1; bsIdx < numBlensShape; bsIdx++)
 				{
 					const auto& [m_morphName, m_morphType, m_vertices, m_englishShapeNameExt] = pmdFile->m_morphs[bsIdx];
-					Write(&m_englishShapeNameExt, file);
+					Write(m_englishShapeNameExt, file);
 				}
 
 				// BoneDisplayNameLists
@@ -574,7 +569,7 @@ namespace libmmd
 				for (size_t displayIdx = 1; displayIdx < numBoneDisplayName; displayIdx++)
 				{
 					const auto& [m_name, m_displayList, m_englishNameExt] = pmdFile->m_boneDisplayLists[displayIdx];
-					Write(&m_englishNameExt, file);
+					Write(m_englishNameExt, file);
 				}
 			}
 
@@ -600,7 +595,7 @@ namespace libmmd
 		{
 			for (const auto& toonTexName : pmdFile->m_toonTextureNames)
 			{
-				Write(&toonTexName, file);
+				Write(toonTexName, file);
 			}
 
 			return !file.IsBad();
@@ -650,7 +645,7 @@ namespace libmmd
 
 			for (const auto& [m_rigidBodyName, m_boneIndex, m_groupIndex, m_groupTarget, m_shapeType, m_shapeWidth, m_shapeHeight, m_shapeDepth, m_pos, m_rot, m_rigidBodyWeight, m_rigidBodyPosDimmer, m_rigidBodyRotDimmer, m_rigidBodyRecoil, m_rigidBodyFriction, m_rigidBodyType] : pmdFile->m_rigidBodies)
 			{
-				Write(&m_rigidBodyName, file);
+				Write(m_rigidBodyName, file);
 				Write(&m_boneIndex, file);
 				Write(&m_groupIndex, file);
 				Write(&m_groupTarget, file);
@@ -710,7 +705,7 @@ namespace libmmd
 
 			for (const auto& [m_jointName, m_rigidBodyA, m_rigidBodyB, m_jointPos, m_jointRot, m_constrainPos1, m_constrainPos2, m_constrainRot1, m_constrainRot2, m_springPos, m_springRot] : pmdFile->m_joints)
 			{
-				Write(&m_jointName, file);
+				Write(m_jointName, file);
 				Write(&m_rigidBodyA, file);
 				Write(&m_rigidBodyB, file);
 				Write(&m_jointPos, file);

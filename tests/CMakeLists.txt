@@ -44,4 +44,19 @@ if (LIBMMD_ENABLE_TEST)
         NAME path_util_test
         COMMAND $<TARGET_FILE:path_util_test>
     )
+
+    # File round-trip tests (read -> write -> read consistency)
+    add_executable(file_roundtrip_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/FileRoundTrip.test.cpp
+    )
+    target_include_directories(file_roundtrip_test PRIVATE
+        ${PROJECT_SOURCE_DIR}/external/spdlog/include
+        ${LIBMMD_EIGEN_ROOT}
+    )
+    target_link_libraries(file_roundtrip_test libMMD)
+
+    add_test(
+        NAME file_roundtrip_test
+        COMMAND $<TARGET_FILE:file_roundtrip_test>
+    )
 endif()

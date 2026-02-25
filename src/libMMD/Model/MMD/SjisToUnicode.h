@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -30,6 +30,13 @@ namespace libmmd
 	 * @return UTF-32 string.
 	 */
 	std::u32string ConvertSjisToU32String(const char* sjisCode);
+
+	/**
+	 * @brief Convert a UTF-16 string to a Shift-JIS string.
+	 * @param u16Str The UTF-16 string to convert.
+	 * @return Shift-JIS encoded string. Characters without a mapping are replaced with '?'.
+	 */
+	std::string ConvertU16ToSjisString(const std::u16string& u16Str);
 }
 
 #endif // !LIBMMD_MODEL_MMD_SJISTOUNICODE_H_

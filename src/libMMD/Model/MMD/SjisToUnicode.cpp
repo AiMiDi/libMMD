@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright(c) 2016-2017 benikabocha.
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 namespace
 {
@@ -9322,5 +9323,76 @@ namespace libmmd
 	std::u32string ConvertSjisToU32String(const char* sjisCode)
 	{
 		return ConvertSjisToCharTString<char32_t>(sjisCode);
+	}
+
+	static std::unordered_map<char16_t, uint16_t> BuildU16ToSjisMap()
+	{
+		std::unordered_map<char16_t, uint16_t> rev;
+
+		for (int i = ASCIIBegin; i <= ASCIIEnd; i++)
+		{
+			auto u = static_cast<char16_t>(AsciiTable[i]);
+			if (u != 0xFFFF)
+				rev[u] = static_cast<uint16_t>(i);
+		}
+
+		for (int i = HankakuBegin; i <= HankakuEnd; i++)
+		{
+			auto u = static_cast<char16_t>(HankakuTable[i - HankakuBegin]);
+			if (u != 0xFFFF)
+				rev[u] = static_cast<uint16_t>(i);
+		}
+
+		for (int c1 = SjisFirstBegin1; c1 <= SjisFirstEnd1; c1++)
+		{
+			for (int c2 = SjisSecondBegin; c2 <= SjisSecondEnd; c2++)
+			{
+				auto u = static_cast<char16_t>(SjisTable1[c1 - SjisFirstBegin1][c2 - SjisSecondBegin]);
+				if (u != 0xFFFF && rev.find(u) == rev.end())
+					rev[u] = static_cast<uint16_t>((c1 << 8) | c2);
+			}
+		}
+
+		for (int c1 = SjisFirstBegin2; c1 <= SjisFirstEnd2; c1++)
+		{
+			for (int c2 = SjisSecondBegin; c2 <= SjisSecondEnd; c2++)
+			{
+				auto u = static_cast<char16_t>(SjisTable2[c1 - SjisFirstBegin2][c2 - SjisSecondBegin]);
+				if (u != 0xFFFF && rev.find(u) == rev.end())
+					rev[u] = static_cast<uint16_t>((c1 << 8) | c2);
+			}
+		}
+
+		return rev;
+	}
+
+	std::string ConvertU16ToSjisString(const std::u16string& u16Str)
+	{
+		static const auto revMap = BuildU16ToSjisMap();
+
+		std::string result;
+		result.reserve(u16Str.size() * 2);
+
+		for (char16_t ch : u16Str)
+		{
+			auto it = revMap.find(ch);
+			if (it == revMap.end())
+			{
+				result.push_back('?');
+				continue;
+			}
+			uint16_t sjis = it->second;
+			if (sjis <= 0xFF)
+			{
+				result.push_back(static_cast<char>(sjis));
+			}
+			else
+			{
+				result.push_back(static_cast<char>((sjis >> 8) & 0xFF));
+				result.push_back(static_cast<char>(sjis & 0xFF));
+			}
+		}
+
+		return result;
 	}
 }

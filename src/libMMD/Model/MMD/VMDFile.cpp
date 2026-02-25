@@ -42,8 +42,8 @@ namespace libmmd
 
 		bool WriteHeader(const VMDFile* vmd, File& file)
 		{
-			Write(&vmd->m_header.m_header, file);
-			Write(&vmd->m_header.m_modelName, file);
+			Write(vmd->m_header.m_header, file);
+			Write(vmd->m_header.m_modelName, file);
 			return !file.IsBad();
 		}
 
@@ -78,7 +78,7 @@ namespace libmmd
 
 			for (const auto& motion : vmd->m_motions)
 			{
-				Write(&motion.m_boneName, file);
+				Write(motion.m_boneName, file);
 				Write(&motion.m_frame, file);
 				Write(&motion.m_translate, file);
 				Write(&motion.m_quaternion, file);
@@ -117,7 +117,7 @@ namespace libmmd
 
 			for (const auto& morph : vmd->m_morphs)
 			{
-				Write(&morph.m_blendShapeName, file);
+				Write(morph.m_blendShapeName, file);
 				Write(&morph.m_frame, file);
 				Write(&morph.m_weight, file);
 			}
@@ -292,7 +292,7 @@ namespace libmmd
 				}
 				for (const auto& ikInfo : ik.m_ikInfos)
 				{
-					Write(&ikInfo.m_name, file);
+					Write(ikInfo.m_name, file);
 					Write(&ikInfo.m_enable, file);
 				}
 			}

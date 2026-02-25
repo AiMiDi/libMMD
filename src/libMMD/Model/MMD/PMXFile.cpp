@@ -834,35 +834,41 @@ namespace libmmd
 
 		bool WriteString(const PMXFile* pmx, const std::string& val, File& file)
 		{
-			uint32_t bufSize = static_cast<uint32_t>(val.size());
-			if (!Write(&bufSize, file))
+			uint32_t bufSize;
+			if (pmx->m_header.m_encode == 0)
+			{
+				// UTF-16
+				std::u16string utf16Str;
+				if (!ConvU8ToU16(val, utf16Str))
+				{
+					return false;
+				}
+				bufSize = static_cast<uint32_t>(utf16Str.size() * sizeof(char16_t));
+				if (!Write(&bufSize, file))
+				{
+					return false;
+				}
+				if (bufSize > 0 && !file.Write(utf16Str.data(), utf16Str.size()))
+				{
+					return false;
+				}
+			}
+			else if (pmx->m_header.m_encode == 1)
+			{
+				// UTF-8
+				bufSize = static_cast<uint32_t>(val.size());
+				if (!Write(&bufSize, file))
+				{
+					return false;
+				}
+				if (bufSize > 0 && !file.Write(val.data(), bufSize))
+				{
+					return false;
+				}
+			}
+			else
 			{
 				return false;
-			}
-
-			if (bufSize > 0)
-			{
-				if (pmx->m_header.m_encode == 0)
-				{
-					// UTF-16
-					std::u16string utf16Str;
-					if (!ConvU8ToU16(val, utf16Str))
-					{
-						return false;
-					}
-					if (!file.Write(utf16Str.data(), utf16Str.size()))
-					{
-						return false;
-					}
-				}
-				else if (pmx->m_header.m_encode == 1)
-				{
-					// UTF-8
-					if (!file.Write(val.data(), val.size()))
-					{
-						return false;
-					}
-				}
 			}
 
 			return !file.IsBad();
@@ -900,7 +906,7 @@ namespace libmmd
 		{
 			const auto& header = pmxFile->m_header;
 
-			Write(&header.m_magic, file);
+			Write(header.m_magic, file);
 			Write(&header.m_version, file);
 
 			Write(&header.m_dataSize, file);
@@ -1215,6 +1221,44 @@ namespace libmmd
 				Write(&morph.m_morphType, file);
 
 				int32_t dataCount;
+				if (morph.m_morphType == PMXMorphType::Position)
+				{
+					dataCount = static_cast<int32_t>(morph.m_positionMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::UV ||
+					morph.m_morphType == PMXMorphType::AddUV1 ||
+					morph.m_morphType == PMXMorphType::AddUV2 ||
+					morph.m_morphType == PMXMorphType::AddUV3 ||
+					morph.m_morphType == PMXMorphType::AddUV4)
+				{
+					dataCount = static_cast<int32_t>(morph.m_uvMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::Bone)
+				{
+					dataCount = static_cast<int32_t>(morph.m_boneMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::Material)
+				{
+					dataCount = static_cast<int32_t>(morph.m_materialMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::Group)
+				{
+					dataCount = static_cast<int32_t>(morph.m_groupMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::Flip)
+				{
+					dataCount = static_cast<int32_t>(morph.m_flipMorph.size());
+				}
+				else if (morph.m_morphType == PMXMorphType::Impluse)
+				{
+					dataCount = static_cast<int32_t>(morph.m_impulseMorph.size());
+				}
+				else
+				{
+					LIBMMD_ERROR("Unsupported Morph Type:[{}]", static_cast<int>(morph.m_morphType));
+					return false;
+				}
+
 				if (!Write(&dataCount, file))
 				{
 					return false;

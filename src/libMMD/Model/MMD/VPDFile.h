@@ -48,6 +48,14 @@ namespace libmmd
 	 * @return True if the file was read successfully, false otherwise.
 	 */
 	bool ReadVPDFile(VPDFile* vpd, const char* filename);
+
+	/**
+	 * @brief Writes a VPD file to the specified filename.
+	 * @param vpd Pointer to the VPDFile structure containing the data to write.
+	 * @param filename The name of the file to write.
+	 * @return True if the file was written successfully, false otherwise.
+	 */
+	bool WriteVPDFile(const VPDFile* vpd, const char* filename);
 }
 
 #endif // !LIBMMD_MODEL_MMD_VPDFILE_H_
