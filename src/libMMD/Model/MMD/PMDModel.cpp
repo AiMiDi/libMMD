@@ -88,6 +88,12 @@ namespace libmmd
 		}
 
 		ResetPhysics();
+
+		const auto rigidbodys = m_physicsMan.GetRigidBodys();
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->SetActivation(true);
+		}
 	}
 
 	void PMDModel::BeginAnimation()
@@ -184,20 +190,12 @@ namespace libmmd
 			return;
 		}
 
+		physics->Update(elapsed);
+
 		const auto rigidbodys = physicsMan->GetRigidBodys();
 		for (const auto& rb : *rigidbodys)
 		{
-			rb->SetActivation(true);
-		}
-
-		physics->Update(elapsed);
-
-		for (const auto& rb : *rigidbodys)
-		{
 			rb->ReflectGlobalTransform();
-		}
-		for (const auto& rb : *rigidbodys)
-		{
 			rb->CalcLocalTransform();
 		}
 

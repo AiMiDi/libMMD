@@ -247,6 +247,12 @@ namespace libmmd
 		EndAnimation();
 
 		ResetPhysics();
+
+		const auto rigidbodys = m_physicsMan.GetRigidBodys();
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->SetActivation(true);
+		}
 	}
 
 	void PMXModel::BeginAnimation()
@@ -267,36 +273,23 @@ namespace libmmd
 
 	void PMXModel::UpdateNodeAnimation(const bool afterPhysicsAnim)
 	{
-		for (const auto pmxNode : m_sortedNodes)
-		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
+		const auto& nodes = afterPhysicsAnim ? m_afterPhysicsNodes : m_beforePhysicsNodes;
 
+		for (const auto pmxNode : nodes)
+		{
 			pmxNode->UpdateLocalTransform();
 		}
 
-		for (const auto pmxNode : m_sortedNodes)
+		for (const auto pmxNode : nodes)
 		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
 			if (pmxNode->GetParent() == nullptr)
 			{
 				pmxNode->UpdateGlobalTransform();
 			}
 		}
 
-		for (const auto pmxNode : m_sortedNodes)
+		for (const auto pmxNode : nodes)
 		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
 			if (pmxNode->GetAppendNode() != nullptr)
 			{
 				pmxNode->UpdateAppendTransform();
@@ -310,13 +303,8 @@ namespace libmmd
 			}
 		}
 
-		for (const auto pmxNode : m_sortedNodes)
+		for (const auto pmxNode : nodes)
 		{
-			if (pmxNode->IsDeformAfterPhysics() != afterPhysicsAnim)
-			{
-				continue;
-			}
-
 			if (pmxNode->GetParent() == nullptr)
 			{
 				pmxNode->UpdateGlobalTransform();
@@ -377,21 +365,12 @@ namespace libmmd
 			return;
 		}
 
+		physics->Update(elapsed);
+
 		const auto rigidbodys = physicsMan->GetRigidBodys();
 		for (const auto& rb : *rigidbodys)
 		{
-			rb->SetActivation(true);
-		}
-
-		physics->Update(elapsed);
-
-		for (const auto& rb : *rigidbodys)
-		{
 			rb->ReflectGlobalTransform();
-		}
-
-		for (const auto& rb : *rigidbodys)
-		{
 			rb->CalcLocalTransform();
 		}
 
@@ -619,6 +598,16 @@ namespace libmmd
 			m_sortedNodes.end(),
 			[](const PMXNode* x, const PMXNode* y) {return x->GetDeformDepth() < y->GetDeformDepth(); }
 		);
+
+		m_beforePhysicsNodes.clear();
+		m_afterPhysicsNodes.clear();
+		for (auto* node : m_sortedNodes)
+		{
+			if (node->IsDeformAfterPhysics())
+				m_afterPhysicsNodes.push_back(node);
+			else
+				m_beforePhysicsNodes.push_back(node);
+		}
 
 		// IK
 		for (size_t i = 0; i < file.m_bones.size(); i++)
@@ -986,7 +975,8 @@ namespace libmmd
 		const auto& morphs = *m_morphMan.GetMorphs();
 		for (const auto & morph : morphs)
 		{
-			Morph(morph.get(), morph->GetWeight());
+			if (morph->GetWeight() != 0.0f)
+				Morph(morph.get(), morph->GetWeight());
 		}
 
 		EndMorphMaterial();

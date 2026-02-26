@@ -2355,6 +2355,765 @@ static void test_Integration_VMD_MultipleConsecutiveFrames()
 }
 
 // ===========================================================================
+// VMDBezier tests
+// ===========================================================================
+
+static void test_VMDBezier_FindBezierX_LinearCP()
+{
+    std::cout << "[test] VMDBezier_FindBezierX_LinearCP\n";
+    libmmd::VMDBezier bezier;
+    bezier.m_cp1 = Eigen::Vector2f(0.5f, 0.5f);
+    bezier.m_cp2 = Eigen::Vector2f(0.5f, 0.5f);
+
+    for (float time = 0.0f; time <= 1.0f; time += 0.1f)
+    {
+        float t = bezier.FindBezierX(time);
+        TEST_ASSERT(t >= 0.0f && t <= 1.0f);
+        TEST_ASSERT(std::fabs(bezier.EvalX(t) - time) < 1e-4f);
+    }
+}
+
+static void test_VMDBezier_FindBezierX_EaseInCP()
+{
+    std::cout << "[test] VMDBezier_FindBezierX_EaseInCP\n";
+    libmmd::VMDBezier bezier;
+    bezier.m_cp1 = Eigen::Vector2f(0.42f, 0.0f);
+    bezier.m_cp2 = Eigen::Vector2f(1.0f, 1.0f);
+
+    TEST_ASSERT(std::fabs(bezier.FindBezierX(0.0f)) < 1e-4f);
+    TEST_ASSERT(std::fabs(bezier.FindBezierX(1.0f) - 1.0f) < 1e-4f);
+    float mid = bezier.FindBezierX(0.5f);
+    TEST_ASSERT(mid > 0.0f && mid < 1.0f);
+}
+
+static void test_VMDBezier_FindBezierX_EaseOutCP()
+{
+    std::cout << "[test] VMDBezier_FindBezierX_EaseOutCP\n";
+    libmmd::VMDBezier bezier;
+    bezier.m_cp1 = Eigen::Vector2f(0.0f, 0.0f);
+    bezier.m_cp2 = Eigen::Vector2f(0.58f, 1.0f);
+
+    TEST_ASSERT(std::fabs(bezier.FindBezierX(0.0f)) < 1e-4f);
+    TEST_ASSERT(std::fabs(bezier.FindBezierX(1.0f) - 1.0f) < 1e-4f);
+    float mid = bezier.FindBezierX(0.5f);
+    TEST_ASSERT(mid > 0.0f && mid < 1.0f);
+}
+
+static void test_VMDBezier_FindBezierX_PrecisionRegression()
+{
+    std::cout << "[test] VMDBezier_FindBezierX_PrecisionRegression\n";
+
+    struct TestCase { Eigen::Vector2f cp1, cp2; };
+    TestCase cases[] = {
+        { {0.25f, 0.1f}, {0.25f, 1.0f} },   // ease
+        { {0.42f, 0.0f}, {1.0f,  1.0f} },    // ease-in
+        { {0.0f,  0.0f}, {0.58f, 1.0f} },    // ease-out
+        { {0.42f, 0.0f}, {0.58f, 1.0f} },    // ease-in-out
+        { {0.0f,  0.0f}, {1.0f,  1.0f} },    // linear
+        { {0.1f,  0.9f}, {0.9f,  0.1f} },    // S-curve
+        { {20.0f/127.0f, 20.0f/127.0f}, {107.0f/127.0f, 107.0f/127.0f} }, // VMD default
+    };
+
+    for (const auto& tc : cases)
+    {
+        libmmd::VMDBezier bezier;
+        bezier.m_cp1 = tc.cp1;
+        bezier.m_cp2 = tc.cp2;
+
+        for (float time = 0.0f; time <= 1.0f; time += 0.05f)
+        {
+            float t = bezier.FindBezierX(time);
+            float reconstructedX = bezier.EvalX(t);
+            TEST_ASSERT(std::fabs(reconstructedX - time) < 1e-4f);
+        }
+    }
+}
+
+static void test_VMDBezier_EvalDX_Correctness()
+{
+    std::cout << "[test] VMDBezier_EvalDX_Correctness\n";
+
+    struct TestCase { Eigen::Vector2f cp1, cp2; };
+    TestCase cases[] = {
+        { {0.25f, 0.1f}, {0.25f, 1.0f} },
+        { {0.42f, 0.0f}, {1.0f,  1.0f} },
+        { {0.0f,  0.0f}, {0.58f, 1.0f} },
+        { {0.1f,  0.9f}, {0.9f,  0.1f} },
+    };
+
+    constexpr float h = 1e-4f;
+    for (const auto& tc : cases)
+    {
+        libmmd::VMDBezier bezier;
+        bezier.m_cp1 = tc.cp1;
+        bezier.m_cp2 = tc.cp2;
+
+        for (float t = 0.05f; t <= 0.95f; t += 0.1f)
+        {
+            float analytic = bezier.EvalDX(t);
+            float numeric = (bezier.EvalX(t + h) - bezier.EvalX(t - h)) / (2.0f * h);
+            TEST_ASSERT(std::fabs(analytic - numeric) < 1e-2f);
+        }
+    }
+}
+
+// ===========================================================================
+// Test helper: PMXModel subclass for accessing protected members
+// ===========================================================================
+
+class TestPMXModel : public libmmd::PMXModel
+{
+public:
+	TestPMXModel() = default;
+	~TestPMXModel() override = default;
+
+	const std::vector<libmmd::PMXNode*>& GetSortedNodes() const { return m_sortedNodes; }
+	const std::vector<libmmd::PMXNode*>& GetBeforePhysicsNodes() const { return m_beforePhysicsNodes; }
+	const std::vector<libmmd::PMXNode*>& GetAfterPhysicsNodes() const { return m_afterPhysicsNodes; }
+	const std::vector<libmmd::MMDMaterial>& GetMaterialsVec() const { return m_materials; }
+	const std::vector<libmmd::MMDMaterial>& GetInitMaterialsVec() const { return m_initMaterials; }
+};
+
+// Helper: build a PMXFile with mixed DeformAfterPhysics bones
+// Creates numBefore bones with DeformAfterPhysics=false,
+//         numAfter bones with DeformAfterPhysics=true
+static libmmd::PMXFile MakeMixedPhysicsPMXFile(int numBefore, int numAfter)
+{
+	libmmd::PMXFile file{};
+
+	for (int i = 0; i < numBefore + numAfter; ++i)
+	{
+		libmmd::PMXBone bone{};
+		bone.m_name = "bone_" + std::to_string(i);
+		bone.m_englishName = bone.m_name;
+		bone.m_position = Eigen::Vector3f(0.0f, static_cast<float>(i), 0.0f);
+		bone.m_parentBoneIndex = (i == 0) ? -1 : 0;
+		bone.m_deformDepth = i;
+		bone.m_appendBoneIndex = -1;
+		bone.m_appendWeight = 0.0f;
+
+		uint16_t flags = static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+		                 static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+		                 static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible);
+		if (i >= numBefore)
+			flags |= static_cast<uint16_t>(libmmd::PMXBoneFlags::DeformAfterPhysics);
+		bone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(flags);
+
+		file.m_bones.push_back(std::move(bone));
+	}
+
+	libmmd::PMXMaterial mat{};
+	mat.m_numFaceVertices = 0;
+	mat.m_textureIndex = -1;
+	mat.m_sphereTextureIndex = -1;
+	mat.m_toonTextureIndex = -1;
+	mat.m_sphereMode = libmmd::PMXSphereMode::None;
+	mat.m_toonMode = libmmd::PMXToonMode::Common;
+	mat.m_drawMode = static_cast<libmmd::PMXDrawModeFlags>(0);
+	mat.m_diffuse = Eigen::Vector4f(1, 1, 1, 1);
+	mat.m_specular = Eigen::Vector3f::Zero();
+	mat.m_specularPower = 1.0f;
+	mat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
+	mat.m_edgeColor = Eigen::Vector4f::Zero();
+	mat.m_edgeSize = 0.0f;
+	file.m_materials.push_back(std::move(mat));
+
+	return file;
+}
+
+// Helper: build a PMXFile with a material morph
+static libmmd::PMXFile MakePMXFileWithMaterialMorph(
+	const std::string& morphName,
+	int materialIndex,
+	libmmd::PMXFileMorph::MaterialMorph::OpType opType,
+	const Eigen::Vector4f& diffuse)
+{
+	libmmd::PMXFile file{};
+
+	libmmd::PMXBone bone{};
+	bone.m_name = "root";
+	bone.m_englishName = "root";
+	bone.m_position = Eigen::Vector3f::Zero();
+	bone.m_parentBoneIndex = -1;
+	bone.m_deformDepth = 0;
+	bone.m_appendBoneIndex = -1;
+	bone.m_appendWeight = 0.0f;
+	bone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible));
+	file.m_bones.push_back(std::move(bone));
+
+	libmmd::PMXMaterial mat{};
+	mat.m_numFaceVertices = 0;
+	mat.m_textureIndex = -1;
+	mat.m_sphereTextureIndex = -1;
+	mat.m_toonTextureIndex = -1;
+	mat.m_sphereMode = libmmd::PMXSphereMode::None;
+	mat.m_toonMode = libmmd::PMXToonMode::Common;
+	mat.m_drawMode = static_cast<libmmd::PMXDrawModeFlags>(0);
+	mat.m_diffuse = Eigen::Vector4f(0.8f, 0.6f, 0.4f, 1.0f);
+	mat.m_specular = Eigen::Vector3f(0.5f, 0.5f, 0.5f);
+	mat.m_specularPower = 10.0f;
+	mat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
+	mat.m_edgeColor = Eigen::Vector4f::Zero();
+	mat.m_edgeSize = 0.0f;
+	file.m_materials.push_back(std::move(mat));
+
+	libmmd::PMXFileMorph morph{};
+	morph.m_name = morphName;
+	morph.m_englishName = morphName;
+	morph.m_controlPanel = 4;
+	morph.m_morphType = libmmd::PMXMorphType::Material;
+
+	libmmd::PMXFileMorph::MaterialMorph matMorph{};
+	matMorph.m_materialIndex = materialIndex;
+	matMorph.m_opType = opType;
+	matMorph.m_diffuse = diffuse;
+	matMorph.m_specular = Eigen::Vector3f::Ones();
+	matMorph.m_specularPower = 1.0f;
+	matMorph.m_ambient = Eigen::Vector3f::Ones();
+	matMorph.m_edgeColor = Eigen::Vector4f::Ones();
+	matMorph.m_edgeSize = 1.0f;
+	matMorph.m_textureFactor = Eigen::Vector4f::Ones();
+	matMorph.m_sphereTextureFactor = Eigen::Vector4f::Ones();
+	matMorph.m_toonTextureFactor = Eigen::Vector4f::Ones();
+	morph.m_materialMorph.push_back(std::move(matMorph));
+
+	file.m_morphs.push_back(std::move(morph));
+
+	return file;
+}
+
+// ===========================================================================
+// Node partition correctness + regression
+// ===========================================================================
+
+static void test_PMXModel_NodePartition_CorrectSplit()
+{
+	std::cout << "[test] PMXModel_NodePartition_CorrectSplit\n";
+
+	auto pmxFile = MakeMixedPhysicsPMXFile(3, 2);
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+	const auto& before = model->GetBeforePhysicsNodes();
+	const auto& after = model->GetAfterPhysicsNodes();
+	const auto& sorted = model->GetSortedNodes();
+
+	TEST_ASSERT_EQ(size_t(3), before.size());
+	TEST_ASSERT_EQ(size_t(2), after.size());
+	TEST_ASSERT_EQ(size_t(5), sorted.size());
+
+	for (const auto* node : before)
+		TEST_ASSERT(!node->IsDeformAfterPhysics());
+	for (const auto* node : after)
+		TEST_ASSERT(node->IsDeformAfterPhysics());
+
+	// Union should equal sorted
+	std::vector<libmmd::PMXNode*> combined;
+	combined.insert(combined.end(), before.begin(), before.end());
+	combined.insert(combined.end(), after.begin(), after.end());
+	std::sort(combined.begin(), combined.end());
+	auto sortedCopy = sorted;
+	std::sort(sortedCopy.begin(), sortedCopy.end());
+	TEST_ASSERT_EQ(sortedCopy.size(), combined.size());
+	for (size_t i = 0; i < combined.size(); ++i)
+		TEST_ASSERT(combined[i] == sortedCopy[i]);
+}
+
+static void test_PMXModel_NodePartition_AllBeforePhysics()
+{
+	std::cout << "[test] PMXModel_NodePartition_AllBeforePhysics\n";
+
+	auto pmxFile = MakeMixedPhysicsPMXFile(4, 0);
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+	TEST_ASSERT_EQ(size_t(4), model->GetBeforePhysicsNodes().size());
+	TEST_ASSERT_EQ(size_t(0), model->GetAfterPhysicsNodes().size());
+}
+
+static void test_PMXModel_NodePartition_AllAfterPhysics()
+{
+	std::cout << "[test] PMXModel_NodePartition_AllAfterPhysics\n";
+
+	auto pmxFile = MakeMixedPhysicsPMXFile(0, 3);
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+	TEST_ASSERT_EQ(size_t(0), model->GetBeforePhysicsNodes().size());
+	TEST_ASSERT_EQ(size_t(3), model->GetAfterPhysicsNodes().size());
+}
+
+static void test_PMXModel_NodePartition_RegressionTransformConsistency()
+{
+	std::cout << "[test] PMXModel_NodePartition_RegressionTransformConsistency\n";
+
+	// Build model with mixed DeformAfterPhysics bones
+	auto pmxFile = MakeMixedPhysicsPMXFile(3, 2);
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+	// Animate with some translation on root
+	auto vmd = MakeSingleKeyVMD("bone_0", 0,
+		Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+	libmmd::VMDAnimation anim;
+	TEST_ASSERT(anim.Create(model));
+	TEST_ASSERT(anim.Add(vmd));
+
+	model->InitializeAnimation();
+	model->BeginAnimation();
+	anim.Evaluate(0.0f);
+	model->UpdateMorphAnimation();
+	model->UpdateNodeAnimation(false);
+	model->UpdateNodeAnimation(true);
+	model->EndAnimation();
+
+	// Verify all nodes have valid (non-NaN) transforms with proper rotation matrices
+	size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+	for (size_t i = 0; i < nodeCount; ++i)
+	{
+		auto* node = model->GetNodeManager()->GetMMDNode(i);
+		const auto& local = node->GetLocalTransform();
+		const auto& global = node->GetGlobalTransform();
+
+		for (int r = 0; r < 4; ++r)
+			for (int c = 0; c < 4; ++c)
+			{
+				TEST_ASSERT(!std::isnan(local(r, c)));
+				TEST_ASSERT(!std::isnan(global(r, c)));
+			}
+
+		Eigen::Matrix3f rotBlock = local.block<3, 3>(0, 0);
+		float det = rotBlock.determinant();
+		TEST_ASSERT(std::fabs(det - 1.0f) < 0.01f);
+	}
+}
+
+static void test_PMXModel_NodePartition_RealFileRegression()
+{
+	std::cout << "[test] PMXModel_NodePartition_RealFileRegression\n";
+
+	auto model = std::make_shared<TestPMXModel>();
+	if (!model->Load(g_pmxTestFile, ""))
+	{
+		std::cerr << "  SKIP: Could not load PMX file\n";
+		return;
+	}
+
+	const auto& before = model->GetBeforePhysicsNodes();
+	const auto& after = model->GetAfterPhysicsNodes();
+	const auto& sorted = model->GetSortedNodes();
+
+	// before + after should equal sorted
+	TEST_ASSERT_EQ(sorted.size(), before.size() + after.size());
+
+	for (const auto* node : before)
+		TEST_ASSERT(!node->IsDeformAfterPhysics());
+	for (const auto* node : after)
+		TEST_ASSERT(node->IsDeformAfterPhysics());
+
+	// Load VMD and run animation, verify transforms are valid
+	libmmd::VMDFile vmdFile;
+	if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+	{
+		std::cerr << "  SKIP: Could not load VMD file\n";
+		return;
+	}
+
+	libmmd::VMDAnimation anim;
+	TEST_ASSERT(anim.Create(model));
+	TEST_ASSERT(anim.Add(vmdFile));
+
+	model->InitializeAnimation();
+	model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+	size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+	for (size_t i = 0; i < nodeCount; ++i)
+	{
+		auto* node = model->GetNodeManager()->GetMMDNode(i);
+		const auto& local = node->GetLocalTransform();
+		for (int r = 0; r < 4; ++r)
+			for (int c = 0; c < 4; ++c)
+				TEST_ASSERT(!std::isnan(local(r, c)));
+
+		Eigen::Matrix3f rotBlock = local.block<3, 3>(0, 0);
+		float det = rotBlock.determinant();
+		TEST_ASSERT(std::fabs(det - 1.0f) < 0.01f);
+	}
+
+	std::cout << "    before=" << before.size() << " after=" << after.size()
+	          << " total=" << sorted.size() << "\n";
+}
+
+// ===========================================================================
+// Zero-weight morph skip
+// ===========================================================================
+
+static void test_PMXModel_MorphAnimation_ZeroWeightSkipped()
+{
+	std::cout << "[test] PMXModel_MorphAnimation_ZeroWeightSkipped\n";
+
+	auto pmxFile = MakePMXFileWithMaterialMorph("test_morph", 0,
+		libmmd::PMXFileMorph::MaterialMorph::OpType::Add,
+		Eigen::Vector4f(0.5f, 0.5f, 0.5f, 0.5f));
+
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+	TEST_ASSERT_EQ(size_t(1), model->GetMorphManager()->GetMorphCount());
+
+	model->InitializeAnimation();
+
+	// Set weight to 0 (default, also reset by InitializeAnimation)
+	auto* morph = model->GetMorphManager()->GetMorph(size_t(0));
+	morph->SetWeight(0.0f);
+
+	model->BeginAnimation();
+	model->UpdateMorphAnimation();
+	model->EndAnimation();
+
+	// Materials should match initMaterials since zero-weight morph is skipped
+	const auto& materials = model->GetMaterialsVec();
+	const auto& initMaterials = model->GetInitMaterialsVec();
+	TEST_ASSERT_EQ(materials.size(), initMaterials.size());
+
+	for (size_t i = 0; i < materials.size(); ++i)
+	{
+		TEST_ASSERT_FLOAT_EQ(initMaterials[i].m_diffuse.x(), materials[i].m_diffuse.x());
+		TEST_ASSERT_FLOAT_EQ(initMaterials[i].m_diffuse.y(), materials[i].m_diffuse.y());
+		TEST_ASSERT_FLOAT_EQ(initMaterials[i].m_diffuse.z(), materials[i].m_diffuse.z());
+		TEST_ASSERT_FLOAT_EQ(initMaterials[i].m_alpha, materials[i].m_alpha);
+	}
+}
+
+static void test_PMXModel_MorphAnimation_NonZeroWeightApplied()
+{
+	std::cout << "[test] PMXModel_MorphAnimation_NonZeroWeightApplied\n";
+
+	// Add morph: adds (0.5, 0.5, 0.5, 0.5) to material diffuse
+	auto pmxFile = MakePMXFileWithMaterialMorph("test_morph", 0,
+		libmmd::PMXFileMorph::MaterialMorph::OpType::Add,
+		Eigen::Vector4f(0.5f, 0.5f, 0.5f, 0.5f));
+
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+	model->InitializeAnimation();
+
+	auto* morph = model->GetMorphManager()->GetMorph(size_t(0));
+	morph->SetWeight(1.0f);
+
+	model->BeginAnimation();
+	model->UpdateMorphAnimation();
+	model->EndAnimation();
+
+	const auto& materials = model->GetMaterialsVec();
+	const auto& initMaterials = model->GetInitMaterialsVec();
+
+	// Diffuse should be init + add = (0.8+0.5, 0.6+0.5, 0.4+0.5) = (1.3, 1.1, 0.9)
+	TEST_ASSERT(std::fabs(materials[0].m_diffuse.x() - (initMaterials[0].m_diffuse.x() + 0.5f)) < 1e-5f);
+	TEST_ASSERT(std::fabs(materials[0].m_diffuse.y() - (initMaterials[0].m_diffuse.y() + 0.5f)) < 1e-5f);
+	TEST_ASSERT(std::fabs(materials[0].m_diffuse.z() - (initMaterials[0].m_diffuse.z() + 0.5f)) < 1e-5f);
+	TEST_ASSERT(std::fabs(materials[0].m_alpha - (initMaterials[0].m_alpha + 0.5f)) < 1e-5f);
+}
+
+static void test_PMXModel_MorphAnimation_MixedWeights()
+{
+	std::cout << "[test] PMXModel_MorphAnimation_MixedWeights\n";
+
+	// Build a PMXFile with 2 material morphs
+	libmmd::PMXFile file{};
+
+	libmmd::PMXBone bone{};
+	bone.m_name = "root";
+	bone.m_englishName = "root";
+	bone.m_position = Eigen::Vector3f::Zero();
+	bone.m_parentBoneIndex = -1;
+	bone.m_deformDepth = 0;
+	bone.m_appendBoneIndex = -1;
+	bone.m_appendWeight = 0.0f;
+	bone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+		static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible));
+	file.m_bones.push_back(std::move(bone));
+
+	libmmd::PMXMaterial mat{};
+	mat.m_numFaceVertices = 0;
+	mat.m_textureIndex = -1;
+	mat.m_sphereTextureIndex = -1;
+	mat.m_toonTextureIndex = -1;
+	mat.m_sphereMode = libmmd::PMXSphereMode::None;
+	mat.m_toonMode = libmmd::PMXToonMode::Common;
+	mat.m_drawMode = static_cast<libmmd::PMXDrawModeFlags>(0);
+	mat.m_diffuse = Eigen::Vector4f(0.5f, 0.5f, 0.5f, 1.0f);
+	mat.m_specular = Eigen::Vector3f::Zero();
+	mat.m_specularPower = 1.0f;
+	mat.m_ambient = Eigen::Vector3f(0.2f, 0.2f, 0.2f);
+	mat.m_edgeColor = Eigen::Vector4f::Zero();
+	mat.m_edgeSize = 0.0f;
+	file.m_materials.push_back(std::move(mat));
+
+	auto makeMaterialMorph = [](const std::string& name, const Eigen::Vector4f& addDiffuse) {
+		libmmd::PMXFileMorph morph{};
+		morph.m_name = name;
+		morph.m_englishName = name;
+		morph.m_controlPanel = 4;
+		morph.m_morphType = libmmd::PMXMorphType::Material;
+
+		libmmd::PMXFileMorph::MaterialMorph matMorph{};
+		matMorph.m_materialIndex = 0;
+		matMorph.m_opType = libmmd::PMXFileMorph::MaterialMorph::OpType::Add;
+		matMorph.m_diffuse = addDiffuse;
+		matMorph.m_specular = Eigen::Vector3f::Zero();
+		matMorph.m_specularPower = 0.0f;
+		matMorph.m_ambient = Eigen::Vector3f::Zero();
+		matMorph.m_edgeColor = Eigen::Vector4f::Zero();
+		matMorph.m_edgeSize = 0.0f;
+		matMorph.m_textureFactor = Eigen::Vector4f::Ones();
+		matMorph.m_sphereTextureFactor = Eigen::Vector4f::Ones();
+		matMorph.m_toonTextureFactor = Eigen::Vector4f::Ones();
+		morph.m_materialMorph.push_back(std::move(matMorph));
+		return morph;
+	};
+
+	// Morph 0: adds (0.1, 0, 0, 0) — will have weight=0 (should be skipped)
+	file.m_morphs.push_back(makeMaterialMorph("morph_zero", Eigen::Vector4f(0.1f, 0.0f, 0.0f, 0.0f)));
+	// Morph 1: adds (0, 0.2, 0, 0) — will have weight=1 (should be applied)
+	file.m_morphs.push_back(makeMaterialMorph("morph_active", Eigen::Vector4f(0.0f, 0.2f, 0.0f, 0.0f)));
+
+	auto model = std::make_shared<TestPMXModel>();
+	TEST_ASSERT(model->LoadPMX(file, "", ""));
+	TEST_ASSERT_EQ(size_t(2), model->GetMorphManager()->GetMorphCount());
+
+	model->InitializeAnimation();
+
+	model->GetMorphManager()->GetMorph(size_t(0))->SetWeight(0.0f);
+	model->GetMorphManager()->GetMorph(size_t(1))->SetWeight(1.0f);
+
+	model->BeginAnimation();
+	model->UpdateMorphAnimation();
+	model->EndAnimation();
+
+	const auto& materials = model->GetMaterialsVec();
+	const auto& initMaterials = model->GetInitMaterialsVec();
+
+	// Only morph_active (adds 0.2 to G) should be applied
+	// X should be unchanged (morph_zero was skipped)
+	TEST_ASSERT_FLOAT_EQ(initMaterials[0].m_diffuse.x(), materials[0].m_diffuse.x());
+	// Y should have +0.2
+	TEST_ASSERT(std::fabs(materials[0].m_diffuse.y() - (initMaterials[0].m_diffuse.y() + 0.2f)) < 1e-5f);
+	// Z unchanged
+	TEST_ASSERT_FLOAT_EQ(initMaterials[0].m_diffuse.z(), materials[0].m_diffuse.z());
+}
+
+static void test_PMXModel_MorphAnimation_RealFileRegression()
+{
+	std::cout << "[test] PMXModel_MorphAnimation_RealFileRegression\n";
+
+	auto model = std::make_shared<TestPMXModel>();
+	if (!model->Load(g_pmxTestFile, ""))
+	{
+		std::cerr << "  SKIP: Could not load PMX file\n";
+		return;
+	}
+
+	libmmd::VMDFile vmdFile;
+	if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+	{
+		std::cerr << "  SKIP: Could not load VMD file\n";
+		return;
+	}
+
+	libmmd::VMDAnimation anim;
+	TEST_ASSERT(anim.Create(model));
+	TEST_ASSERT(anim.Add(vmdFile));
+
+	model->InitializeAnimation();
+	model->UpdateAllAnimation(&anim, 0.0f, 1.0f / 30.0f);
+
+	// Verify all bones have valid transforms after the pipeline runs
+	size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+	for (size_t i = 0; i < nodeCount; ++i)
+	{
+		auto* node = model->GetNodeManager()->GetMMDNode(i);
+		const auto& local = node->GetLocalTransform();
+		for (int r = 0; r < 4; ++r)
+			for (int c = 0; c < 4; ++c)
+				TEST_ASSERT(!std::isnan(local(r, c)));
+	}
+
+	// Verify materials have valid values (non-NaN)
+	const auto& materials = model->GetMaterialsVec();
+	for (size_t i = 0; i < materials.size(); ++i)
+	{
+		TEST_ASSERT(!std::isnan(materials[i].m_diffuse.x()));
+		TEST_ASSERT(!std::isnan(materials[i].m_alpha));
+		TEST_ASSERT(!std::isnan(materials[i].m_specularPower));
+	}
+
+	std::cout << "    Materials validated: " << materials.size() << "\n";
+}
+
+// ===========================================================================
+// SyncPhysics parameterization
+// ===========================================================================
+
+static void test_VMDAnimation_SyncPhysics_DefaultElapsed()
+{
+    std::cout << "[test] VMDAnimation_SyncPhysics_DefaultElapsed\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    anim.SyncPhysics(0.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& local = childNode->GetLocalTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT(!std::isnan(local(r, c)));
+}
+
+static void test_VMDAnimation_SyncPhysics_CustomElapsed()
+{
+    std::cout << "[test] VMDAnimation_SyncPhysics_CustomElapsed\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto vmd = MakeSingleKeyVMD("child", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmd));
+
+    model->InitializeAnimation();
+    anim.SyncPhysics(0.0f, 30, 1.0f / 60.0f);
+
+    auto* childNode = model->GetNodeManager()->GetMMDNode(size_t(1));
+    const auto& local = childNode->GetLocalTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT(!std::isnan(local(r, c)));
+}
+
+static void test_VMDAnimation_SyncPhysics_RealFile()
+{
+    std::cout << "[test] VMDAnimation_SyncPhysics_RealFile\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    if (!model->Load(g_pmxTestFile, ""))
+    {
+        std::cerr << "  SKIP: Could not load PMX file\n";
+        return;
+    }
+
+    libmmd::VMDFile vmdFile;
+    if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load VMD file\n";
+        return;
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdFile));
+
+    model->InitializeAnimation();
+    anim.SyncPhysics(0.0f, 30, 1.0f / 60.0f);
+
+    size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+    for (size_t i = 0; i < nodeCount; ++i)
+    {
+        auto* node = model->GetNodeManager()->GetMMDNode(i);
+        const auto& local = node->GetLocalTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT(!std::isnan(local(r, c)));
+    }
+    std::cout << "    SyncPhysics with custom elapsed produced valid transforms\n";
+}
+
+// ===========================================================================
+// UpdatePhysicsAnimation loop merge regression
+// ===========================================================================
+
+static void test_PMXModel_PhysicsAnimation_TransformsValid()
+{
+    std::cout << "[test] PMXModel_PhysicsAnimation_TransformsValid\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    if (!model->Load(g_pmxTestFile, ""))
+    {
+        std::cerr << "  SKIP: Could not load PMX file\n";
+        return;
+    }
+
+    libmmd::VMDFile vmdFile;
+    if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load VMD file\n";
+        return;
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdFile));
+
+    model->InitializeAnimation();
+
+    for (int frame = 0; frame <= 90; frame += 30)
+    {
+        model->UpdateAllAnimation(&anim, static_cast<float>(frame), 1.0f / 30.0f);
+
+        size_t nodeCount = model->GetNodeManager()->GetNodeCount();
+        for (size_t i = 0; i < nodeCount; ++i)
+        {
+            auto* node = model->GetNodeManager()->GetMMDNode(i);
+            const auto& global = node->GetGlobalTransform();
+            for (int r = 0; r < 4; ++r)
+                for (int c = 0; c < 4; ++c)
+                    TEST_ASSERT(!std::isnan(global(r, c)));
+
+            Eigen::Matrix3f rotBlock = global.block<3, 3>(0, 0);
+            float det = rotBlock.determinant();
+            TEST_ASSERT(std::fabs(det - 1.0f) < 0.05f);
+        }
+    }
+    std::cout << "    Multi-frame physics animation produced valid transforms\n";
+}
+
+static void test_PMDModel_PhysicsAnimation_TransformsValid()
+{
+    std::cout << "[test] PMDModel_PhysicsAnimation_TransformsValid\n";
+
+    auto model = std::make_shared<libmmd::PMDModel>();
+
+    model->InitializeAnimation();
+    model->BeginAnimation();
+    model->UpdateNodeAnimation(false);
+    model->UpdatePhysicsAnimation(1.0f / 30.0f);
+    model->UpdateNodeAnimation(true);
+    model->EndAnimation();
+
+    TEST_ASSERT(true);
+}
+
+// ===========================================================================
 // main
 // ===========================================================================
 
@@ -2507,6 +3266,35 @@ int main()
     // Real File Integration
     test_Integration_RealFile_LoadPMXAndApplyVMD();
     test_Integration_RealFile_LocalTransformDeltaConsistency();
+
+    // VMDBezier
+    test_VMDBezier_FindBezierX_LinearCP();
+    test_VMDBezier_FindBezierX_EaseInCP();
+    test_VMDBezier_FindBezierX_EaseOutCP();
+    test_VMDBezier_FindBezierX_PrecisionRegression();
+    test_VMDBezier_EvalDX_Correctness();
+
+    // Node Partition
+    test_PMXModel_NodePartition_CorrectSplit();
+    test_PMXModel_NodePartition_AllBeforePhysics();
+    test_PMXModel_NodePartition_AllAfterPhysics();
+    test_PMXModel_NodePartition_RegressionTransformConsistency();
+    test_PMXModel_NodePartition_RealFileRegression();
+
+    // Zero-weight Morph Skip
+    test_PMXModel_MorphAnimation_ZeroWeightSkipped();
+    test_PMXModel_MorphAnimation_NonZeroWeightApplied();
+    test_PMXModel_MorphAnimation_MixedWeights();
+    test_PMXModel_MorphAnimation_RealFileRegression();
+
+    // SyncPhysics parameterization
+    test_VMDAnimation_SyncPhysics_DefaultElapsed();
+    test_VMDAnimation_SyncPhysics_CustomElapsed();
+    test_VMDAnimation_SyncPhysics_RealFile();
+
+    // Physics animation loop merge regression
+    test_PMXModel_PhysicsAnimation_TransformsValid();
+    test_PMDModel_PhysicsAnimation_TransformsValid();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";

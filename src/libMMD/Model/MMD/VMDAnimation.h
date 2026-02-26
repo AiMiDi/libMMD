@@ -44,9 +44,16 @@ namespace libmmd
 		Eigen::Vector2f Eval(float t) const;
 
 		/**
-		 * @brief Find the X component of the Bezier curve at a given time.
-		 * @param time The time parameter.
-		 * @return The X component at the given time.
+		 * @brief Evaluate the derivative of the X component at time t.
+		 * @param t The time parameter.
+		 * @return dX/dt at the given time.
+		 */
+		float EvalDX(float t) const;
+
+		/**
+		 * @brief Find the parameter t such that EvalX(t) ≈ time, using Newton-Raphson.
+		 * @param time The target X value in [0, 1].
+		 * @return The parameter t corresponding to the given X value.
 		 */
 		float FindBezierX(float time) const;
 
@@ -97,8 +104,9 @@ namespace libmmd
 		 * @brief Synchronize physics with the animation.
 		 * @param t The time parameter.
 		 * @param frameCount The number of frames to synchronize over.
+		 * @param physicsElapsed Physics timestep per iteration (default: 1/30s).
 		 */
-		void SyncPhysics(float t, int frameCount = 30) const;
+		void SyncPhysics(float t, int frameCount = 30, float physicsElapsed = 1.0f / 30.0f) const;
 
 		/**
 		 * @brief Get the maximum key time of the animation.

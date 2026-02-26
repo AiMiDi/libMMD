@@ -73,25 +73,55 @@ namespace libmmd
 		return Eigen::Vector2f(EvalX(t), EvalY(t));
 	}
 
+	float VMDBezier::EvalDX(const float t) const
+	{
+		const float it = 1.0f - t;
+		const float x[4] = {
+			0,
+			m_cp1.x(),
+			m_cp2.x(),
+			1
+		};
+		// d/dt of cubic Bezier: 3*(1-t)^2*(P1-P0) + 6*(1-t)*t*(P2-P1) + 3*t^2*(P3-P2)
+		return 3.0f * it * it * (x[1] - x[0])
+			 + 6.0f * it * t  * (x[2] - x[1])
+			 + 3.0f * t  * t  * (x[3] - x[2]);
+	}
+
 	float VMDBezier::FindBezierX(const float time) const
 	{
 		constexpr float e = 0.00001f;
-		float start = 0.0f;
-		float stop = 1.0f;
-		float t = 0.5f;
-		float x = EvalX(t);
-		while (std::abs(time - x) > e)
+
+		// Newton-Raphson iteration
+		float t = time;
+		for (int i = 0; i < 8; ++i)
 		{
-			if (time < x)
+			const float x = EvalX(t) - time;
+			if (std::abs(x) < e)
+				return t;
+			const float dx = EvalDX(t);
+			if (std::abs(dx) < 1e-6f)
+				break;
+			t -= x / dx;
+			t = std::clamp(t, 0.0f, 1.0f);
+		}
+
+		// Fallback to bisection if Newton didn't converge
+		if (std::abs(EvalX(t) - time) > e)
+		{
+			float start = 0.0f;
+			float stop = 1.0f;
+			t = 0.5f;
+			float x = EvalX(t);
+			while (std::abs(time - x) > e)
 			{
-				stop = t;
+				if (time < x)
+					stop = t;
+				else
+					start = t;
+				t = (stop + start) * 0.5f;
+				x = EvalX(t);
 			}
-			else
-			{
-				start = t;
-			}
-			t = (stop + start) * 0.5f;
-			x = EvalX(t);
 		}
 
 		return t;
@@ -492,7 +522,7 @@ namespace libmmd
 		}
 	}
 
-	void VMDAnimation::SyncPhysics(const float t, const int frameCount) const
+	void VMDAnimation::SyncPhysics(const float t, const int frameCount, const float physicsElapsed) const
 	{
 		/*
 		 * Physics synchronization is crucial for realistic animation
@@ -501,18 +531,15 @@ namespace libmmd
 		 */
 		m_model->SaveBaseAnimation();
 
-		// Apply physics simulation over multiple frames for smooth transition
 		for (int i = 0; i < frameCount; i++) {
 			m_model->BeginAnimation();
 
-			// Gradually blend from initial to target pose
 			const float blendWeight = static_cast<float>(1 + i) / static_cast<float>(frameCount);
 			Evaluate(t, blendWeight);
 
-			// Update animation components
 			m_model->UpdateMorphAnimation();
 			m_model->UpdateNodeAnimation(false);
-			m_model->UpdatePhysicsAnimation(1.0f / 30.0f);  // Fixed timestep for physics
+			m_model->UpdatePhysicsAnimation(physicsElapsed);
 			m_model->UpdateNodeAnimation(true);
 
 			m_model->EndAnimation();

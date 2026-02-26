@@ -283,6 +283,8 @@ namespace libmmd
 		std::vector<MMDMaterial>	m_materials;
 		std::vector<MMDSubMesh>		m_subMeshes;
 		std::vector<PMXNode*>		m_sortedNodes;
+		std::vector<PMXNode*>		m_beforePhysicsNodes;
+		std::vector<PMXNode*>		m_afterPhysicsNodes;
 
 		MMDNodeManagerT<PMXNode>	m_nodeMan;
 		MMDIKManagerT<MMDIkSolver>	m_ikSolverMan;
