@@ -3049,6 +3049,216 @@ static void test_VMDAnimation_SyncPhysics_RealFile()
 }
 
 // ===========================================================================
+// VMDAnimation Save tests
+// ===========================================================================
+
+static void test_VMDAnimation_Save_EmptyAnimation()
+{
+    std::cout << "[test] VMDAnimation_Save_EmptyAnimation\n";
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+
+    libmmd::VMDFile vmd;
+    TEST_ASSERT(anim.Save(vmd));
+
+    TEST_ASSERT_EQ(std::string("Vocaloid Motion Data 0002"), vmd.m_header.m_header.ToString());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_motions.size());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_morphs.size());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_iks.size());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_cameras.size());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_lights.size());
+    TEST_ASSERT_EQ(size_t(0), vmd.m_shadows.size());
+}
+
+static void test_VMDAnimation_Save_SingleBoneKey()
+{
+    std::cout << "[test] VMDAnimation_Save_SingleBoneKey\n";
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    Eigen::Vector3f translate(1.0f, 2.0f, 3.0f);
+    Eigen::Quaternionf rotation(Eigen::AngleAxisf(0.5f, Eigen::Vector3f::UnitY()));
+    auto vmdIn = MakeSingleKeyVMD("child", 5, translate, rotation);
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(size_t(1), vmdOut.m_motions.size());
+    const auto& m = vmdOut.m_motions[0];
+    TEST_ASSERT_EQ(std::string("child"), m.m_boneName.ToString());
+    TEST_ASSERT_EQ(uint32_t(5), m.m_frame);
+    TEST_ASSERT_FLOAT_EQ(1.0f, m.m_translate.x());
+    TEST_ASSERT_FLOAT_EQ(2.0f, m.m_translate.y());
+    TEST_ASSERT_FLOAT_EQ(3.0f, m.m_translate.z());
+    TEST_ASSERT(std::fabs(m.m_quaternion.w() - rotation.w()) < 1e-4f);
+    TEST_ASSERT(std::fabs(m.m_quaternion.x() - rotation.x()) < 1e-4f);
+    TEST_ASSERT(std::fabs(m.m_quaternion.y() - rotation.y()) < 1e-4f);
+    TEST_ASSERT(std::fabs(m.m_quaternion.z() - rotation.z()) < 1e-4f);
+}
+
+static void test_VMDAnimation_Save_MultipleBoneKeys()
+{
+    std::cout << "[test] VMDAnimation_Save_MultipleBoneKeys\n";
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto vmdIn = MakeTwoKeyVMD("child",
+        0, Eigen::Vector3f::Zero(), Eigen::Quaternionf::Identity(),
+        30, Eigen::Vector3f(10.0f, 0.0f, 0.0f), Eigen::Quaternionf::Identity());
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(size_t(2), vmdOut.m_motions.size());
+    TEST_ASSERT_EQ(uint32_t(0), vmdOut.m_motions[0].m_frame);
+    TEST_ASSERT_EQ(uint32_t(30), vmdOut.m_motions[1].m_frame);
+}
+
+static void test_VMDAnimation_Save_MultipleBones()
+{
+    std::cout << "[test] VMDAnimation_Save_MultipleBones\n";
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    libmmd::VMDFile vmdIn{};
+    auto interp = MakeLinearInterpolation();
+
+    libmmd::VMDMotion m0{};
+    m0.m_boneName.Set("root");
+    m0.m_frame = 0;
+    m0.m_translate = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    m0.m_quaternion = Eigen::Quaternionf::Identity();
+    m0.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m0));
+
+    libmmd::VMDMotion m1{};
+    m1.m_boneName.Set("child");
+    m1.m_frame = 0;
+    m1.m_translate = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
+    m1.m_quaternion = Eigen::Quaternionf::Identity();
+    m1.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m1));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(size_t(2), vmdOut.m_motions.size());
+
+    bool hasRoot = false, hasChild = false;
+    for (const auto& motion : vmdOut.m_motions)
+    {
+        if (motion.m_boneName.ToString() == "root") hasRoot = true;
+        if (motion.m_boneName.ToString() == "child") hasChild = true;
+    }
+    TEST_ASSERT(hasRoot);
+    TEST_ASSERT(hasChild);
+}
+
+static void test_VMDAnimation_Save_InterpolationPreserved()
+{
+    std::cout << "[test] VMDAnimation_Save_InterpolationPreserved\n";
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    libmmd::VMDFile vmdIn{};
+    libmmd::VMDMotion motion{};
+    motion.m_boneName.Set("child");
+    motion.m_frame = 0;
+    motion.m_translate = Eigen::Vector3f::Zero();
+    motion.m_quaternion = Eigen::Quaternionf::Identity();
+    motion.m_interpolation.fill(0);
+    // TX: cp1=(30, 40), cp2=(90, 100)
+    motion.m_interpolation[0]  = 30;  // tx cp1.x
+    motion.m_interpolation[4]  = 40;  // tx cp1.y
+    motion.m_interpolation[8]  = 90;  // tx cp2.x
+    motion.m_interpolation[12] = 100; // tx cp2.y
+    // Rot: cp1=(10, 50), cp2=(80, 120)
+    motion.m_interpolation[3]  = 10;  // rot cp1.x
+    motion.m_interpolation[7]  = 50;  // rot cp1.y
+    motion.m_interpolation[11] = 80;  // rot cp2.x
+    motion.m_interpolation[15] = 120; // rot cp2.y
+    vmdIn.m_motions.push_back(std::move(motion));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(size_t(1), vmdOut.m_motions.size());
+    const auto& out = vmdOut.m_motions[0].m_interpolation;
+    // Allow ±1 tolerance for float->uint8 round-trip
+    TEST_ASSERT(std::abs(static_cast<int>(out[0])  - 30)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[4])  - 40)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[8])  - 90)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[12]) - 100) <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[3])  - 10)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[7])  - 50)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[11]) - 80)  <= 1);
+    TEST_ASSERT(std::abs(static_cast<int>(out[15]) - 120) <= 1);
+}
+
+static void test_VMDAnimation_Save_NonexistentBoneIgnored()
+{
+    std::cout << "[test] VMDAnimation_Save_NonexistentBoneIgnored\n";
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    libmmd::VMDFile vmdIn{};
+    auto interp = MakeLinearInterpolation();
+
+    // Existing bone
+    libmmd::VMDMotion m0{};
+    m0.m_boneName.Set("child");
+    m0.m_frame = 0;
+    m0.m_translate = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    m0.m_quaternion = Eigen::Quaternionf::Identity();
+    m0.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m0));
+
+    // Non-existing bone
+    libmmd::VMDMotion m1{};
+    m1.m_boneName.Set("nonexistent");
+    m1.m_frame = 0;
+    m1.m_translate = Eigen::Vector3f::Zero();
+    m1.m_quaternion = Eigen::Quaternionf::Identity();
+    m1.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m1));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(size_t(1), vmdOut.m_motions.size());
+    TEST_ASSERT_EQ(std::string("child"), vmdOut.m_motions[0].m_boneName.ToString());
+}
+
+// ===========================================================================
 // UpdatePhysicsAnimation loop merge regression
 // ===========================================================================
 
@@ -3291,6 +3501,14 @@ int main()
     test_VMDAnimation_SyncPhysics_DefaultElapsed();
     test_VMDAnimation_SyncPhysics_CustomElapsed();
     test_VMDAnimation_SyncPhysics_RealFile();
+
+    // VMDAnimation Save
+    test_VMDAnimation_Save_EmptyAnimation();
+    test_VMDAnimation_Save_SingleBoneKey();
+    test_VMDAnimation_Save_MultipleBoneKeys();
+    test_VMDAnimation_Save_MultipleBones();
+    test_VMDAnimation_Save_InterpolationPreserved();
+    test_VMDAnimation_Save_NonexistentBoneIgnored();
 
     // Physics animation loop merge regression
     test_PMXModel_PhysicsAnimation_TransformsValid();

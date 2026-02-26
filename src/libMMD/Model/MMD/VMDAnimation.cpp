@@ -5,8 +5,10 @@
 
 #include "VMDAnimation.h"
 #include "VMDAnimationCommon.hpp"
+#include "SjisToUnicode.h"
 
 #include <libMMD/Base/Log.h>
+#include <libMMD/Base/UnicodeUtil.h>
 
 #include <algorithm>
 #include <iterator>
@@ -29,6 +31,24 @@ namespace libmmd
 
 			bezier.m_cp1 = Eigen::Vector2f(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
 			bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
+		}
+
+		void GetVMDBezier(const VMDBezier& bezier, unsigned char* cp)
+		{
+			cp[0]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp1.x() * 127.0f), 0.0f, 127.0f));
+			cp[4]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp1.y() * 127.0f), 0.0f, 127.0f));
+			cp[8]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp2.x() * 127.0f), 0.0f, 127.0f));
+			cp[12] = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp2.y() * 127.0f), 0.0f, 127.0f));
+		}
+
+		std::string ConvertU8ToSjis(const std::string& u8Str)
+		{
+			std::u16string u16Str;
+			if (!ConvU8ToU16(u8Str, u16Str))
+			{
+				return u8Str;
+			}
+			return ConvertU16ToSjisString(u16Str);
 		}
 
 	} // namespace
@@ -722,5 +742,92 @@ namespace libmmd
 			std::end(m_keys),
 			[](const KeyType& a, const KeyType& b) { return a.m_time < b.m_time; }
 		);
+	}
+
+	bool VMDAnimation::Save(VMDFile& vmd) const
+	{
+		vmd = VMDFile();
+
+		vmd.m_header.m_header.Set("Vocaloid Motion Data 0002");
+
+		// Node controllers -> VMDMotion
+		for (const auto& nodeCtrl : m_nodeControllers)
+		{
+			const auto* node = nodeCtrl->GetNode();
+			if (node == nullptr)
+				continue;
+
+			const std::string sjisName = ConvertU8ToSjis(node->GetName());
+			for (const auto& key : nodeCtrl->GetKeys())
+			{
+				VMDMotion motion;
+				motion.m_boneName.Set(sjisName.c_str());
+				motion.m_frame = static_cast<uint32_t>(key.m_time);
+				motion.m_translate = key.m_translate;
+				motion.m_quaternion = key.m_rotate;
+				motion.m_interpolation.fill(0);
+				GetVMDBezier(key.m_txBezier, &motion.m_interpolation[0]);
+				GetVMDBezier(key.m_tyBezier, &motion.m_interpolation[1]);
+				GetVMDBezier(key.m_tzBezier, &motion.m_interpolation[2]);
+				GetVMDBezier(key.m_rotBezier, &motion.m_interpolation[3]);
+				vmd.m_motions.push_back(std::move(motion));
+			}
+		}
+
+		// Morph controllers -> VMDMorph
+		for (const auto& morphCtrl : m_morphControllers)
+		{
+			const auto* morph = morphCtrl->GetMorph();
+			if (morph == nullptr)
+				continue;
+
+			const std::string sjisName = ConvertU8ToSjis(morph->GetName());
+			for (const auto& key : morphCtrl->GetKeys())
+			{
+				VMDMorph vm;
+				vm.m_blendShapeName.Set(sjisName.c_str());
+				vm.m_frame = static_cast<uint32_t>(key.m_time);
+				vm.m_weight = key.m_weight;
+				vmd.m_morphs.push_back(std::move(vm));
+			}
+		}
+
+		// IK controllers -> VMDIk (group by frame)
+		std::map<uint32_t, std::vector<VMDIkInfo>> ikFrameMap;
+		for (const auto& ikCtrl : m_ikControllers)
+		{
+			const auto* solver = ikCtrl->GetIkSolver();
+			if (solver == nullptr)
+				continue;
+
+			const std::string sjisName = ConvertU8ToSjis(solver->GetName());
+			for (const auto& key : ikCtrl->GetKeys())
+			{
+				VMDIkInfo info;
+				info.m_name.Set(sjisName.c_str());
+				info.m_enable = key.m_enable ? 1 : 0;
+				ikFrameMap[static_cast<uint32_t>(key.m_time)].push_back(std::move(info));
+			}
+		}
+		for (auto& [frame, infos] : ikFrameMap)
+		{
+			VMDIk ik;
+			ik.m_frame = frame;
+			ik.m_show = 1;
+			ik.m_ikInfos = std::move(infos);
+			vmd.m_iks.push_back(std::move(ik));
+		}
+
+		return true;
+	}
+
+	bool VMDAnimation::Save(const char* filename) const
+	{
+		VMDFile vmd;
+		if (!Save(vmd))
+		{
+			return false;
+		}
+		return WriteVMDFile(&vmd, filename);
 	}
 }

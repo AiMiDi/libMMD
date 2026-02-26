@@ -131,6 +131,21 @@ namespace libmmd
 		* @return The number of IK controllers.
 		*/
 		int32_t GetIKKeyNum() const { return static_cast<int32_t>(m_ikControllers.size()); }
+
+		/**
+		 * @brief Export the animation data to a VMDFile structure.
+		 * @param vmd The VMDFile to populate.
+		 * @return True if export is successful, false otherwise.
+		 */
+		bool Save(VMDFile& vmd) const;
+
+		/**
+		 * @brief Export the animation data and write to a VMD file on disk.
+		 * @param filename The output file path.
+		 * @return True if the file is written successfully, false otherwise.
+		 */
+		bool Save(const char* filename) const;
+
 	private:
 		int32_t CalculateMaxKeyTime() const;
 

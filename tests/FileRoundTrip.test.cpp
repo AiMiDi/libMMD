@@ -2,8 +2,10 @@
 #include <cmath>
 
 #include <libMMD/Model/MMD/PMXFile.h>
+#include <libMMD/Model/MMD/PMXModel.h>
 #include <libMMD/Model/MMD/PMDFile.h>
 #include <libMMD/Model/MMD/VMDFile.h>
+#include <libMMD/Model/MMD/VMDAnimation.h>
 #include <libMMD/Model/MMD/VPDFile.h>
 #include <libMMD/Base/File.h>
 
@@ -11,6 +13,7 @@
 #include <string>
 #include <cstdlib>
 #include <cstdio>
+#include <memory>
 #include <vector>
 #include <array>
 #include <filesystem>
@@ -1036,6 +1039,411 @@ static void test_PMX_MorphTypes_RoundTrip()
 }
 
 // ===========================================================================
+// VMDAnimation Add->Save round-trip helpers
+// ===========================================================================
+
+static libmmd::PMXFile MakeSimplePMXFileForAnim(float boneLength = 10.0f)
+{
+    libmmd::PMXFile file{};
+
+    libmmd::PMXBone root{};
+    root.m_name = "root";
+    root.m_englishName = "root";
+    root.m_position = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    root.m_parentBoneIndex = -1;
+    root.m_deformDepth = 0;
+    root.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    root.m_appendBoneIndex = -1;
+    root.m_appendWeight = 0.0f;
+
+    libmmd::PMXBone child{};
+    child.m_name = "child";
+    child.m_englishName = "child";
+    child.m_position = Eigen::Vector3f(0.0f, boneLength, 0.0f);
+    child.m_parentBoneIndex = 0;
+    child.m_deformDepth = 0;
+    child.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowTranslate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    child.m_appendBoneIndex = -1;
+    child.m_appendWeight = 0.0f;
+
+    file.m_bones.push_back(std::move(root));
+    file.m_bones.push_back(std::move(child));
+
+    libmmd::PMXMaterial mat{};
+    mat.m_numFaceVertices = 0;
+    mat.m_textureIndex = -1;
+    mat.m_sphereTextureIndex = -1;
+    mat.m_toonTextureIndex = -1;
+    mat.m_sphereMode = libmmd::PMXSphereMode::None;
+    mat.m_toonMode = libmmd::PMXToonMode::Common;
+    file.m_materials.push_back(std::move(mat));
+
+    return file;
+}
+
+static libmmd::PMXFile MakePMXFileWithMorphForAnim()
+{
+    auto file = MakeSimplePMXFileForAnim();
+
+    libmmd::PMXFileMorph morph{};
+    morph.m_name = "smile";
+    morph.m_englishName = "smile";
+    morph.m_controlPanel = 4;
+    morph.m_morphType = libmmd::PMXMorphType::Position;
+    file.m_morphs.push_back(std::move(morph));
+
+    return file;
+}
+
+static libmmd::PMXFile MakePMXFileWithIKForAnim()
+{
+    libmmd::PMXFile file{};
+
+    // Bone 0: root
+    libmmd::PMXBone root{};
+    root.m_name = "root";
+    root.m_englishName = "root";
+    root.m_position = Eigen::Vector3f::Zero();
+    root.m_parentBoneIndex = -1;
+    root.m_deformDepth = 0;
+    root.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    root.m_appendBoneIndex = -1;
+    file.m_bones.push_back(std::move(root));
+
+    // Bone 1: ik_target (the bone that IK tries to reach)
+    libmmd::PMXBone target{};
+    target.m_name = "ik_target";
+    target.m_englishName = "ik_target";
+    target.m_position = Eigen::Vector3f(0.0f, 0.0f, -5.0f);
+    target.m_parentBoneIndex = 0;
+    target.m_deformDepth = 0;
+    target.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible)
+    );
+    target.m_appendBoneIndex = -1;
+    file.m_bones.push_back(std::move(target));
+
+    // Bone 2: ik_bone (the IK solver bone)
+    libmmd::PMXBone ikBone{};
+    ikBone.m_name = "ik_leg";
+    ikBone.m_englishName = "ik_leg";
+    ikBone.m_position = Eigen::Vector3f(0.0f, 0.0f, -10.0f);
+    ikBone.m_parentBoneIndex = 0;
+    ikBone.m_deformDepth = 0;
+    ikBone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::AllowRotate) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::Visible) |
+        static_cast<uint16_t>(libmmd::PMXBoneFlags::IK)
+    );
+    ikBone.m_appendBoneIndex = -1;
+    ikBone.m_ikTargetBoneIndex = 1;
+    ikBone.m_ikIterationCount = 10;
+    ikBone.m_ikLimit = 2.0f;
+    libmmd::PMXIKLink link{};
+    link.m_ikBoneIndex = 0;
+    link.m_enableLimit = 0;
+    ikBone.m_ikLinks.push_back(link);
+    file.m_bones.push_back(std::move(ikBone));
+
+    libmmd::PMXMaterial mat{};
+    mat.m_numFaceVertices = 0;
+    mat.m_textureIndex = -1;
+    mat.m_sphereTextureIndex = -1;
+    mat.m_toonTextureIndex = -1;
+    mat.m_sphereMode = libmmd::PMXSphereMode::None;
+    mat.m_toonMode = libmmd::PMXToonMode::Common;
+    file.m_materials.push_back(std::move(mat));
+
+    return file;
+}
+
+// ===========================================================================
+// VMDAnimation Add->Save round-trip tests
+// ===========================================================================
+
+static void test_VMDAnimation_AddSave_MotionRoundTrip()
+{
+    std::cout << "[test] VMDAnimation_AddSave_MotionRoundTrip\n";
+
+    auto pmxFile = MakeSimplePMXFileForAnim();
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Build input VMD with multiple bones and frames
+    libmmd::VMDFile vmdIn;
+    vmdIn.m_header.m_header.Set("Vocaloid Motion Data 0002");
+    vmdIn.m_header.m_modelName.Set("TestModel");
+
+    auto makeMotion = [](const char* name, uint32_t frame,
+        const Eigen::Vector3f& t, const Eigen::Quaternionf& q,
+        uint8_t interpVal) -> libmmd::VMDMotion
+    {
+        libmmd::VMDMotion m;
+        m.m_boneName.Set(name);
+        m.m_frame = frame;
+        m.m_translate = t;
+        m.m_quaternion = q;
+        m.m_interpolation.fill(0);
+        for (int ch = 0; ch < 4; ++ch)
+        {
+            m.m_interpolation[ch + 0]  = interpVal;
+            m.m_interpolation[ch + 4]  = interpVal;
+            m.m_interpolation[ch + 8]  = static_cast<uint8_t>(127 - interpVal);
+            m.m_interpolation[ch + 12] = static_cast<uint8_t>(127 - interpVal);
+        }
+        return m;
+    };
+
+    vmdIn.m_motions.push_back(makeMotion("root", 0,
+        Eigen::Vector3f(1.0f, 2.0f, 3.0f), Eigen::Quaternionf::Identity(), 20));
+    vmdIn.m_motions.push_back(makeMotion("root", 30,
+        Eigen::Vector3f(4.0f, 5.0f, 6.0f), Eigen::Quaternionf::Identity(), 20));
+    vmdIn.m_motions.push_back(makeMotion("child", 0,
+        Eigen::Vector3f::Zero(),
+        Eigen::Quaternionf(Eigen::AngleAxisf(0.5f, Eigen::Vector3f::UnitZ())), 40));
+    vmdIn.m_motions.push_back(makeMotion("child", 15,
+        Eigen::Vector3f(7.0f, 8.0f, 9.0f), Eigen::Quaternionf::Identity(), 40));
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(vmdIn.m_motions.size(), vmdOut.m_motions.size());
+
+    // Build lookup: (boneName, frame) -> motion for both input and output
+    auto findMotion = [](const std::vector<libmmd::VMDMotion>& motions,
+        const std::string& name, uint32_t frame) -> const libmmd::VMDMotion*
+    {
+        for (const auto& m : motions)
+            if (m.m_boneName.ToString() == name && m.m_frame == frame)
+                return &m;
+        return nullptr;
+    };
+
+    for (const auto& orig : vmdIn.m_motions)
+    {
+        const auto* saved = findMotion(vmdOut.m_motions,
+            orig.m_boneName.ToString(), orig.m_frame);
+        TEST_ASSERT(saved != nullptr);
+        if (!saved) continue;
+
+        TEST_ASSERT_FLOAT_EQ(orig.m_translate.x(), saved->m_translate.x());
+        TEST_ASSERT_FLOAT_EQ(orig.m_translate.y(), saved->m_translate.y());
+        TEST_ASSERT_FLOAT_EQ(orig.m_translate.z(), saved->m_translate.z());
+        TEST_ASSERT(std::fabs(orig.m_quaternion.w() - saved->m_quaternion.w()) < 1e-4f);
+        TEST_ASSERT(std::fabs(orig.m_quaternion.x() - saved->m_quaternion.x()) < 1e-4f);
+        TEST_ASSERT(std::fabs(orig.m_quaternion.y() - saved->m_quaternion.y()) < 1e-4f);
+        TEST_ASSERT(std::fabs(orig.m_quaternion.z() - saved->m_quaternion.z()) < 1e-4f);
+
+        // Check interpolation control points (allow ±1 for float->uint8 precision)
+        for (int i = 0; i < 16; ++i)
+        {
+            TEST_ASSERT(std::abs(static_cast<int>(orig.m_interpolation[i])
+                - static_cast<int>(saved->m_interpolation[i])) <= 1);
+        }
+    }
+
+    std::cout << "    VMDAnimation motion Add->Save round-trip passed\n";
+}
+
+static void test_VMDAnimation_AddSave_MorphRoundTrip()
+{
+    std::cout << "[test] VMDAnimation_AddSave_MorphRoundTrip\n";
+
+    auto pmxFile = MakePMXFileWithMorphForAnim();
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    libmmd::VMDFile vmdIn;
+    vmdIn.m_header.m_header.Set("Vocaloid Motion Data 0002");
+
+    {
+        libmmd::VMDMorph m;
+        m.m_blendShapeName.Set("smile");
+        m.m_frame = 0;
+        m.m_weight = 0.0f;
+        vmdIn.m_morphs.push_back(std::move(m));
+    }
+    {
+        libmmd::VMDMorph m;
+        m.m_blendShapeName.Set("smile");
+        m.m_frame = 15;
+        m.m_weight = 0.75f;
+        vmdIn.m_morphs.push_back(std::move(m));
+    }
+    {
+        libmmd::VMDMorph m;
+        m.m_blendShapeName.Set("smile");
+        m.m_frame = 30;
+        m.m_weight = 1.0f;
+        vmdIn.m_morphs.push_back(std::move(m));
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(vmdIn.m_morphs.size(), vmdOut.m_morphs.size());
+
+    for (size_t i = 0; i < vmdIn.m_morphs.size(); ++i)
+    {
+        TEST_ASSERT_EQ(vmdIn.m_morphs[i].m_blendShapeName.ToString(),
+                        vmdOut.m_morphs[i].m_blendShapeName.ToString());
+        TEST_ASSERT_EQ(vmdIn.m_morphs[i].m_frame, vmdOut.m_morphs[i].m_frame);
+        TEST_ASSERT_FLOAT_EQ(vmdIn.m_morphs[i].m_weight, vmdOut.m_morphs[i].m_weight);
+    }
+
+    std::cout << "    VMDAnimation morph Add->Save round-trip passed\n";
+}
+
+static void test_VMDAnimation_AddSave_IKRoundTrip()
+{
+    std::cout << "[test] VMDAnimation_AddSave_IKRoundTrip\n";
+
+    auto pmxFile = MakePMXFileWithIKForAnim();
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+    TEST_ASSERT(model->GetIKManager()->GetIKSolverCount() > 0);
+
+    libmmd::VMDFile vmdIn;
+    vmdIn.m_header.m_header.Set("Vocaloid Motion Data 0002");
+
+    {
+        libmmd::VMDIk ik;
+        ik.m_frame = 0;
+        ik.m_show = 1;
+        libmmd::VMDIkInfo info;
+        info.m_name.Set("ik_leg");
+        info.m_enable = 1;
+        ik.m_ikInfos.push_back(std::move(info));
+        vmdIn.m_iks.push_back(std::move(ik));
+    }
+    {
+        libmmd::VMDIk ik;
+        ik.m_frame = 20;
+        ik.m_show = 1;
+        libmmd::VMDIkInfo info;
+        info.m_name.Set("ik_leg");
+        info.m_enable = 0;
+        ik.m_ikInfos.push_back(std::move(info));
+        vmdIn.m_iks.push_back(std::move(ik));
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    libmmd::VMDFile vmdOut;
+    TEST_ASSERT(anim.Save(vmdOut));
+
+    TEST_ASSERT_EQ(vmdIn.m_iks.size(), vmdOut.m_iks.size());
+
+    for (size_t i = 0; i < vmdIn.m_iks.size(); ++i)
+    {
+        TEST_ASSERT_EQ(vmdIn.m_iks[i].m_frame, vmdOut.m_iks[i].m_frame);
+        TEST_ASSERT_EQ(vmdIn.m_iks[i].m_ikInfos.size(), vmdOut.m_iks[i].m_ikInfos.size());
+        for (size_t j = 0; j < vmdIn.m_iks[i].m_ikInfos.size(); ++j)
+        {
+            TEST_ASSERT_EQ(vmdIn.m_iks[i].m_ikInfos[j].m_name.ToString(),
+                            vmdOut.m_iks[i].m_ikInfos[j].m_name.ToString());
+            TEST_ASSERT_EQ(vmdIn.m_iks[i].m_ikInfos[j].m_enable,
+                            vmdOut.m_iks[i].m_ikInfos[j].m_enable);
+        }
+    }
+
+    std::cout << "    VMDAnimation IK Add->Save round-trip passed\n";
+}
+
+static void test_VMDAnimation_SaveToFile_RoundTrip()
+{
+    std::cout << "[test] VMDAnimation_SaveToFile_RoundTrip\n";
+
+    auto pmxFile = MakeSimplePMXFileForAnim();
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    // Build a VMD with motion data
+    libmmd::VMDFile vmdIn;
+    vmdIn.m_header.m_header.Set("Vocaloid Motion Data 0002");
+    {
+        libmmd::VMDMotion m;
+        m.m_boneName.Set("child");
+        m.m_frame = 0;
+        m.m_translate = Eigen::Vector3f(1.0f, 2.0f, 3.0f);
+        m.m_quaternion = Eigen::Quaternionf::Identity();
+        m.m_interpolation.fill(20);
+        vmdIn.m_motions.push_back(std::move(m));
+    }
+    {
+        libmmd::VMDMotion m;
+        m.m_boneName.Set("child");
+        m.m_frame = 30;
+        m.m_translate = Eigen::Vector3f(4.0f, 5.0f, 6.0f);
+        m.m_quaternion = Eigen::Quaternionf::Identity();
+        m.m_interpolation.fill(20);
+        vmdIn.m_motions.push_back(std::move(m));
+    }
+
+    libmmd::VMDAnimation anim;
+    TEST_ASSERT(anim.Create(model));
+    TEST_ASSERT(anim.Add(vmdIn));
+
+    // Save to file
+    TempFile tmp(".vmd");
+    TEST_ASSERT(anim.Save(tmp.path()));
+
+    // Read back
+    libmmd::VMDFile vmdLoaded;
+    TEST_ASSERT(libmmd::ReadVMDFile(&vmdLoaded, tmp.path()));
+
+    // Compare with in-memory Save result
+    libmmd::VMDFile vmdMem;
+    TEST_ASSERT(anim.Save(vmdMem));
+
+    TEST_ASSERT_EQ(vmdMem.m_header.m_header.ToString(), vmdLoaded.m_header.m_header.ToString());
+    TEST_ASSERT_EQ(vmdMem.m_motions.size(), vmdLoaded.m_motions.size());
+
+    for (size_t i = 0; i < vmdMem.m_motions.size(); ++i)
+    {
+        const auto& a = vmdMem.m_motions[i];
+        const auto& b = vmdLoaded.m_motions[i];
+        TEST_ASSERT_EQ(a.m_boneName.ToString(), b.m_boneName.ToString());
+        TEST_ASSERT_EQ(a.m_frame, b.m_frame);
+        TEST_ASSERT_FLOAT_EQ(a.m_translate.x(), b.m_translate.x());
+        TEST_ASSERT_FLOAT_EQ(a.m_translate.y(), b.m_translate.y());
+        TEST_ASSERT_FLOAT_EQ(a.m_translate.z(), b.m_translate.z());
+        TEST_ASSERT_FLOAT_EQ(a.m_quaternion.w(), b.m_quaternion.w());
+        TEST_ASSERT_FLOAT_EQ(a.m_quaternion.x(), b.m_quaternion.x());
+        TEST_ASSERT_FLOAT_EQ(a.m_quaternion.y(), b.m_quaternion.y());
+        TEST_ASSERT_FLOAT_EQ(a.m_quaternion.z(), b.m_quaternion.z());
+        TEST_ASSERT(a.m_interpolation == b.m_interpolation);
+    }
+
+    TEST_ASSERT_EQ(vmdMem.m_morphs.size(), vmdLoaded.m_morphs.size());
+    TEST_ASSERT_EQ(vmdMem.m_iks.size(), vmdLoaded.m_iks.size());
+
+    std::cout << "    VMDAnimation Save-to-file round-trip passed\n";
+}
+
+// ===========================================================================
 // main
 // ===========================================================================
 
@@ -1050,6 +1458,12 @@ int main()
     test_PMX_MorphTypes_RoundTrip();
     test_PMD_RoundTrip();
     test_VPD_RoundTrip();
+
+    // VMDAnimation Add->Save round-trips
+    test_VMDAnimation_AddSave_MotionRoundTrip();
+    test_VMDAnimation_AddSave_MorphRoundTrip();
+    test_VMDAnimation_AddSave_IKRoundTrip();
+    test_VMDAnimation_SaveToFile_RoundTrip();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";
