@@ -104,6 +104,11 @@ namespace libmmd
 		);
 
 		/**
+		 * @brief Remove all IK chains, allowing a full rebuild.
+		 */
+		void ClearIKChains() { m_chains.clear(); }
+
+		/**
 		 * @brief Solve the IK.
 		 */
 		void Solve();
