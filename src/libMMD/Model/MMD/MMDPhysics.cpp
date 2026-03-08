@@ -13,8 +13,6 @@
 
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
-#include <LinearMath/btThreads.h>
-#include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolverMt.h>
 
 namespace libmmd
 {
@@ -46,23 +44,7 @@ namespace libmmd
 		std::vector<btBroadphaseProxy*> m_nonFilterProxy;
 	};
 
-	static btITaskScheduler* InitTaskScheduler()
-	{
-		btITaskScheduler* scheduler = btCreateDefaultTaskScheduler();
-		if (!scheduler)
-			scheduler = btGetSequentialTaskScheduler();
-		if (scheduler)
-		{
-			btSetTaskScheduler(scheduler);
-			scheduler->setNumThreads(scheduler->getMaxNumThreads());
-		}
-		return scheduler;
-	}
-
-	MMDPhysics::MMDPhysics()
-	{
-		static btITaskScheduler* scheduler = InitTaskScheduler();
-	}
+	MMDPhysics::MMDPhysics() = default;
 
 	MMDPhysics::~MMDPhysics()
 	{
@@ -75,7 +57,7 @@ namespace libmmd
 		m_collisionConfig = std::make_unique<btDefaultCollisionConfiguration>();
 		m_dispatcher = std::make_unique<btCollisionDispatcher>(m_collisionConfig.get());
 
-		m_solver = std::make_unique<btSequentialImpulseConstraintSolverMt>();
+		m_solver = std::make_unique<btSequentialImpulseConstraintSolver>();
 
 		m_world = std::make_unique<btDiscreteDynamicsWorld>(
 			m_dispatcher.get(),
@@ -84,7 +66,7 @@ namespace libmmd
 			m_collisionConfig.get()
 			);
 
-		m_world->getSolverInfo().m_solverMode |= SOLVER_CACHE_FRIENDLY | SOLVER_USE_ARTICULATED_WARMSTARTING;
+		m_world->getSolverInfo().m_solverMode |= SOLVER_CACHE_FRIENDLY;
 		m_world->getDispatchInfo().m_allowedCcdPenetration = 0.0001f;
 		m_world->setGravity(btVector3(0, -9.8f * 10.0f, 0));
 

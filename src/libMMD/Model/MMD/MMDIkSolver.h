@@ -114,6 +114,13 @@ namespace libmmd
 		void Solve();
 
 		/**
+		 * @brief Build the chain path from the shallowest chain node
+		 *        to the IK target for scoped global transform updates.
+		 *        Must be called after all AddIKChain calls are done.
+		 */
+		void BuildChainPath();
+
+		/**
 		 * @brief Save the base animation state.
 		 */
 		void SaveBaseAnimation() { m_baseAnimEnable = m_enable; }
@@ -175,6 +182,8 @@ namespace libmmd
 
 		void SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis);
 
+		void UpdateChainPathGlobalTransform(size_t fromPathIdx);
+
 		std::vector<IKChain>	m_chains; ///< List of IK chains
 		MMDNode*	m_ikNode; ///< Pointer to the IK node
 		MMDNode*	m_ikTarget; ///< Pointer to the target node
@@ -182,6 +191,9 @@ namespace libmmd
 		float		m_limitAngle; ///< Limit angle
 		bool		m_enable; ///< Enable flag
 		bool		m_baseAnimEnable; ///< Base animation enable flag
+
+		std::vector<MMDNode*>	m_chainPath; ///< Nodes from shallowest chain to IK target
+		std::vector<size_t>		m_chainNodePathIndices; ///< Path index for each chain node
 	};
 }
 

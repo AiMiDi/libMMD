@@ -382,6 +382,7 @@ namespace libmmd
 
 			solver->SetIterateCount(m_numIteration);
 			solver->SetLimitAngle(m_rotateLimit * 4.0f);
+			solver->BuildChainPath();
 		}
 
 		LoadMorph(file);

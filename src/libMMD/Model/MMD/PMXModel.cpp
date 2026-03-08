@@ -628,6 +628,7 @@ namespace libmmd
 
 				solver->SetIterateCount(bone.m_ikIterationCount);
 				solver->SetLimitAngle(bone.m_ikLimit);
+				solver->BuildChainPath();
 			}
 		}
 

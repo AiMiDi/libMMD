@@ -131,19 +131,14 @@ void MMDNode::UpdateGlobalTransform()
 
 	void MMDNode::OnUpdateLocalTransform()
 	{
-		Eigen::Matrix4f s = Eigen::Matrix4f::Identity();
-		s.diagonal().head<3>() = GetScale();
-		Eigen::Matrix4f r = Eigen::Matrix4f::Identity();
-		r.block<3,3>(0,0) = AnimateRotate().toRotationMatrix();
-		Eigen::Matrix4f t = Eigen::Matrix4f::Identity();
-		t.block<3,1>(0,3) = AnimateTranslate();
-		if (m_enableIK)
-		{
-			Eigen::Matrix4f ikRot = Eigen::Matrix4f::Identity();
-			ikRot.block<3,3>(0,0) = m_ikRotate.toRotationMatrix();
-			r = ikRot * r;
-		}
-		m_local = t * r * s;
+		const Eigen::Quaternionf rot = m_enableIK
+			? (m_ikRotate * AnimateRotate())
+			: AnimateRotate();
+		const Eigen::Vector3f& sc = GetScale();
+
+		m_local.setIdentity();
+		m_local.block<3,3>(0,0).noalias() = rot.toRotationMatrix() * sc.asDiagonal();
+		m_local.block<3,1>(0,3) = AnimateTranslate();
 	}
 
 }

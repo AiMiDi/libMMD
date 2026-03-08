@@ -21,10 +21,9 @@ class btBroadphaseInterface;
 class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
 class btConstraintSolver;
-class btSequentialImpulseConstraintSolverMt;
+class btSequentialImpulseConstraintSolver;
 class btMotionState;
 struct btOverlapFilterCallback;
-class btITaskScheduler;
 
 namespace libmmd
 {
@@ -262,7 +261,7 @@ namespace libmmd
 		std::unique_ptr<btBroadphaseInterface>				m_broadphase;
 		std::unique_ptr<btDefaultCollisionConfiguration>	m_collisionConfig;
 		std::unique_ptr<btCollisionDispatcher>				m_dispatcher;
-		std::unique_ptr<btSequentialImpulseConstraintSolverMt>	m_solver;
+		std::unique_ptr<btSequentialImpulseConstraintSolver>	m_solver;
 		std::unique_ptr<btDiscreteDynamicsWorld>			m_world;
 		std::unique_ptr<btCollisionShape>					m_groundShape;
 		std::unique_ptr<btMotionState>						m_groundMS;
