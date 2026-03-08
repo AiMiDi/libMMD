@@ -230,17 +230,7 @@ namespace libmmd
 			}
 			if (pmxNode->GetIKSolver() != nullptr)
 			{
-				const auto ikSolver = pmxNode->GetIKSolver();
-				ikSolver->Solve();
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto& node : *m_nodeMan.GetNodes())
-		{
-			if (node->GetParent() == nullptr)
-			{
-				node->UpdateGlobalTransform();
+				pmxNode->GetIKSolver()->Solve();
 			}
 		}
 
@@ -288,6 +278,9 @@ namespace libmmd
 			}
 		}
 
+		// Nodes are sorted by deform depth, so parent transforms are always
+		// resolved before children. Each Append/IK node propagates via DFS to
+		// its subtree, making a final full-tree DFS unnecessary.
 		for (const auto pmxNode : nodes)
 		{
 			if (pmxNode->GetAppendNode() != nullptr)
@@ -297,17 +290,7 @@ namespace libmmd
 			}
 			if (pmxNode->GetIKSolver() != nullptr)
 			{
-				const auto ikSolver = pmxNode->GetIKSolver();
-				ikSolver->Solve();
-				pmxNode->UpdateGlobalTransform();
-			}
-		}
-
-		for (const auto pmxNode : nodes)
-		{
-			if (pmxNode->GetParent() == nullptr)
-			{
-				pmxNode->UpdateGlobalTransform();
+				pmxNode->GetIKSolver()->Solve();
 			}
 		}
 	}
