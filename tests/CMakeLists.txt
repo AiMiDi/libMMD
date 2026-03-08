@@ -59,4 +59,20 @@ if (LIBMMD_ENABLE_TEST)
         NAME file_roundtrip_test
         COMMAND $<TARGET_FILE:file_roundtrip_test>
     )
+
+    # MMD Physics tests (multithreaded Bullet world)
+    add_executable(mmd_physics_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/MMDPhysics.test.cpp
+    )
+    target_include_directories(mmd_physics_test PRIVATE
+        ${PROJECT_SOURCE_DIR}/external/spdlog/include
+        ${LIBMMD_EIGEN_ROOT}
+        ${BULLET_INCLUDE_DIRS}
+    )
+    target_link_libraries(mmd_physics_test libMMD ${BULLET_LIBRARIES})
+
+    add_test(
+        NAME mmd_physics_test
+        COMMAND $<TARGET_FILE:mmd_physics_test>
+    )
 endif()
