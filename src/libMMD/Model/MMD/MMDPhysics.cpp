@@ -609,6 +609,41 @@ namespace libmmd
 		return true;
 	}
 
+	bool MMDRigidBody::Create(
+		PMXRigidbody::Shape shape,
+		const Eigen::Vector3f& shapeSize,
+		const Eigen::Vector3f& translate,
+		const Eigen::Vector3f& rotate,
+		float mass,
+		float linearDamping,
+		float angularDamping,
+		float repulsion,
+		float friction,
+		PMXRigidbody::Operation op,
+		uint8_t group,
+		uint16_t collisionGroup,
+		MMDModel* model,
+		MMDNode* node,
+		const std::string& name
+	)
+	{
+		PMXRigidbody rb{};
+		rb.m_name = name;
+		rb.m_shape = shape;
+		rb.m_shapeSize = shapeSize;
+		rb.m_translate = translate;
+		rb.m_rotate = rotate;
+		rb.m_mass = mass;
+		rb.m_translateDimmer = linearDamping;
+		rb.m_rotateDimmer = angularDamping;
+		rb.m_repulsion = repulsion;
+		rb.m_friction = friction;
+		rb.m_op = op;
+		rb.m_group = group;
+		rb.m_collisionGroup = collisionGroup;
+		return Create(rb, model, node);
+	}
+
 	void MMDRigidBody::Destroy()
 	{
 		m_shape = nullptr;
@@ -881,6 +916,31 @@ namespace libmmd
 		m_constraint = std::move(constraint);
 
 		return true;
+	}
+
+	bool MMDJoint::CreateJoint(
+		const Eigen::Vector3f& translate,
+		const Eigen::Vector3f& rotate,
+		const Eigen::Vector3f& translateLowerLimit,
+		const Eigen::Vector3f& translateUpperLimit,
+		const Eigen::Vector3f& rotateLowerLimit,
+		const Eigen::Vector3f& rotateUpperLimit,
+		const Eigen::Vector3f& springTranslateFactor,
+		const Eigen::Vector3f& springRotateFactor,
+		const MMDRigidBody* rigidBodyA,
+		const MMDRigidBody* rigidBodyB
+	)
+	{
+		PMXJoint jt{};
+		jt.m_translate = translate;
+		jt.m_rotate = rotate;
+		jt.m_translateLowerLimit = translateLowerLimit;
+		jt.m_translateUpperLimit = translateUpperLimit;
+		jt.m_rotateLowerLimit = rotateLowerLimit;
+		jt.m_rotateUpperLimit = rotateUpperLimit;
+		jt.m_springTranslateFactor = springTranslateFactor;
+		jt.m_springRotateFactor = springRotateFactor;
+		return CreateJoint(jt, rigidBodyA, rigidBodyB);
 	}
 
 	void MMDJoint::Destroy()

@@ -202,6 +202,14 @@ namespace libmmd
 	 * @return True if the file is written successfully, false otherwise.
 	 */
 	bool WriteVMDFile(const VMDFile* vmd, const char* filename);
+
+	/**
+	 * @brief Write a VMD file to a memory buffer.
+	 * @param vmd Pointer to the VMDFile structure containing the data to write.
+	 * @param outData Output vector to receive the serialized VMD data.
+	 * @return True if the data is written successfully, false otherwise.
+	 */
+	bool WriteVMDFile(const VMDFile* vmd, std::vector<uint8_t>& outData);
 }
 
 #endif // !LIBMMD_MODEL_MMD_VMDFILE_H_

@@ -61,6 +61,42 @@ namespace libmmd
 		 */
 		bool Create(const PMXRigidbody& pmxRigidBody, MMDModel* model, MMDNode* node);
 		/**
+		 * @brief Create a rigid body from individual parameters.
+		 * @param shape Shape type.
+		 * @param shapeSize Shape dimensions.
+		 * @param translate Position vector.
+		 * @param rotate Rotation vector (radians).
+		 * @param mass Mass (0 for static).
+		 * @param linearDamping Linear damping factor.
+		 * @param angularDamping Angular damping factor.
+		 * @param repulsion Restitution (repulsion).
+		 * @param friction Friction coefficient.
+		 * @param op Physics operation mode.
+		 * @param group Collision group index.
+		 * @param collisionGroup Collision group mask.
+		 * @param model Pointer to the MMD model.
+		 * @param node Pointer to the MMD node.
+		 * @param name Rigid body name.
+		 * @return True if creation is successful, false otherwise.
+		 */
+		bool Create(
+			PMXRigidbody::Shape shape,
+			const Eigen::Vector3f& shapeSize,
+			const Eigen::Vector3f& translate,
+			const Eigen::Vector3f& rotate,
+			float mass,
+			float linearDamping,
+			float angularDamping,
+			float repulsion,
+			float friction,
+			PMXRigidbody::Operation op,
+			uint8_t group,
+			uint16_t collisionGroup,
+			MMDModel* model,
+			MMDNode* node,
+			const std::string& name = ""
+		);
+		/**
 		 * @brief Destroy the rigid body.
 		 */
 		void Destroy();
@@ -161,6 +197,32 @@ namespace libmmd
 		 * @return True if creation is successful, false otherwise.
 		 */
 		bool CreateJoint(const PMXJoint& pmxJoint, const MMDRigidBody* rigidBodyA, const MMDRigidBody* rigidBodyB);
+		/**
+		 * @brief Create a joint from individual parameters.
+		 * @param translate Position vector.
+		 * @param rotate Rotation vector (radians).
+		 * @param translateLowerLimit Lower limit for translation.
+		 * @param translateUpperLimit Upper limit for translation.
+		 * @param rotateLowerLimit Lower limit for rotation.
+		 * @param rotateUpperLimit Upper limit for rotation.
+		 * @param springTranslateFactor Spring constant for translation.
+		 * @param springRotateFactor Spring constant for rotation.
+		 * @param rigidBodyA Pointer to the first rigid body.
+		 * @param rigidBodyB Pointer to the second rigid body.
+		 * @return True if creation is successful, false otherwise.
+		 */
+		bool CreateJoint(
+			const Eigen::Vector3f& translate,
+			const Eigen::Vector3f& rotate,
+			const Eigen::Vector3f& translateLowerLimit,
+			const Eigen::Vector3f& translateUpperLimit,
+			const Eigen::Vector3f& rotateLowerLimit,
+			const Eigen::Vector3f& rotateUpperLimit,
+			const Eigen::Vector3f& springTranslateFactor,
+			const Eigen::Vector3f& springRotateFactor,
+			const MMDRigidBody* rigidBodyA,
+			const MMDRigidBody* rigidBodyB
+		);
 		/**
 		 * @brief Destroy the joint.
 		 */

@@ -119,6 +119,12 @@ namespace libmmd
 		return file.Write(str.m_buffer, Size);
 	}
 
+	template <size_t Size>
+	bool Write(const MMDFileString<Size>& str, MemoryWriter& writer)
+	{
+		return writer.Write(str.m_buffer, Size);
+	}
+
 	/**
 	 * @brief Convert to UTF-8 string.
 	 * @return UTF-8 string representation.

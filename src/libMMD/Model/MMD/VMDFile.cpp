@@ -18,8 +18,8 @@ namespace libmmd
 			return file.Read(val);
 		}
 
-		template <typename T>
-		bool Write(const T* val, File& file)
+		template <typename T, typename Writer>
+		bool Write(const T* val, Writer& file)
 		{
 			return file.Write(val);
 		}
@@ -40,7 +40,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteHeader(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteHeader(const VMDFile* vmd, Writer& file)
 		{
 			Write(vmd->m_header.m_header, file);
 			Write(vmd->m_header.m_modelName, file);
@@ -68,7 +69,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteMotion(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteMotion(const VMDFile* vmd, Writer& file)
 		{
 			const auto motionCount = static_cast<uint32_t>(vmd->m_motions.size());
 			if (!Write(&motionCount, file))
@@ -107,7 +109,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteBlendShape(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteBlendShape(const VMDFile* vmd, Writer& file)
 		{
 			const auto blendShapeCount = static_cast<uint32_t>(vmd->m_morphs.size());
 			if (!Write(&blendShapeCount, file))
@@ -148,7 +151,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteCamera(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteCamera(const VMDFile* vmd, Writer& file)
 		{
 			const auto cameraCount = static_cast<uint32_t>(vmd->m_cameras.size());
 			if (!Write(&cameraCount, file))
@@ -189,7 +193,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteLight(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteLight(const VMDFile* vmd, Writer& file)
 		{
 			const auto lightCount = static_cast<uint32_t>(vmd->m_lights.size());
 			if (!Write(&lightCount, file))
@@ -226,7 +231,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteShadow(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteShadow(const VMDFile* vmd, Writer& file)
 		{
 			const auto shadowCount = static_cast<uint32_t>(vmd->m_shadows.size());
 			if (!Write(&shadowCount, file))
@@ -273,7 +279,8 @@ namespace libmmd
 			return !file.IsBad();
 		}
 
-		bool WriteIK(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteIK(const VMDFile* vmd, Writer& file)
 		{
 			const auto ikCount = static_cast<uint32_t>(vmd->m_iks.size());
 			if (!Write(&ikCount, file))
@@ -362,7 +369,8 @@ namespace libmmd
 			return true;
 		}
 
-		bool WriteVMDFile(const VMDFile* vmd, File& file)
+		template <typename Writer>
+		bool WriteVMDFile(const VMDFile* vmd, Writer& file)
 		{
 			if (!WriteHeader(vmd, file))
 			{
@@ -447,6 +455,17 @@ namespace libmmd
 		}
 
 		return WriteVMDFile(vmd, file);
+	}
+
+	bool WriteVMDFile(const VMDFile* vmd, std::vector<uint8_t>& outData)
+	{
+		MemoryWriter writer;
+		if (!WriteVMDFile(vmd, writer))
+		{
+			return false;
+		}
+		outData = std::move(writer.GetData());
+		return true;
 	}
 
 }

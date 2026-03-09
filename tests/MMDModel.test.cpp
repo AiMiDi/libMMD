@@ -10,6 +10,7 @@
 #include <libMMD/Model/MMD/MMDMaterial.h>
 #include <libMMD/Model/MMD/PMXFile.h>
 #include <libMMD/Model/MMD/VMDFile.h>
+#include <libMMD/Model/MMD/MMDPhysics.h>
 #include <libMMD/Base/File.h>
 
 #include <iostream>
@@ -693,6 +694,329 @@ static void test_PhysicsManager_InitialListsEmpty()
     TEST_ASSERT(physicsMan.Create());
     TEST_ASSERT(physicsMan.GetRigidBodys()->empty());
     TEST_ASSERT(physicsMan.GetJoints()->empty());
+}
+
+// ===========================================================================
+// MMDRigidBody parametric Create equivalence tests
+// ===========================================================================
+
+static void test_RigidBody_ParametricCreate_Sphere()
+{
+    std::cout << "[test] RigidBody_ParametricCreate_Sphere\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* node = model->AddNode();
+    node->SetName("root");
+    node->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rb{};
+    rb.m_name = "sphere_rb";
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(1.0f, 2.0f, 3.0f);
+    rb.m_rotate = Eigen::Vector3f(0.1f, 0.2f, 0.3f);
+    rb.m_mass = 1.0f;
+    rb.m_translateDimmer = 0.5f;
+    rb.m_rotateDimmer = 0.5f;
+    rb.m_repulsion = 0.3f;
+    rb.m_friction = 0.8f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+    rb.m_group = 1;
+    rb.m_collisionGroup = 0xFFFF;
+
+    auto* rbStruct = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbStruct->Create(rb, model.get(), node));
+
+    auto* rbParam = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbParam->Create(
+        rb.m_shape, rb.m_shapeSize, rb.m_translate, rb.m_rotate,
+        rb.m_mass, rb.m_translateDimmer, rb.m_rotateDimmer,
+        rb.m_repulsion, rb.m_friction, rb.m_op,
+        rb.m_group, rb.m_collisionGroup,
+        model.get(), node, rb.m_name));
+
+    TEST_ASSERT_EQ(rbStruct->GetGroup(), rbParam->GetGroup());
+    TEST_ASSERT_EQ(rbStruct->GetGroupMask(), rbParam->GetGroupMask());
+    TEST_ASSERT(rbStruct->GetRigidBody() != nullptr);
+    TEST_ASSERT(rbParam->GetRigidBody() != nullptr);
+
+    auto structTf = rbStruct->GetTransform();
+    auto paramTf = rbParam->GetTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(structTf(r, c), paramTf(r, c));
+}
+
+static void test_RigidBody_ParametricCreate_Box()
+{
+    std::cout << "[test] RigidBody_ParametricCreate_Box\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* node = model->AddNode();
+    node->SetName("root");
+    node->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rb{};
+    rb.m_name = "box_rb";
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Box;
+    rb.m_shapeSize = Eigen::Vector3f(1.0f, 2.0f, 3.0f);
+    rb.m_translate = Eigen::Vector3f(-1.0f, 0.5f, 2.0f);
+    rb.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rb.m_mass = 0.0f;
+    rb.m_translateDimmer = 0.0f;
+    rb.m_rotateDimmer = 0.0f;
+    rb.m_repulsion = 0.0f;
+    rb.m_friction = 0.5f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::Static;
+    rb.m_group = 0;
+    rb.m_collisionGroup = 0x0001;
+
+    auto* rbStruct = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbStruct->Create(rb, model.get(), node));
+
+    auto* rbParam = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbParam->Create(
+        rb.m_shape, rb.m_shapeSize, rb.m_translate, rb.m_rotate,
+        rb.m_mass, rb.m_translateDimmer, rb.m_rotateDimmer,
+        rb.m_repulsion, rb.m_friction, rb.m_op,
+        rb.m_group, rb.m_collisionGroup,
+        model.get(), node, rb.m_name));
+
+    TEST_ASSERT_EQ(rbStruct->GetGroup(), rbParam->GetGroup());
+    TEST_ASSERT_EQ(rbStruct->GetGroupMask(), rbParam->GetGroupMask());
+
+    auto structTf = rbStruct->GetTransform();
+    auto paramTf = rbParam->GetTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(structTf(r, c), paramTf(r, c));
+}
+
+static void test_RigidBody_ParametricCreate_Capsule()
+{
+    std::cout << "[test] RigidBody_ParametricCreate_Capsule\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* node = model->AddNode();
+    node->SetName("root");
+    node->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rb{};
+    rb.m_name = "capsule_rb";
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Capsule;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 2.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(0.0f, 5.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_mass = 2.5f;
+    rb.m_translateDimmer = 0.9f;
+    rb.m_rotateDimmer = 0.9f;
+    rb.m_repulsion = 0.1f;
+    rb.m_friction = 0.3f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::DynamicAndBoneMerge;
+    rb.m_group = 2;
+    rb.m_collisionGroup = 0x00FF;
+
+    auto* rbStruct = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbStruct->Create(rb, model.get(), node));
+
+    auto* rbParam = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbParam->Create(
+        rb.m_shape, rb.m_shapeSize, rb.m_translate, rb.m_rotate,
+        rb.m_mass, rb.m_translateDimmer, rb.m_rotateDimmer,
+        rb.m_repulsion, rb.m_friction, rb.m_op,
+        rb.m_group, rb.m_collisionGroup,
+        model.get(), node, rb.m_name));
+
+    TEST_ASSERT_EQ(rbStruct->GetGroup(), rbParam->GetGroup());
+    TEST_ASSERT_EQ(rbStruct->GetGroupMask(), rbParam->GetGroupMask());
+
+    auto structTf = rbStruct->GetTransform();
+    auto paramTf = rbParam->GetTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(structTf(r, c), paramTf(r, c));
+}
+
+static void test_RigidBody_ParametricCreate_NullNode()
+{
+    std::cout << "[test] RigidBody_ParametricCreate_NullNode\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* root = model->AddNode();
+    root->SetName("root");
+    root->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rb{};
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rb.m_mass = 1.0f;
+    rb.m_translateDimmer = 0.0f;
+    rb.m_rotateDimmer = 0.0f;
+    rb.m_repulsion = 0.0f;
+    rb.m_friction = 0.5f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+    rb.m_group = 0;
+    rb.m_collisionGroup = 0xFFFF;
+
+    auto* rbStruct = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbStruct->Create(rb, model.get(), nullptr));
+
+    auto* rbParam = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbParam->Create(
+        rb.m_shape, rb.m_shapeSize, rb.m_translate, rb.m_rotate,
+        rb.m_mass, rb.m_translateDimmer, rb.m_rotateDimmer,
+        rb.m_repulsion, rb.m_friction, rb.m_op,
+        rb.m_group, rb.m_collisionGroup,
+        model.get(), nullptr));
+
+    TEST_ASSERT_EQ(rbStruct->GetGroup(), rbParam->GetGroup());
+    TEST_ASSERT_EQ(rbStruct->GetGroupMask(), rbParam->GetGroupMask());
+
+    auto structTf = rbStruct->GetTransform();
+    auto paramTf = rbParam->GetTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(structTf(r, c), paramTf(r, c));
+}
+
+// ===========================================================================
+// MMDJoint parametric CreateJoint equivalence tests
+// ===========================================================================
+
+static void test_Joint_ParametricCreate_Equivalence()
+{
+    std::cout << "[test] Joint_ParametricCreate_Equivalence\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* node = model->AddNode();
+    node->SetName("root");
+    node->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rbData{};
+    rbData.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rbData.m_shapeSize = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    rbData.m_translate = Eigen::Vector3f(0.0f, 5.0f, 0.0f);
+    rbData.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rbData.m_mass = 0.0f;
+    rbData.m_translateDimmer = 0.0f;
+    rbData.m_rotateDimmer = 0.0f;
+    rbData.m_repulsion = 0.0f;
+    rbData.m_friction = 0.5f;
+    rbData.m_op = libmmd::PMXRigidbody::Operation::Static;
+    rbData.m_group = 0;
+    rbData.m_collisionGroup = 0xFFFF;
+
+    auto* rbA1 = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbA1->Create(rbData, model.get(), node));
+    auto* rbA2 = model->GetPhysicsManager()->AddRigidBody();
+    rbData.m_translate = Eigen::Vector3f(0.0f, 3.0f, 0.0f);
+    rbData.m_mass = 1.0f;
+    rbData.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+    TEST_ASSERT(rbA2->Create(rbData, model.get(), node));
+
+    auto* rbB1 = model->GetPhysicsManager()->AddRigidBody();
+    rbData.m_translate = Eigen::Vector3f(0.0f, 5.0f, 0.0f);
+    rbData.m_mass = 0.0f;
+    rbData.m_op = libmmd::PMXRigidbody::Operation::Static;
+    TEST_ASSERT(rbB1->Create(rbData, model.get(), node));
+    auto* rbB2 = model->GetPhysicsManager()->AddRigidBody();
+    rbData.m_translate = Eigen::Vector3f(0.0f, 3.0f, 0.0f);
+    rbData.m_mass = 1.0f;
+    rbData.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+    TEST_ASSERT(rbB2->Create(rbData, model.get(), node));
+
+    libmmd::PMXJoint jt{};
+    jt.m_translate = Eigen::Vector3f(0.0f, 4.0f, 0.0f);
+    jt.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    jt.m_translateLowerLimit = Eigen::Vector3f(-1.0f, -1.0f, -1.0f);
+    jt.m_translateUpperLimit = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+    jt.m_rotateLowerLimit = Eigen::Vector3f(-0.5f, -0.5f, -0.5f);
+    jt.m_rotateUpperLimit = Eigen::Vector3f(0.5f, 0.5f, 0.5f);
+    jt.m_springTranslateFactor = Eigen::Vector3f(10.0f, 10.0f, 10.0f);
+    jt.m_springRotateFactor = Eigen::Vector3f(5.0f, 5.0f, 5.0f);
+
+    auto* jtStruct = model->GetPhysicsManager()->AddJoint();
+    TEST_ASSERT(jtStruct->CreateJoint(jt, rbA1, rbA2));
+
+    auto* jtParam = model->GetPhysicsManager()->AddJoint();
+    TEST_ASSERT(jtParam->CreateJoint(
+        jt.m_translate, jt.m_rotate,
+        jt.m_translateLowerLimit, jt.m_translateUpperLimit,
+        jt.m_rotateLowerLimit, jt.m_rotateUpperLimit,
+        jt.m_springTranslateFactor, jt.m_springRotateFactor,
+        rbB1, rbB2));
+
+    TEST_ASSERT(jtStruct->GetConstraint() != nullptr);
+    TEST_ASSERT(jtParam->GetConstraint() != nullptr);
+
+    auto structPos = jtStruct->GetPosition();
+    auto paramPos = jtParam->GetPosition();
+    TEST_ASSERT_FLOAT_EQ(structPos.x(), paramPos.x());
+    TEST_ASSERT_FLOAT_EQ(structPos.y(), paramPos.y());
+    TEST_ASSERT_FLOAT_EQ(structPos.z(), paramPos.z());
+}
+
+static void test_Joint_ParametricCreate_ZeroSprings()
+{
+    std::cout << "[test] Joint_ParametricCreate_ZeroSprings\n";
+
+    auto model = std::make_shared<libmmd::PMXModel>();
+    auto* node = model->AddNode();
+    node->SetName("root");
+    node->SetGlobalTransform(Eigen::Matrix4f::Identity());
+    model->GetPhysicsManager()->Create();
+
+    libmmd::PMXRigidbody rbData{};
+    rbData.m_shape = libmmd::PMXRigidbody::Shape::Box;
+    rbData.m_shapeSize = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+    rbData.m_translate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rbData.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rbData.m_mass = 0.0f;
+    rbData.m_op = libmmd::PMXRigidbody::Operation::Static;
+    rbData.m_group = 0;
+    rbData.m_collisionGroup = 0xFFFF;
+
+    auto* rbA1 = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbA1->Create(rbData, model.get(), node));
+    auto* rbA2 = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbA2->Create(rbData, model.get(), node));
+    auto* rbB1 = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbB1->Create(rbData, model.get(), node));
+    auto* rbB2 = model->GetPhysicsManager()->AddRigidBody();
+    TEST_ASSERT(rbB2->Create(rbData, model.get(), node));
+
+    Eigen::Vector3f zero = Eigen::Vector3f::Zero();
+
+    libmmd::PMXJoint jt{};
+    jt.m_translate = Eigen::Vector3f(1.0f, 2.0f, 3.0f);
+    jt.m_rotate = Eigen::Vector3f(0.1f, 0.2f, 0.3f);
+    jt.m_translateLowerLimit = Eigen::Vector3f(-2.0f, -2.0f, -2.0f);
+    jt.m_translateUpperLimit = Eigen::Vector3f(2.0f, 2.0f, 2.0f);
+    jt.m_rotateLowerLimit = Eigen::Vector3f(-1.0f, -1.0f, -1.0f);
+    jt.m_rotateUpperLimit = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+    jt.m_springTranslateFactor = zero;
+    jt.m_springRotateFactor = zero;
+
+    auto* jtStruct = model->GetPhysicsManager()->AddJoint();
+    TEST_ASSERT(jtStruct->CreateJoint(jt, rbA1, rbA2));
+
+    auto* jtParam = model->GetPhysicsManager()->AddJoint();
+    TEST_ASSERT(jtParam->CreateJoint(
+        jt.m_translate, jt.m_rotate,
+        jt.m_translateLowerLimit, jt.m_translateUpperLimit,
+        jt.m_rotateLowerLimit, jt.m_rotateUpperLimit,
+        zero, zero,
+        rbB1, rbB2));
+
+    TEST_ASSERT(jtStruct->GetConstraint() != nullptr);
+    TEST_ASSERT(jtParam->GetConstraint() != nullptr);
 }
 
 // ===========================================================================
@@ -3260,6 +3584,346 @@ static void test_VMDAnimation_Save_NonexistentBoneIgnored()
 }
 
 // ===========================================================================
+// Round-trip tests (Group D)
+// ===========================================================================
+
+static void test_RoundTrip_PhysicsRebuild()
+{
+    std::cout << "[test] RoundTrip_PhysicsRebuild\n";
+
+    libmmd::PMXFile file = MakeSimplePMXFile(10.0f);
+
+    libmmd::PMXRigidbody rb0{};
+    rb0.m_name = "rb_root";
+    rb0.m_boneIndex = 0;
+    rb0.m_shape = libmmd::PMXRigidbody::Shape::Box;
+    rb0.m_shapeSize = Eigen::Vector3f(2.0f, 1.0f, 1.0f);
+    rb0.m_translate = Eigen::Vector3f(0.0f, 5.0f, 0.0f);
+    rb0.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    rb0.m_mass = 0.0f;
+    rb0.m_translateDimmer = 0.0f;
+    rb0.m_rotateDimmer = 0.0f;
+    rb0.m_repulsion = 0.0f;
+    rb0.m_friction = 0.5f;
+    rb0.m_op = libmmd::PMXRigidbody::Operation::Static;
+    rb0.m_group = 0;
+    rb0.m_collisionGroup = 0xFFFF;
+    file.m_rigidbodies.push_back(rb0);
+
+    libmmd::PMXRigidbody rb1{};
+    rb1.m_name = "rb_child";
+    rb1.m_boneIndex = 1;
+    rb1.m_shape = libmmd::PMXRigidbody::Shape::Capsule;
+    rb1.m_shapeSize = Eigen::Vector3f(0.5f, 3.0f, 0.0f);
+    rb1.m_translate = Eigen::Vector3f(0.0f, 8.0f, 0.0f);
+    rb1.m_rotate = Eigen::Vector3f(0.1f, 0.0f, 0.0f);
+    rb1.m_mass = 1.5f;
+    rb1.m_translateDimmer = 0.8f;
+    rb1.m_rotateDimmer = 0.8f;
+    rb1.m_repulsion = 0.2f;
+    rb1.m_friction = 0.3f;
+    rb1.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+    rb1.m_group = 1;
+    rb1.m_collisionGroup = 0x00FE;
+    file.m_rigidbodies.push_back(rb1);
+
+    libmmd::PMXJoint jt{};
+    jt.m_name = "joint_01";
+    jt.m_type = libmmd::PMXJoint::JointType::SpringDOF6;
+    jt.m_rigidbodyAIndex = 0;
+    jt.m_rigidbodyBIndex = 1;
+    jt.m_translate = Eigen::Vector3f(0.0f, 6.5f, 0.0f);
+    jt.m_rotate = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    jt.m_translateLowerLimit = Eigen::Vector3f(-1.0f, -1.0f, -1.0f);
+    jt.m_translateUpperLimit = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+    jt.m_rotateLowerLimit = Eigen::Vector3f(-0.5f, -0.5f, -0.5f);
+    jt.m_rotateUpperLimit = Eigen::Vector3f(0.5f, 0.5f, 0.5f);
+    jt.m_springTranslateFactor = Eigen::Vector3f(10.0f, 10.0f, 10.0f);
+    jt.m_springRotateFactor = Eigen::Vector3f(5.0f, 5.0f, 5.0f);
+    file.m_joints.push_back(jt);
+
+    auto modelA = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(modelA->LoadPMX(file, "", ""));
+    auto* physA = modelA->GetPhysicsManager();
+    auto* rbsA = physA->GetRigidBodys();
+    auto* jtsA = physA->GetJoints();
+    TEST_ASSERT_EQ(size_t(2), rbsA->size());
+    TEST_ASSERT_EQ(size_t(1), jtsA->size());
+
+    libmmd::PMXFile fileBones = file;
+    fileBones.m_rigidbodies.clear();
+    fileBones.m_joints.clear();
+    auto modelB = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(modelB->LoadPMX(fileBones, "", ""));
+
+    auto* physB = modelB->GetPhysicsManager();
+
+    for (const auto& pmxRB : file.m_rigidbodies)
+    {
+        auto* rb = physB->AddRigidBody();
+        libmmd::MMDNode* node = nullptr;
+        if (pmxRB.m_boneIndex != -1)
+            node = modelB->GetNodeManager()->GetMMDNode(pmxRB.m_boneIndex);
+        TEST_ASSERT(rb->Create(
+            pmxRB.m_shape, pmxRB.m_shapeSize, pmxRB.m_translate, pmxRB.m_rotate,
+            pmxRB.m_mass, pmxRB.m_translateDimmer, pmxRB.m_rotateDimmer,
+            pmxRB.m_repulsion, pmxRB.m_friction, pmxRB.m_op,
+            pmxRB.m_group, pmxRB.m_collisionGroup,
+            modelB.get(), node, pmxRB.m_name));
+        physB->GetMMDPhysics()->AddRigidBody(rb);
+    }
+
+    auto* rbsB = physB->GetRigidBodys();
+    TEST_ASSERT_EQ(rbsA->size(), rbsB->size());
+
+    for (size_t i = 0; i < rbsA->size(); ++i)
+    {
+        TEST_ASSERT_EQ((*rbsA)[i]->GetGroup(), (*rbsB)[i]->GetGroup());
+        TEST_ASSERT_EQ((*rbsA)[i]->GetGroupMask(), (*rbsB)[i]->GetGroupMask());
+        auto tfA = (*rbsA)[i]->GetTransform();
+        auto tfB = (*rbsB)[i]->GetTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT_FLOAT_EQ(tfA(r, c), tfB(r, c));
+    }
+
+    for (const auto& pmxJt : file.m_joints)
+    {
+        if (pmxJt.m_rigidbodyAIndex < 0 || pmxJt.m_rigidbodyBIndex < 0)
+            continue;
+        auto* joint = physB->AddJoint();
+        TEST_ASSERT(joint->CreateJoint(
+            pmxJt.m_translate, pmxJt.m_rotate,
+            pmxJt.m_translateLowerLimit, pmxJt.m_translateUpperLimit,
+            pmxJt.m_rotateLowerLimit, pmxJt.m_rotateUpperLimit,
+            pmxJt.m_springTranslateFactor, pmxJt.m_springRotateFactor,
+            (*rbsB)[pmxJt.m_rigidbodyAIndex].get(),
+            (*rbsB)[pmxJt.m_rigidbodyBIndex].get()));
+        physB->GetMMDPhysics()->AddJoint(joint);
+    }
+
+    auto* jtsB = physB->GetJoints();
+    TEST_ASSERT_EQ(jtsA->size(), jtsB->size());
+
+    for (size_t i = 0; i < jtsA->size(); ++i)
+    {
+        auto posA = (*jtsA)[i]->GetPosition();
+        auto posB = (*jtsB)[i]->GetPosition();
+        TEST_ASSERT_FLOAT_EQ(posA.x(), posB.x());
+        TEST_ASSERT_FLOAT_EQ(posA.y(), posB.y());
+        TEST_ASSERT_FLOAT_EQ(posA.z(), posB.z());
+    }
+
+    std::cout << "    Physics rebuild round-trip: rigid bodies and joints match\n";
+}
+
+static void test_RoundTrip_VMDSerialize_Buffer()
+{
+    std::cout << "[test] RoundTrip_VMDSerialize_Buffer\n";
+
+    auto pmxFile = MakeSimplePMXFile(10.0f);
+    auto model = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(model->LoadPMX(pmxFile, "", ""));
+
+    auto interp = MakeLinearInterpolation();
+    libmmd::VMDFile vmdIn{};
+
+    libmmd::VMDMotion m0{};
+    m0.m_boneName.Set("root");
+    m0.m_frame = 0;
+    m0.m_translate = Eigen::Vector3f(1.0f, 2.0f, 3.0f);
+    m0.m_quaternion = Eigen::Quaternionf::Identity();
+    m0.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m0));
+
+    libmmd::VMDMotion m1{};
+    m1.m_boneName.Set("child");
+    m1.m_frame = 10;
+    m1.m_translate = Eigen::Vector3f(4.0f, 5.0f, 6.0f);
+    m1.m_quaternion = Eigen::Quaternionf(Eigen::AngleAxisf(0.5f, Eigen::Vector3f::UnitY()));
+    m1.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m1));
+
+    libmmd::VMDMotion m2{};
+    m2.m_boneName.Set("root");
+    m2.m_frame = 30;
+    m2.m_translate = Eigen::Vector3f(10.0f, 0.0f, 0.0f);
+    m2.m_quaternion = Eigen::Quaternionf::Identity();
+    m2.m_interpolation = interp;
+    vmdIn.m_motions.push_back(std::move(m2));
+
+    libmmd::VMDAnimation animA;
+    TEST_ASSERT(animA.Create(model));
+    TEST_ASSERT(animA.Add(vmdIn));
+
+    libmmd::VMDFile savedVmd;
+    TEST_ASSERT(animA.Save(savedVmd));
+
+    std::vector<uint8_t> buffer;
+    TEST_ASSERT(libmmd::WriteVMDFile(&savedVmd, buffer));
+    TEST_ASSERT(!buffer.empty());
+
+    libmmd::VMDFile restoredVmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&restoredVmd, buffer.data(), buffer.size()));
+
+    libmmd::VMDAnimation animB;
+    TEST_ASSERT(animB.Create(model));
+    TEST_ASSERT(animB.Add(restoredVmd));
+
+    libmmd::VMDFile savedVmd2;
+    TEST_ASSERT(animB.Save(savedVmd2));
+
+    TEST_ASSERT_EQ(savedVmd.m_motions.size(), savedVmd2.m_motions.size());
+
+    for (size_t i = 0; i < savedVmd.m_motions.size(); ++i)
+    {
+        const auto& a = savedVmd.m_motions[i];
+        const auto& b = savedVmd2.m_motions[i];
+        TEST_ASSERT_EQ(a.m_boneName.ToString(), b.m_boneName.ToString());
+        TEST_ASSERT_EQ(a.m_frame, b.m_frame);
+        TEST_ASSERT(std::fabs(a.m_translate.x() - b.m_translate.x()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_translate.y() - b.m_translate.y()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_translate.z() - b.m_translate.z()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_quaternion.w() - b.m_quaternion.w()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_quaternion.x() - b.m_quaternion.x()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_quaternion.y() - b.m_quaternion.y()) < 1e-4f);
+        TEST_ASSERT(std::fabs(a.m_quaternion.z() - b.m_quaternion.z()) < 1e-4f);
+    }
+
+    std::cout << "    VMD serialize round-trip: " << savedVmd.m_motions.size()
+              << " motion keys preserved\n";
+}
+
+static void test_RoundTrip_RealFile_PhysicsAndVMD()
+{
+    std::cout << "[test] RoundTrip_RealFile_PhysicsAndVMD\n";
+
+    libmmd::PMXFile pmxFile;
+    if (!libmmd::ReadPMXFile(&pmxFile, g_pmxTestFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load PMX file\n";
+        return;
+    }
+
+    auto modelA = std::make_shared<libmmd::PMXModel>();
+    if (!modelA->Load(g_pmxTestFile, ""))
+    {
+        std::cerr << "  SKIP: Could not load model A\n";
+        return;
+    }
+
+    auto* physA = modelA->GetPhysicsManager();
+    size_t rbCountA = physA->GetRigidBodys()->size();
+    size_t jtCountA = physA->GetJoints()->size();
+    size_t nodeCountA = modelA->GetNodeManager()->GetNodeCount();
+
+    libmmd::PMXFile pmxBones = pmxFile;
+    pmxBones.m_rigidbodies.clear();
+    pmxBones.m_joints.clear();
+    auto modelB = std::make_shared<libmmd::PMXModel>();
+    TEST_ASSERT(modelB->LoadPMX(pmxBones, "", ""));
+    size_t nodeCountB = modelB->GetNodeManager()->GetNodeCount();
+    TEST_ASSERT_EQ(nodeCountA, nodeCountB);
+
+    auto* physB = modelB->GetPhysicsManager();
+
+    for (const auto& pmxRB : pmxFile.m_rigidbodies)
+    {
+        auto* rb = physB->AddRigidBody();
+        libmmd::MMDNode* node = nullptr;
+        if (pmxRB.m_boneIndex >= 0 &&
+            pmxRB.m_boneIndex < static_cast<int32_t>(nodeCountB))
+            node = modelB->GetNodeManager()->GetMMDNode(pmxRB.m_boneIndex);
+        TEST_ASSERT(rb->Create(
+            pmxRB.m_shape, pmxRB.m_shapeSize, pmxRB.m_translate, pmxRB.m_rotate,
+            pmxRB.m_mass, pmxRB.m_translateDimmer, pmxRB.m_rotateDimmer,
+            pmxRB.m_repulsion, pmxRB.m_friction, pmxRB.m_op,
+            pmxRB.m_group, pmxRB.m_collisionGroup,
+            modelB.get(), node, pmxRB.m_name));
+        physB->GetMMDPhysics()->AddRigidBody(rb);
+    }
+
+    TEST_ASSERT_EQ(rbCountA, physB->GetRigidBodys()->size());
+
+    auto* rbsA = physA->GetRigidBodys();
+    auto* rbsB = physB->GetRigidBodys();
+    for (size_t i = 0; i < rbCountA; ++i)
+    {
+        TEST_ASSERT_EQ((*rbsA)[i]->GetGroup(), (*rbsB)[i]->GetGroup());
+        TEST_ASSERT_EQ((*rbsA)[i]->GetGroupMask(), (*rbsB)[i]->GetGroupMask());
+        auto tfA = (*rbsA)[i]->GetTransform();
+        auto tfB = (*rbsB)[i]->GetTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT_FLOAT_EQ(tfA(r, c), tfB(r, c));
+    }
+
+    size_t rebuiltJoints = 0;
+    for (const auto& pmxJt : pmxFile.m_joints)
+    {
+        if (pmxJt.m_rigidbodyAIndex < 0 || pmxJt.m_rigidbodyBIndex < 0 ||
+            pmxJt.m_rigidbodyAIndex == pmxJt.m_rigidbodyBIndex)
+            continue;
+        auto* joint = physB->AddJoint();
+        TEST_ASSERT(joint->CreateJoint(
+            pmxJt.m_translate, pmxJt.m_rotate,
+            pmxJt.m_translateLowerLimit, pmxJt.m_translateUpperLimit,
+            pmxJt.m_rotateLowerLimit, pmxJt.m_rotateUpperLimit,
+            pmxJt.m_springTranslateFactor, pmxJt.m_springRotateFactor,
+            (*rbsB)[pmxJt.m_rigidbodyAIndex].get(),
+            (*rbsB)[pmxJt.m_rigidbodyBIndex].get()));
+        physB->GetMMDPhysics()->AddJoint(joint);
+        ++rebuiltJoints;
+    }
+    TEST_ASSERT_EQ(jtCountA, rebuiltJoints);
+
+    auto* jtsA = physA->GetJoints();
+    auto* jtsB = physB->GetJoints();
+    for (size_t i = 0; i < jtCountA; ++i)
+    {
+        auto posA = (*jtsA)[i]->GetPosition();
+        auto posB = (*jtsB)[i]->GetPosition();
+        TEST_ASSERT_FLOAT_EQ(posA.x(), posB.x());
+        TEST_ASSERT_FLOAT_EQ(posA.y(), posB.y());
+        TEST_ASSERT_FLOAT_EQ(posA.z(), posB.z());
+    }
+
+    libmmd::VMDFile vmdFile;
+    if (!libmmd::ReadVMDFile(&vmdFile, g_vmdBoneFile.c_str()))
+    {
+        std::cerr << "  SKIP: Could not load VMD file\n";
+        return;
+    }
+
+    libmmd::VMDAnimation animA;
+    TEST_ASSERT(animA.Create(modelA));
+    TEST_ASSERT(animA.Add(vmdFile));
+
+    libmmd::VMDFile savedVmd;
+    TEST_ASSERT(animA.Save(savedVmd));
+    size_t motionCountA = savedVmd.m_motions.size();
+
+    std::vector<uint8_t> vmdBuffer;
+    TEST_ASSERT(libmmd::WriteVMDFile(&savedVmd, vmdBuffer));
+
+    libmmd::VMDFile restoredVmd;
+    TEST_ASSERT(libmmd::ReadVMDFile(&restoredVmd, vmdBuffer.data(), vmdBuffer.size()));
+
+    libmmd::VMDAnimation animB;
+    TEST_ASSERT(animB.Create(modelB));
+    TEST_ASSERT(animB.Add(restoredVmd));
+
+    libmmd::VMDFile savedVmd2;
+    TEST_ASSERT(animB.Save(savedVmd2));
+
+    TEST_ASSERT_EQ(motionCountA, savedVmd2.m_motions.size());
+
+    std::cout << "    Real file round-trip: " << nodeCountA << " nodes, "
+              << rbCountA << " rigid bodies, " << jtCountA << " joints, "
+              << motionCountA << " motion keys\n";
+}
+
+// ===========================================================================
 // UpdatePhysicsAnimation loop merge regression
 // ===========================================================================
 
@@ -4631,6 +5295,16 @@ int main()
     test_PhysicsManager_CreateSucceeds();
     test_PhysicsManager_InitialListsEmpty();
 
+    // RigidBody parametric Create
+    test_RigidBody_ParametricCreate_Sphere();
+    test_RigidBody_ParametricCreate_Box();
+    test_RigidBody_ParametricCreate_Capsule();
+    test_RigidBody_ParametricCreate_NullNode();
+
+    // Joint parametric CreateJoint
+    test_Joint_ParametricCreate_Equivalence();
+    test_Joint_ParametricCreate_ZeroSprings();
+
     // Polymorphism
     test_Polymorphism_PMXModelAsMMDModel();
     test_Polymorphism_PMDModelAsMMDModel();
@@ -4745,6 +5419,11 @@ int main()
     test_VMDAnimation_Save_MultipleBones();
     test_VMDAnimation_Save_InterpolationPreserved();
     test_VMDAnimation_Save_NonexistentBoneIgnored();
+
+    // Round-trip tests (Group D)
+    test_RoundTrip_PhysicsRebuild();
+    test_RoundTrip_VMDSerialize_Buffer();
+    test_RoundTrip_RealFile_PhysicsAndVMD();
 
     // Physics animation loop merge regression
     test_PMXModel_PhysicsAnimation_TransformsValid();

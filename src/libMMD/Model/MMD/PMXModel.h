@@ -263,6 +263,11 @@ namespace libmmd
 		 * @brief Destroy the PMX model.
 		 */
 		virtual void Destroy();
+
+		PMXNode* AddNode() { return m_nodeMan.AddNode(); }
+		MMDIkSolver* AddIKSolver() { return m_ikSolverMan.AddIKSolver(); }
+		void SortNodes();
+
 	protected:
 		enum class MorphType;
 		struct MaterialFactor;

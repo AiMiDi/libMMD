@@ -193,6 +193,35 @@ namespace libmmd
 		bool			m_badFlag;
 	};
 
+	class MemoryWriter
+	{
+	public:
+		MemoryWriter() : m_badFlag(false) {}
+
+		bool IsBad() const { return m_badFlag; }
+		void ClearBadFlag() { m_badFlag = false; }
+
+		std::vector<uint8_t>& GetData() { return m_data; }
+		const std::vector<uint8_t>& GetData() const { return m_data; }
+
+		template <typename T>
+		bool Write(const T* buffer, size_t count = 1)
+		{
+			if (buffer == nullptr)
+			{
+				return false;
+			}
+			const size_t bytes = sizeof(T) * count;
+			const auto* ptr = reinterpret_cast<const uint8_t*>(buffer);
+			m_data.insert(m_data.end(), ptr, ptr + bytes);
+			return true;
+		}
+
+	private:
+		std::vector<uint8_t> m_data;
+		bool m_badFlag;
+	};
+
 	class TextFileReader
 	{
 	public:

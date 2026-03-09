@@ -373,6 +373,32 @@ namespace libmmd
 		m_nodeMan.GetNodes()->clear();
 	}
 
+	void PMXModel::SortNodes()
+	{
+		m_sortedNodes.clear();
+		m_sortedNodes.reserve(m_nodeMan.GetNodeCount());
+		auto* pmxNodes = m_nodeMan.GetNodes();
+		for (auto& pmxNode : (*pmxNodes))
+		{
+			m_sortedNodes.push_back(pmxNode.get());
+		}
+		std::stable_sort(
+			m_sortedNodes.begin(),
+			m_sortedNodes.end(),
+			[](const PMXNode* x, const PMXNode* y) { return x->GetDeformDepth() < y->GetDeformDepth(); }
+		);
+
+		m_beforePhysicsNodes.clear();
+		m_afterPhysicsNodes.clear();
+		for (auto* node : m_sortedNodes)
+		{
+			if (node->IsDeformAfterPhysics())
+				m_afterPhysicsNodes.push_back(node);
+			else
+				m_beforePhysicsNodes.push_back(node);
+		}
+	}
+
 	PMXModel::PMXMorph::PMXMorph(): m_morphType(MorphType::None), m_dataIndex()
 	{}
 
@@ -569,28 +595,7 @@ namespace libmmd
 			node->SaveInitialTRS();
 		}
 
-		m_sortedNodes.clear();
-		m_sortedNodes.reserve(m_nodeMan.GetNodeCount());
-		auto* pmxNodes = m_nodeMan.GetNodes();
-		for (auto& pmxNode : (*pmxNodes))
-		{
-			m_sortedNodes.push_back(pmxNode.get());
-		}
-		std::stable_sort(
-			m_sortedNodes.begin(),
-			m_sortedNodes.end(),
-			[](const PMXNode* x, const PMXNode* y) {return x->GetDeformDepth() < y->GetDeformDepth(); }
-		);
-
-		m_beforePhysicsNodes.clear();
-		m_afterPhysicsNodes.clear();
-		for (auto* node : m_sortedNodes)
-		{
-			if (node->IsDeformAfterPhysics())
-				m_afterPhysicsNodes.push_back(node);
-			else
-				m_beforePhysicsNodes.push_back(node);
-		}
+		SortNodes();
 
 		// IK
 		for (size_t i = 0; i < file.m_bones.size(); i++)
