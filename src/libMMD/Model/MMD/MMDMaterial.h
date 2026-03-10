@@ -17,6 +17,8 @@ namespace libmmd
 	 */
 	struct MMDMaterial
 	{
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 		MMDMaterial();
 
 		/**
