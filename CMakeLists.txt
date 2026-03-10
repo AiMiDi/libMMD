@@ -15,6 +15,7 @@ set (LIBMMD_BULLET_ROOT "" CACHE PATH "Bullet Root Directory")
 set (LIBMMD_EIGEN_ROOT "${PROJECT_SOURCE_DIR}/external/eigen" CACHE PATH "Eigen Root Directory")
 option (LIBMMD_ENABLE_TEST "Enable CTest." on)
 option (LIBMMD_INSTALL "libMMD install." off)
+option (LIBMMD_ENABLE_AVX2 "Enable AVX2 instruction set." off)
 
 set (BULLET_ROOT ${LIBMMD_BULLET_ROOT})
 MESSAGE( STATUS "BULLET_ROOT=${BULLET_ROOT}")
@@ -44,7 +45,9 @@ endif(WIN32)
 
 if(MSVC)
     ADD_DEFINITIONS(/MP /utf-8)
-    ADD_DEFINITIONS(-DBT_USE_PPL=1)
+    if(LIBMMD_ENABLE_AVX2)
+        add_compile_options(/arch:AVX2)
+    endif()
 endif()
 
 add_subdirectory(src)
