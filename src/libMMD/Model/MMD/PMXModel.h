@@ -266,6 +266,7 @@ namespace libmmd
 
 		PMXNode* AddNode() { return m_nodeMan.AddNode(); }
 		MMDIkSolver* AddIKSolver() { return m_ikSolverMan.AddIKSolver(); }
+		MMDMorph* AddMorph() { return m_morphMan.AddMorph(); }
 		void SortNodes();
 
 	protected:
