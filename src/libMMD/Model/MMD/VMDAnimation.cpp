@@ -531,9 +531,12 @@ namespace libmmd
 			nodeCtrl->Evaluate(t, weight);
 		}
 
-		for (const auto& ikCtrl : m_ikControllers)
+		if (m_applyIKEnable)
 		{
-			ikCtrl->Evaluate(t, weight);
+			for (const auto& ikCtrl : m_ikControllers)
+			{
+				ikCtrl->Evaluate(t, weight);
+			}
 		}
 
 		for (const auto& morphCtrl : m_morphControllers)

@@ -146,6 +146,20 @@ namespace libmmd
 		 */
 		bool Save(const char* filename) const;
 
+		/**
+		 * @brief Control whether IK enable/disable keyframes are applied during Evaluate.
+		 * When set to false, Evaluate skips IK controller evaluation, allowing external
+		 * systems (e.g. Cinema 4D keyframes) to control IK solver states.
+		 * @param apply True to apply IK enable keyframes (default), false to skip.
+		 */
+		void SetApplyIKEnable(bool apply) { m_applyIKEnable = apply; }
+
+		/**
+		 * @brief Check whether IK enable keyframes are applied during Evaluate.
+		 * @return True if IK enable keyframes are applied, false otherwise.
+		 */
+		bool GetApplyIKEnable() const { return m_applyIKEnable; }
+
 	private:
 		int32_t CalculateMaxKeyTime() const;
 
@@ -158,6 +172,7 @@ namespace libmmd
 		std::vector<IKControllerPtr>		m_ikControllers; ///< IK controllers
 		std::vector<MorphControllerPtr>		m_morphControllers; ///< Morph controllers
 		uint32_t	m_maxKeyTime; ///< Maximum key time
+		bool		m_applyIKEnable = true; ///< Whether to apply IK enable keyframes during Evaluate
 	};
 
 }
