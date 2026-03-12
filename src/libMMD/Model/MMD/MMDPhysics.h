@@ -237,10 +237,10 @@ namespace libmmd
 		btTypedConstraint* GetConstraint() const;
 
 		/**
-		 * @brief Get the position vector of the joint.
-		 * @return The position vector as Eigen::Vector3f.
+		 * @brief Get the world-space transform matrix of the joint after physics simulation.
+		 * @return Transform matrix as Eigen::Matrix4f.
 		 */
-		Eigen::Vector3f GetPosition() const;
+		Eigen::Matrix4f GetTransform() const;
 
 	private:
 		std::unique_ptr<btTypedConstraint>	m_constraint;

@@ -956,11 +956,11 @@ static void test_Joint_ParametricCreate_Equivalence()
     TEST_ASSERT(jtStruct->GetConstraint() != nullptr);
     TEST_ASSERT(jtParam->GetConstraint() != nullptr);
 
-    auto structPos = jtStruct->GetPosition();
-    auto paramPos = jtParam->GetPosition();
-    TEST_ASSERT_FLOAT_EQ(structPos.x(), paramPos.x());
-    TEST_ASSERT_FLOAT_EQ(structPos.y(), paramPos.y());
-    TEST_ASSERT_FLOAT_EQ(structPos.z(), paramPos.z());
+    auto structMat = jtStruct->GetTransform();
+    auto paramMat = jtParam->GetTransform();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            TEST_ASSERT_FLOAT_EQ(structMat(r, c), paramMat(r, c));
 }
 
 static void test_Joint_ParametricCreate_ZeroSprings()
@@ -3707,11 +3707,11 @@ static void test_RoundTrip_PhysicsRebuild()
 
     for (size_t i = 0; i < jtsA->size(); ++i)
     {
-        auto posA = (*jtsA)[i]->GetPosition();
-        auto posB = (*jtsB)[i]->GetPosition();
-        TEST_ASSERT_FLOAT_EQ(posA.x(), posB.x());
-        TEST_ASSERT_FLOAT_EQ(posA.y(), posB.y());
-        TEST_ASSERT_FLOAT_EQ(posA.z(), posB.z());
+        auto matA = (*jtsA)[i]->GetTransform();
+        auto matB = (*jtsB)[i]->GetTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT_FLOAT_EQ(matA(r, c), matB(r, c));
     }
 
     std::cout << "    Physics rebuild round-trip: rigid bodies and joints match\n";
@@ -3881,11 +3881,11 @@ static void test_RoundTrip_RealFile_PhysicsAndVMD()
     auto* jtsB = physB->GetJoints();
     for (size_t i = 0; i < jtCountA; ++i)
     {
-        auto posA = (*jtsA)[i]->GetPosition();
-        auto posB = (*jtsB)[i]->GetPosition();
-        TEST_ASSERT_FLOAT_EQ(posA.x(), posB.x());
-        TEST_ASSERT_FLOAT_EQ(posA.y(), posB.y());
-        TEST_ASSERT_FLOAT_EQ(posA.z(), posB.z());
+        auto matA = (*jtsA)[i]->GetTransform();
+        auto matB = (*jtsB)[i]->GetTransform();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                TEST_ASSERT_FLOAT_EQ(matA(r, c), matB(r, c));
     }
 
     libmmd::VMDFile vmdFile;

@@ -953,19 +953,17 @@ namespace libmmd
 		return m_constraint.get();
 	}
 
-	Eigen::Vector3f MMDJoint::GetPosition() const
+	Eigen::Matrix4f MMDJoint::GetTransform() const
 	{
 		if (m_constraint == nullptr)
 		{
-			return Eigen::Vector3f::Zero();
+			return Eigen::Matrix4f::Identity();
 		}
-		const auto& position_a = m_constraint->getRigidBodyA().getCenterOfMassPosition();
-		const auto& position_b = m_constraint->getRigidBodyB().getCenterOfMassPosition();
-		const auto position = position_a.lerp(position_b, 0.5f);
-		return {
-			position.x(),
-			position.y(),
-			position.z()
-		};
+		auto* dof6 = static_cast<btGeneric6DofSpringConstraint*>(m_constraint.get());
+		dof6->calculateTransforms();
+		const btTransform& transform = dof6->getCalculatedTransformA();
+		alignas(16) Eigen::Matrix4f mat;
+		transform.getOpenGLMatrix(mat.data());
+		return mat;
 	}
 }
