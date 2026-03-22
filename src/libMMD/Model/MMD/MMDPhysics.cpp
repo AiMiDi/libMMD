@@ -715,6 +715,16 @@ namespace libmmd
 		{
 			m_kinematicMotionState->ReflectGlobalTransform();
 		}
+
+		if (m_rigidBodyType == RigidBodyType::Aligned && m_node != nullptr)
+		{
+			alignas(16) Eigen::Matrix4f rbWorld = m_node->GetGlobalTransform() * m_offsetMat;
+			btTransform transform;
+			transform.setFromOpenGLMatrix(rbWorld.data());
+			m_rigidBody->setCenterOfMassTransform(transform);
+			m_activeMotionState->setWorldTransform(transform);
+			m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+		}
 	}
 
 	void MMDRigidBody::CalcLocalTransform() const
