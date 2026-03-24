@@ -404,6 +404,9 @@ namespace libmmd
 		if (pmdRigidBody.m_rigidBodyType != PMDRigidBodyOperation::Static)
 		{
 			mass = pmdRigidBody.m_rigidBodyWeight;
+			constexpr btScalar kMaxMass = 1.0f / SIMD_EPSILON;
+			if (mass > kMaxMass)
+				mass = kMaxMass;
 		}
 		if (mass != 0)
 		{
@@ -522,6 +525,9 @@ namespace libmmd
 		if (pmxRigidBody.m_op != PMXRigidbody::Operation::Static)
 		{
 			mass = pmxRigidBody.m_mass;
+			constexpr btScalar kMaxMass = 1.0f / SIMD_EPSILON;
+			if (mass > kMaxMass)
+				mass = kMaxMass;
 		}
 		if (mass != 0)
 		{
@@ -554,9 +560,9 @@ namespace libmmd
 		}
 
 		btMotionState* MMDMotionState = nullptr;
+		m_kinematicMotionState = std::make_unique<KinematicMotionState>(kinematicNode, m_offsetMat);
 		if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
 		{
-			m_kinematicMotionState = std::make_unique<KinematicMotionState>(kinematicNode, m_offsetMat);
 			MMDMotionState = m_kinematicMotionState.get();
 		}
 		else
@@ -566,20 +572,17 @@ namespace libmmd
 				if (pmxRigidBody.m_op == PMXRigidbody::Operation::Dynamic)
 				{
 					m_activeMotionState = std::make_unique<DynamicMotionState>(kinematicNode, m_offsetMat);
-					m_kinematicMotionState = std::make_unique<KinematicMotionState>(kinematicNode, m_offsetMat);
 					MMDMotionState = m_activeMotionState.get();
 				}
 				else if (pmxRigidBody.m_op == PMXRigidbody::Operation::DynamicAndBoneMerge)
 				{
 					m_activeMotionState = std::make_unique<DynamicAndBoneMergeMotionState>(kinematicNode, m_offsetMat);
-					m_kinematicMotionState = std::make_unique<KinematicMotionState>(kinematicNode, m_offsetMat);
 					MMDMotionState = m_activeMotionState.get();
 				}
 			}
 			else
 			{
 				m_activeMotionState = std::make_unique<DefaultMotionState>(m_offsetMat);
-				m_kinematicMotionState = std::make_unique<KinematicMotionState>(kinematicNode, m_offsetMat);
 				MMDMotionState = m_activeMotionState.get();
 			}
 		}
@@ -715,17 +718,8 @@ namespace libmmd
 		{
 			m_kinematicMotionState->ReflectGlobalTransform();
 		}
-
-		if (m_rigidBodyType == RigidBodyType::Aligned && m_node != nullptr)
-		{
-			alignas(16) Eigen::Matrix4f rbWorld = m_node->GetGlobalTransform() * m_offsetMat;
-			btTransform transform;
-			transform.setFromOpenGLMatrix(rbWorld.data());
-			m_rigidBody->setCenterOfMassTransform(transform);
-			m_activeMotionState->setWorldTransform(transform);
-			m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
-		}
 	}
+
 
 	void MMDRigidBody::CalcLocalTransform() const
 	{
