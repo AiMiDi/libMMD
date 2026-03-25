@@ -160,6 +160,20 @@ namespace libmmd
 		 */
 		bool GetApplyIKEnable() const { return m_applyIKEnable; }
 
+		/**
+		 * @brief Control whether morph keyframes are applied during Evaluate.
+		 * When set to false, Evaluate skips morph controller evaluation, allowing external
+		 * systems (e.g. Cinema 4D CTrack keyframes) to drive morph weights instead.
+		 * @param apply True to apply morph keyframes (default), false to skip.
+		 */
+		void SetApplyMorphEnable(bool apply) { m_applyMorphEnable = apply; }
+
+		/**
+		 * @brief Check whether morph keyframes are applied during Evaluate.
+		 * @return True if morph keyframes are applied, false otherwise.
+		 */
+		bool GetApplyMorphEnable() const { return m_applyMorphEnable; }
+
 	private:
 		int32_t CalculateMaxKeyTime() const;
 
@@ -173,6 +187,7 @@ namespace libmmd
 		std::vector<MorphControllerPtr>		m_morphControllers; ///< Morph controllers
 		uint32_t	m_maxKeyTime; ///< Maximum key time
 		bool		m_applyIKEnable = true; ///< Whether to apply IK enable keyframes during Evaluate
+		bool		m_applyMorphEnable = true; ///< Whether to apply morph keyframes during Evaluate
 	};
 
 }

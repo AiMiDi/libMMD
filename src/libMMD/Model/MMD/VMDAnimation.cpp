@@ -539,9 +539,12 @@ namespace libmmd
 			}
 		}
 
-		for (const auto& morphCtrl : m_morphControllers)
+		if (m_applyMorphEnable)
 		{
-			morphCtrl->Evaluate(t, weight);
+			for (const auto& morphCtrl : m_morphControllers)
+			{
+				morphCtrl->Evaluate(t, weight);
+			}
 		}
 	}
 
