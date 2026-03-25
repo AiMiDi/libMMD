@@ -25,6 +25,16 @@ namespace libmmd
 	public:
 		virtual void Reset() = 0;
 		virtual void ReflectGlobalTransform() = 0;
+		virtual void SyncBonePosition() {}
+		/**
+		 * @brief For DynamicAndBoneMerge: bone linear velocity from position delta / elapsed.
+		 * Default: zero (no bone motion contribution).
+		 */
+		virtual btVector3 ComputeBoneVelocity(float elapsed)
+		{
+			(void)elapsed;
+			return btVector3(0, 0, 0);
+		}
 	};
 
 	struct MMDFilterCallback final : btOverlapFilterCallback
@@ -296,6 +306,8 @@ namespace libmmd
 		{
 			Eigen::Matrix4f global = m_node->GetGlobalTransform() * m_offset;
 			m_transform.setFromOpenGLMatrix(global.data());
+			m_prevBoneOrigin = m_transform.getOrigin();
+			m_hasPrevBoneOrigin = true;
 		}
 
 		void ReflectGlobalTransform() override
@@ -313,12 +325,35 @@ namespace libmmd
 			}
 		}
 
+		void SyncBonePosition() override
+		{
+			Eigen::Matrix4f boneGlobal = m_node->GetGlobalTransform() * m_offset;
+			btTransform boneTransform;
+			boneTransform.setFromOpenGLMatrix(boneGlobal.data());
+			m_transform.setOrigin(boneTransform.getOrigin());
+		}
+
+		btVector3 ComputeBoneVelocity(float elapsed) override
+		{
+			const btVector3 currentOrigin = m_transform.getOrigin();
+			btVector3 velocity(0, 0, 0);
+			if (m_hasPrevBoneOrigin && elapsed > 0.0f)
+			{
+				velocity = (currentOrigin - m_prevBoneOrigin) / elapsed;
+			}
+			m_prevBoneOrigin = currentOrigin;
+			m_hasPrevBoneOrigin = true;
+			return velocity;
+		}
+
 	private:
 		MMDNode*	m_node;
 		Eigen::Matrix4f	m_offset;
 		Eigen::Matrix4f	m_invOffset{};
 		btTransform	m_transform;
 		bool		m_override;
+		btVector3	m_prevBoneOrigin{0, 0, 0};
+		bool		m_hasPrevBoneOrigin = false;
 
 	};
 
@@ -724,6 +759,23 @@ namespace libmmd
 		{
 			m_kinematicMotionState->ReflectGlobalTransform();
 		}
+	}
+
+	void MMDRigidBody::SyncBonePositionToPhysics(const float elapsed) const
+	{
+		if (m_rigidBodyType != RigidBodyType::Aligned)
+			return;
+		if (m_activeMotionState == nullptr || m_rigidBody == nullptr)
+			return;
+
+		m_activeMotionState->SyncBonePosition();
+
+		const btVector3 boneVelocity = m_activeMotionState->ComputeBoneVelocity(elapsed);
+
+		btTransform transform;
+		m_activeMotionState->getWorldTransform(transform);
+		m_rigidBody->setCenterOfMassTransform(transform);
+		m_rigidBody->setLinearVelocity(boneVelocity);
 	}
 
 

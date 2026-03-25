@@ -348,9 +348,14 @@ namespace libmmd
 			return;
 		}
 
+		const auto rigidbodys = physicsMan->GetRigidBodys();
+		for (const auto& rb : *rigidbodys)
+		{
+			rb->SyncBonePositionToPhysics(elapsed);
+		}
+
 		physics->Update(elapsed);
 
-		const auto rigidbodys = physicsMan->GetRigidBodys();
 		for (const auto& rb : *rigidbodys)
 		{
 			rb->ReflectGlobalTransform();

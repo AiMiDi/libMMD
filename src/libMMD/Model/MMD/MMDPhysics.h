@@ -139,6 +139,14 @@ namespace libmmd
 		 */
 		void ReflectGlobalTransform() const;
 		/**
+		 * @brief For DynamicAndBoneMerge rigid bodies, sync bone position
+		 * to the physics world while preserving physics rotation, and set
+		 * linear velocity from bone motion (delta / elapsed).
+		 * Must be called before physics stepping.
+		 * @param elapsed Simulation timestep for this frame (seconds).
+		 */
+		void SyncBonePositionToPhysics(float elapsed) const;
+		/**
 		 * @brief Calculate the local transform of the rigid body.
 		 */
 		void CalcLocalTransform() const;
