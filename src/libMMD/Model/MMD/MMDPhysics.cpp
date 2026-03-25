@@ -14,8 +14,12 @@
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
 
+#include <cmath>
+
 namespace libmmd
 {
+	constexpr btScalar kMaxMass = 200.0f;
+
 	class MMDMotionState : public btMotionState
 	{
 	public:
@@ -404,7 +408,8 @@ namespace libmmd
 		if (pmdRigidBody.m_rigidBodyType != PMDRigidBodyOperation::Static)
 		{
 			mass = pmdRigidBody.m_rigidBodyWeight;
-			constexpr btScalar kMaxMass = 1.0f / SIMD_EPSILON;
+			if (!std::isfinite(mass) || mass < 0.0f)
+				mass = 0.0f;
 			if (mass > kMaxMass)
 				mass = kMaxMass;
 		}
@@ -525,7 +530,8 @@ namespace libmmd
 		if (pmxRigidBody.m_op != PMXRigidbody::Operation::Static)
 		{
 			mass = pmxRigidBody.m_mass;
-			constexpr btScalar kMaxMass = 1.0f / SIMD_EPSILON;
+			if (!std::isfinite(mass) || mass < 0.0f)
+				mass = 0.0f;
 			if (mass > kMaxMass)
 				mass = kMaxMass;
 		}
