@@ -29,6 +29,7 @@ namespace libmmd
 {
 	class MMDPhysics;
 	class MMDModel;
+	class IMMDNode;
 	class MMDNode;
 
 	class MMDMotionState;
@@ -62,6 +63,13 @@ namespace libmmd
 		 * @return True if creation is successful, false otherwise.
 		 */
 		bool Create(const PMXRigidbody& pmxRigidBody, MMDModel* model, MMDNode* node);
+		/**
+		 * @brief Create a rigid body from PMX data bound to an external IMMD node.
+		 * @param pmxRigidBody PMX rigid body data.
+		 * @param node Pointer to the external node binding.
+		 * @return True if creation is successful, false otherwise.
+		 */
+		bool Create(const PMXRigidbody& pmxRigidBody, IMMDNode* node);
 		/**
 		 * @brief Create a rigid body from individual parameters.
 		 * @param shape Shape type.
@@ -175,6 +183,7 @@ namespace libmmd
 		uint16_t		m_groupMask;
 
 		MMDNode*	m_node;
+		IMMDNode*	m_externalNode;
 		Eigen::Matrix4f	m_offsetMat;
 
 		std::string					m_name;

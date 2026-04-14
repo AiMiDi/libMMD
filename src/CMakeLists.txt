@@ -60,6 +60,7 @@ set (
     libMMD/Model/MMD/PMXModel.cpp
     libMMD/Model/MMD/SjisToUnicode.cpp
     libMMD/Model/MMD/VMDAnimation.cpp
+    libMMD/Model/MMD/VMDInterpolation.cpp
     libMMD/Model/MMD/VMDCameraAnimation.cpp
     libMMD/Model/MMD/VMDFile.cpp
     libMMD/Model/MMD/VPDFile.cpp
@@ -67,6 +68,7 @@ set (
 set (
     MODEL_MMD_HEADER
     libMMD/Model/MMD/MMDFileString.h
+    libMMD/Model/MMD/IMMDNode.h
     libMMD/Model/MMD/MMDIkSolver.h
     libMMD/Model/MMD/MMDMaterial.h
     libMMD/Model/MMD/MMDModel.h
@@ -80,6 +82,7 @@ set (
     libMMD/Model/MMD/PMXModel.h
     libMMD/Model/MMD/SjisToUnicode.h
     libMMD/Model/MMD/VMDAnimation.h
+    libMMD/Model/MMD/VMDInterpolation.h
     libMMD/Model/MMD/VMDCameraAnimation.h
     libMMD/Model/MMD/VMDAnimationCommon.hpp
     libMMD/Model/MMD/VMDFile.h

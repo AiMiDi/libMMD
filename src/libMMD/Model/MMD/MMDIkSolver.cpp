@@ -24,7 +24,7 @@ namespace libmmd
 	{
 	}
 
-	void MMDIkSolver::AddIKChain(MMDNode * node, const bool isKnee)
+	void MMDIkSolver::AddIKChain(IMMDNode * node, const bool isKnee)
 	{
 		m_chains.emplace_back(node,
 			isKnee,
@@ -34,7 +34,7 @@ namespace libmmd
 	}
 
 	void MMDIkSolver::AddIKChain(
-		MMDNode * node,
+		IMMDNode * node,
 		const bool axisLimit,
 		const Eigen::Vector3f & limitMin,
 		const Eigen::Vector3f & limitMax
@@ -51,14 +51,14 @@ namespace libmmd
 		if (!m_ikTarget || m_chains.empty())
 			return;
 
-		std::unordered_set<MMDNode*> chainNodeSet;
+		std::unordered_set<IMMDNode*> chainNodeSet;
 		for (const auto& chain : m_chains)
 			chainNodeSet.insert(chain.m_node);
 
 		// Walk from IK target up to root, collecting ancestors
-		std::vector<MMDNode*> ancestors;
-		MMDNode* shallowest = nullptr;
-		for (MMDNode* cur = m_ikTarget; cur != nullptr; cur = cur->GetParent())
+		std::vector<IMMDNode*> ancestors;
+		IMMDNode* shallowest = nullptr;
+		for (IMMDNode* cur = m_ikTarget; cur != nullptr; cur = cur->GetParent())
 		{
 			ancestors.push_back(cur);
 			if (chainNodeSet.count(cur))
@@ -97,8 +97,8 @@ namespace libmmd
 	{
 		for (size_t i = fromPathIdx; i < m_chainPath.size(); i++)
 		{
-			MMDNode* node = m_chainPath[i];
-			MMDNode* parent = node->GetParent();
+			IMMDNode* node = m_chainPath[i];
+			IMMDNode* parent = node->GetParent();
 			if (parent)
 				node->SetGlobalTransform(parent->GetGlobalTransform() * node->GetLocalTransform());
 			else
@@ -295,7 +295,7 @@ namespace libmmd
 		for (size_t chainIdx = 0; chainIdx < m_chains.size(); chainIdx++)
 		{
 			auto& chain = m_chains[chainIdx];
-			MMDNode* chainNode = chain.m_node;
+			IMMDNode* chainNode = chain.m_node;
 			if (chainNode == m_ikTarget)
 			{
 				/*

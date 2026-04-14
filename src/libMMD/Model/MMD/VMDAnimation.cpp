@@ -20,27 +20,6 @@ namespace libmmd
 {
 	namespace
 	{
-		// Helper function to set up VMD Bezier curve control points
-		void SetVMDBezier(VMDBezier& bezier, const unsigned char* cp)
-		{
-			// Convert control points from VMD format (0-127) to normalized space (0-1)
-			const int x0 = cp[0];
-			const int y0 = cp[4];
-			const int x1 = cp[8];
-			const int y1 = cp[12];
-
-			bezier.m_cp1 = Eigen::Vector2f(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
-			bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
-		}
-
-		void GetVMDBezier(const VMDBezier& bezier, unsigned char* cp)
-		{
-			cp[0]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp1.x() * 127.0f), 0.0f, 127.0f));
-			cp[4]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp1.y() * 127.0f), 0.0f, 127.0f));
-			cp[8]  = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp2.x() * 127.0f), 0.0f, 127.0f));
-			cp[12] = static_cast<uint8_t>(std::clamp(std::round(bezier.m_cp2.y() * 127.0f), 0.0f, 127.0f));
-		}
-
 		std::string ConvertU8ToSjis(const std::string& u8Str)
 		{
 			std::u16string u16Str;
@@ -53,114 +32,7 @@ namespace libmmd
 
 	} // namespace
 
-	float VMDBezier::EvalX(const float t) const
-	{
-		// Calculate Bezier curve using cubic polynomial form
-		const float t2 = t * t;
-		const float t3 = t2 * t;
-		const float it = 1.0f - t;
-		const float it2 = it * it;
-		const float it3 = it2 * it;
-		const float x[4] = {
-			0,              // Start point
-			m_cp1.x(),      // First control point
-			m_cp2.x(),      // Second control point
-			1               // End point
-		};
-
-		return t3 * x[3] + 3 * t2 * it * x[2] + 3 * t * it2 * x[1] + it3 * x[0];
-	}
-
-	float VMDBezier::EvalY(const float t) const
-	{
-		const float t2 = t * t;
-		const float t3 = t2 * t;
-		const float it = 1.0f - t;
-		const float it2 = it * it;
-		const float it3 = it2 * it;
-		const float y[4] = {
-			0,
-			m_cp1.y(),
-			m_cp2.y(),
-			1,
-		};
-
-		return t3 * y[3] + 3 * t2 * it * y[2] + 3 * t * it2 * y[1] + it3 * y[0];
-	}
-
-	Eigen::Vector2f VMDBezier::Eval(const float t) const
-	{
-		return Eigen::Vector2f(EvalX(t), EvalY(t));
-	}
-
-	float VMDBezier::EvalDX(const float t) const
-	{
-		const float it = 1.0f - t;
-		const float x[4] = {
-			0,
-			m_cp1.x(),
-			m_cp2.x(),
-			1
-		};
-		// d/dt of cubic Bezier: 3*(1-t)^2*(P1-P0) + 6*(1-t)*t*(P2-P1) + 3*t^2*(P3-P2)
-		return 3.0f * it * it * (x[1] - x[0])
-			 + 6.0f * it * t  * (x[2] - x[1])
-			 + 3.0f * t  * t  * (x[3] - x[2]);
-	}
-
-	float VMDBezier::FindBezierX(const float time) const
-	{
-		constexpr float e = 0.00001f;
-
-		// Newton-Raphson iteration
-		float t = time;
-		for (int i = 0; i < 8; ++i)
-		{
-			const float x = EvalX(t) - time;
-			if (std::abs(x) < e)
-				return t;
-			const float dx = EvalDX(t);
-			if (std::abs(dx) < 1e-6f)
-				break;
-			t -= x / dx;
-			t = std::clamp(t, 0.0f, 1.0f);
-		}
-
-		// Fallback to bisection if Newton didn't converge
-		if (std::abs(EvalX(t) - time) > e)
-		{
-			float start = 0.0f;
-			float stop = 1.0f;
-			t = 0.5f;
-			float x = EvalX(t);
-			while (std::abs(time - x) > e)
-			{
-				if (time < x)
-					stop = t;
-				else
-					start = t;
-				t = (stop + start) * 0.5f;
-				x = EvalX(t);
-			}
-		}
-
-		return t;
-	}
-
-	// Node animation key structure containing position, rotation and interpolation data
-	struct VMDNodeAnimationKey {
-		void Set(const VMDMotion& motion);
-
-		int32_t             m_time;         // Keyframe time
-		Eigen::Vector3f     m_translate;    // Translation vector
-		Eigen::Quaternionf  m_rotate;       // Rotation quaternion
-
-		// Bezier interpolation curves for each component
-		VMDBezier   m_txBezier;     // X translation
-		VMDBezier   m_tyBezier;     // Y translation
-		VMDBezier   m_tzBezier;     // Z translation
-		VMDBezier   m_rotBezier;    // Rotation
-	};
+	using VMDNodeAnimationKey = VMDBoneKeyframe;
 
 	// Morph animation key containing weight values for blend shapes
 	struct VMDMorphAnimationKey {
@@ -297,31 +169,20 @@ namespace libmmd
 		Eigen::Quaternionf q;
 		if (boundIt == std::end(m_keys))
 		{
-			vt = m_keys[m_keys.size() - 1].m_translate;
-			q = m_keys[m_keys.size() - 1].m_rotate;
+			vt = m_keys[m_keys.size() - 1].translate;
+			q = m_keys[m_keys.size() - 1].rotate;
 		}
 		else
 		{
-			vt = boundIt->m_translate;
-			q = boundIt->m_rotate;
+			vt = boundIt->translate;
+			q = boundIt->rotate;
 			if (boundIt != std::begin(m_keys))
 			{
 				const auto& key0 = *(boundIt - 1);
 				const auto& key1 = *boundIt;
-
-				const auto timeRange = static_cast<float>(key1.m_time - key0.m_time);
-				const auto time = (t - static_cast<float>(key0.m_time)) / timeRange;
-				const auto tx_x = key0.m_txBezier.FindBezierX(time);
-				const auto ty_x = key0.m_tyBezier.FindBezierX(time);
-				const auto tz_x = key0.m_tzBezier.FindBezierX(time);
-				const auto rot_x = key0.m_rotBezier.FindBezierX(time);
-				const auto tx_y = key0.m_txBezier.EvalY(tx_x);
-				const auto ty_y = key0.m_tyBezier.EvalY(ty_x);
-				const auto tz_y = key0.m_tzBezier.EvalY(tz_x);
-				const auto rot_y = key0.m_rotBezier.EvalY(rot_x);
-
-				vt = key0.m_translate + (key1.m_translate - key0.m_translate).cwiseProduct(Eigen::Vector3f(tx_y, ty_y, tz_y));
-				q = key0.m_rotate.slerp(rot_y, key1.m_rotate);
+				const auto interpolated = InterpolateBoneKeys(key0, key1, t);
+				vt = interpolated.translate;
+				q = interpolated.rotate;
 
 				m_startKeyIndex = std::distance(m_keys.cbegin(), boundIt);
 			}
@@ -346,7 +207,7 @@ namespace libmmd
 		std::sort(
 			std::begin(m_keys),
 			std::end(m_keys),
-			[](const KeyType& a, const KeyType& b) { return a.m_time < b.m_time; }
+			[](const KeyType& a, const KeyType& b) { return a.frame < b.frame; }
 		);
 	}
 
@@ -580,7 +441,7 @@ namespace libmmd
 			const auto& keys = nodeController->GetKeys();
 			if (!keys.empty())
 			{
-				maxTime = std::max(maxTime, keys.rbegin()->m_time);
+				maxTime = std::max(maxTime, keys.rbegin()->frame);
 			}
 		}
 
@@ -603,20 +464,6 @@ namespace libmmd
 		}
 
 		return maxTime;
-	}
-
-	void VMDNodeAnimationKey::Set(const VMDMotion & motion)
-	{
-		m_time = static_cast<int32_t>(motion.m_frame);
-
-		m_translate = motion.m_translate;
-
-		m_rotate = motion.m_quaternion;
-
-		SetVMDBezier(m_txBezier, &motion.m_interpolation[0]);
-		SetVMDBezier(m_tyBezier, &motion.m_interpolation[1]);
-		SetVMDBezier(m_tzBezier, &motion.m_interpolation[2]);
-		SetVMDBezier(m_rotBezier, &motion.m_interpolation[3]);
 	}
 
 	VMDIKController::VMDIKController()
@@ -768,14 +615,14 @@ namespace libmmd
 			{
 				VMDMotion motion;
 				motion.m_boneName.Set(sjisName.c_str());
-				motion.m_frame = static_cast<uint32_t>(key.m_time);
-				motion.m_translate = key.m_translate;
-				motion.m_quaternion = key.m_rotate;
+				motion.m_frame = static_cast<uint32_t>(key.frame);
+				motion.m_translate = key.translate;
+				motion.m_quaternion = key.rotate;
 				motion.m_interpolation.fill(0);
-				GetVMDBezier(key.m_txBezier, &motion.m_interpolation[0]);
-				GetVMDBezier(key.m_tyBezier, &motion.m_interpolation[1]);
-				GetVMDBezier(key.m_tzBezier, &motion.m_interpolation[2]);
-				GetVMDBezier(key.m_rotBezier, &motion.m_interpolation[3]);
+				GetVMDBezier(key.txBezier, &motion.m_interpolation[0]);
+				GetVMDBezier(key.tyBezier, &motion.m_interpolation[1]);
+				GetVMDBezier(key.tzBezier, &motion.m_interpolation[2]);
+				GetVMDBezier(key.rotBezier, &motion.m_interpolation[3]);
 				vmd.m_motions.push_back(std::move(motion));
 			}
 		}

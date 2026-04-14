@@ -5,6 +5,7 @@
 
 #include "MMDPhysics.h"
 
+#include "IMMDNode.h"
 #include "MMDNode.h"
 #include "MMDModel.h"
 
@@ -154,7 +155,7 @@ namespace libmmd
 
 	void MMDPhysics::AddRigidBody(const MMDRigidBody * mmdRB) const
 	{
-		if (m_world != nullptr && mmdRB != nullptr)
+		if (m_world != nullptr && mmdRB != nullptr && mmdRB->GetRigidBody() != nullptr)
 		{
 			m_world->addRigidBody(
 				mmdRB->GetRigidBody(),
@@ -166,7 +167,7 @@ namespace libmmd
 
 	void MMDPhysics::RemoveRigidBody(const MMDRigidBody * mmdRB) const
 	{
-		if (m_world != nullptr && mmdRB != nullptr)
+		if (m_world != nullptr && mmdRB != nullptr && mmdRB->GetRigidBody() != nullptr)
 		{
 			m_world->removeRigidBody(mmdRB->GetRigidBody());
 		}
@@ -397,11 +398,181 @@ namespace libmmd
 		Eigen::Matrix4f	m_offset;
 	};
 
+	class ExternalKinematicMotionState final : public MMDMotionState
+	{
+	public:
+		ExternalKinematicMotionState(IMMDNode* node, const Eigen::Matrix4f& offset)
+			: m_node(node)
+			, m_offset(offset)
+		{
+		}
+
+		void getWorldTransform(btTransform& worldTransform) const override
+		{
+			Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
+			if (m_node != nullptr)
+			{
+				m = m_node->GetGlobalTransform() * m_offset;
+			}
+			worldTransform.setFromOpenGLMatrix(m.data());
+		}
+
+		void setWorldTransform(const btTransform& worldTransform) override
+		{
+		}
+
+		void Reset() override
+		{
+		}
+
+		void ReflectGlobalTransform() override
+		{
+		}
+
+	private:
+		IMMDNode*	m_node;
+		Eigen::Matrix4f	m_offset;
+	};
+
+	class ExternalDynamicMotionState final : public MMDMotionState
+	{
+	public:
+		ExternalDynamicMotionState(IMMDNode* node, const Eigen::Matrix4f& offset)
+			: m_node(node)
+			, m_offset(offset)
+		{
+			m_invOffset = offset.inverse();
+			Reset();
+		}
+
+		void getWorldTransform(btTransform& worldTransform) const override
+		{
+			worldTransform = m_transform;
+		}
+
+		void setWorldTransform(const btTransform& worldTransform) override
+		{
+			m_transform = worldTransform;
+		}
+
+		void Reset() override
+		{
+			if (m_node == nullptr)
+			{
+				return;
+			}
+			const Eigen::Matrix4f global = m_node->GetGlobalTransform() * m_offset;
+			m_transform.setFromOpenGLMatrix(global.data());
+		}
+
+		void ReflectGlobalTransform() override
+		{
+			if (m_node == nullptr)
+			{
+				return;
+			}
+
+			alignas(16) Eigen::Matrix4f world;
+			m_transform.getOpenGLMatrix(world.data());
+			m_node->SetGlobalTransform(world * m_invOffset);
+		}
+
+	private:
+		IMMDNode*	m_node;
+		Eigen::Matrix4f	m_offset;
+		Eigen::Matrix4f	m_invOffset{};
+		btTransform	m_transform;
+	};
+
+	class ExternalDynamicAndBoneMergeMotionState final : public MMDMotionState
+	{
+	public:
+		ExternalDynamicAndBoneMergeMotionState(IMMDNode* node, const Eigen::Matrix4f& offset)
+			: m_node(node)
+			, m_offset(offset)
+		{
+			m_invOffset = offset.inverse();
+			Reset();
+		}
+
+		void getWorldTransform(btTransform& worldTransform) const override
+		{
+			worldTransform = m_transform;
+		}
+
+		void setWorldTransform(const btTransform& worldTransform) override
+		{
+			m_transform = worldTransform;
+		}
+
+		void Reset() override
+		{
+			if (m_node == nullptr)
+			{
+				return;
+			}
+			const Eigen::Matrix4f global = m_node->GetGlobalTransform() * m_offset;
+			m_transform.setFromOpenGLMatrix(global.data());
+			m_prevBoneOrigin = m_transform.getOrigin();
+			m_hasPrevBoneOrigin = true;
+		}
+
+		void ReflectGlobalTransform() override
+		{
+			if (m_node == nullptr)
+			{
+				return;
+			}
+
+			alignas(16) Eigen::Matrix4f world;
+			m_transform.getOpenGLMatrix(world.data());
+			Eigen::Matrix4f btGlobal = world * m_invOffset;
+			const Eigen::Matrix4f currentGlobal = m_node->GetGlobalTransform();
+			btGlobal.col(3) = currentGlobal.col(3);
+			m_node->SetGlobalTransform(btGlobal);
+		}
+
+		void SyncBonePosition() override
+		{
+			if (m_node == nullptr)
+			{
+				return;
+			}
+
+			const Eigen::Matrix4f boneGlobal = m_node->GetGlobalTransform() * m_offset;
+			btTransform boneTransform;
+			boneTransform.setFromOpenGLMatrix(boneGlobal.data());
+			m_transform.setOrigin(boneTransform.getOrigin());
+		}
+
+		btVector3 ComputeBoneVelocity(float elapsed) override
+		{
+			const btVector3 currentOrigin = m_transform.getOrigin();
+			btVector3 velocity(0, 0, 0);
+			if (m_hasPrevBoneOrigin && elapsed > 0.0f)
+			{
+				velocity = (currentOrigin - m_prevBoneOrigin) / elapsed;
+			}
+			m_prevBoneOrigin = currentOrigin;
+			m_hasPrevBoneOrigin = true;
+			return velocity;
+		}
+
+	private:
+		IMMDNode*	m_node;
+		Eigen::Matrix4f	m_offset;
+		Eigen::Matrix4f	m_invOffset{};
+		btTransform	m_transform;
+		btVector3	m_prevBoneOrigin{0, 0, 0};
+		bool		m_hasPrevBoneOrigin = false;
+	};
+
 	MMDRigidBody::MMDRigidBody()
 		: m_rigidBodyType(RigidBodyType::Kinematic)
 		, m_group(0)
 		, m_groupMask(0)
 		, m_node(nullptr)
+		, m_externalNode(nullptr)
 		, m_offsetMat(Eigen::Matrix4f::Identity())
 	{
 	}
@@ -653,6 +824,112 @@ namespace libmmd
 		return true;
 	}
 
+	bool MMDRigidBody::Create(const PMXRigidbody& pmxRigidBody, IMMDNode* node)
+	{
+		Destroy();
+
+		if (node == nullptr)
+		{
+			return false;
+		}
+
+		switch (pmxRigidBody.m_shape)
+		{
+		case PMXRigidbody::Shape::Sphere:
+			m_shape = std::make_unique<btSphereShape>(pmxRigidBody.m_shapeSize.x());
+			break;
+		case PMXRigidbody::Shape::Box:
+			m_shape = std::make_unique<btBoxShape>(btVector3(
+				pmxRigidBody.m_shapeSize.x(),
+				pmxRigidBody.m_shapeSize.y(),
+				pmxRigidBody.m_shapeSize.z()
+			));
+			break;
+		case PMXRigidbody::Shape::Capsule:
+			m_shape = std::make_unique<btCapsuleShape>(
+				pmxRigidBody.m_shapeSize.x(),
+				pmxRigidBody.m_shapeSize.y()
+			);
+			break;
+		default:
+			break;
+		}
+		if (m_shape == nullptr)
+		{
+			return false;
+		}
+
+		btScalar mass(0.0f);
+		btVector3 localInteria(0, 0, 0);
+		if (pmxRigidBody.m_op != PMXRigidbody::Operation::Static)
+		{
+			mass = pmxRigidBody.m_mass;
+			if (!std::isfinite(mass) || mass < 0.0f)
+				mass = 0.0f;
+			if (mass > kMaxMass)
+				mass = kMaxMass;
+		}
+		if (mass != 0)
+		{
+			m_shape->calculateLocalInertia(mass, localInteria);
+		}
+
+		Eigen::Matrix4f rx = Eigen::Matrix4f::Identity();
+		rx.block<3, 3>(0, 0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.x(), Eigen::Vector3f::UnitX()).toRotationMatrix();
+		Eigen::Matrix4f ry = Eigen::Matrix4f::Identity();
+		ry.block<3, 3>(0, 0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.y(), Eigen::Vector3f::UnitY()).toRotationMatrix();
+		Eigen::Matrix4f rz = Eigen::Matrix4f::Identity();
+		rz.block<3, 3>(0, 0) = Eigen::AngleAxisf(pmxRigidBody.m_rotate.z(), Eigen::Vector3f::UnitZ()).toRotationMatrix();
+		const Eigen::Matrix4f rotMat = ry * rx * rz;
+		Eigen::Matrix4f translateMat = Eigen::Matrix4f::Identity();
+		translateMat.block<3, 1>(0, 3) = pmxRigidBody.m_translate;
+
+		const Eigen::Matrix4f rbMat = translateMat * rotMat;
+		m_offsetMat = node->GetInitialGlobalTransform().inverse() * rbMat;
+
+		btMotionState* motionState = nullptr;
+		m_kinematicMotionState = std::make_unique<ExternalKinematicMotionState>(node, m_offsetMat);
+		if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
+		{
+			motionState = m_kinematicMotionState.get();
+		}
+		else if (pmxRigidBody.m_op == PMXRigidbody::Operation::Dynamic)
+		{
+			m_activeMotionState = std::make_unique<ExternalDynamicMotionState>(node, m_offsetMat);
+			motionState = m_activeMotionState.get();
+		}
+		else if (pmxRigidBody.m_op == PMXRigidbody::Operation::DynamicAndBoneMerge)
+		{
+			m_activeMotionState = std::make_unique<ExternalDynamicAndBoneMergeMotionState>(node, m_offsetMat);
+			motionState = m_activeMotionState.get();
+		}
+
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, m_shape.get(), localInteria);
+		rbInfo.m_linearDamping = pmxRigidBody.m_translateDimmer;
+		rbInfo.m_angularDamping = pmxRigidBody.m_rotateDimmer;
+		rbInfo.m_restitution = pmxRigidBody.m_repulsion;
+		rbInfo.m_friction = pmxRigidBody.m_friction;
+		rbInfo.m_additionalDamping = true;
+
+		m_rigidBody = std::make_unique<btRigidBody>(rbInfo);
+		m_rigidBody->setUserPointer(this);
+		m_rigidBody->setSleepingThresholds(0.01f, 0.1f * static_cast<float>(EIGEN_PI) / 180.0f);
+		m_rigidBody->setActivationState(DISABLE_DEACTIVATION);
+		if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
+		{
+			m_rigidBody->setCollisionFlags(m_rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+		}
+
+		m_rigidBodyType = static_cast<RigidBodyType>(pmxRigidBody.m_op);
+		m_group = pmxRigidBody.m_group;
+		m_groupMask = pmxRigidBody.m_collisionGroup;
+		m_node = nullptr;
+		m_externalNode = node;
+		m_name = pmxRigidBody.m_name;
+
+		return true;
+	}
+
 	bool MMDRigidBody::Create(
 		PMXRigidbody::Shape shape,
 		const Eigen::Vector3f& shapeSize,
@@ -690,7 +967,13 @@ namespace libmmd
 
 	void MMDRigidBody::Destroy()
 	{
+		m_rigidBody = nullptr;
+		m_activeMotionState = nullptr;
+		m_kinematicMotionState = nullptr;
 		m_shape = nullptr;
+		m_node = nullptr;
+		m_externalNode = nullptr;
+		m_offsetMat = Eigen::Matrix4f::Identity();
 	}
 
 	btRigidBody * MMDRigidBody::GetRigidBody() const
@@ -710,6 +993,11 @@ namespace libmmd
 
 	void MMDRigidBody::SetActivation(const bool activation) const
 	{
+		if (m_rigidBody == nullptr)
+		{
+			return;
+		}
+
 		if (m_rigidBodyType != RigidBodyType::Kinematic)
 		{
 			if (activation)
@@ -739,6 +1027,11 @@ namespace libmmd
 
 	void MMDRigidBody::Reset(const MMDPhysics* physics) const
 	{
+		if (physics == nullptr || m_rigidBody == nullptr)
+		{
+			return;
+		}
+
 		if (const auto cache = physics->GetDynamicsWorld()->getPairCache(); cache != nullptr)
 		{
 			const auto dispatcher = physics->GetDynamicsWorld()->getDispatcher();
@@ -781,6 +1074,11 @@ namespace libmmd
 
 	void MMDRigidBody::CalcLocalTransform() const
 	{
+		if (m_externalNode != nullptr)
+		{
+			return;
+		}
+
 		if (m_node != nullptr)
 		{
 			if (const auto parent = m_node->GetParent(); parent != nullptr)
@@ -797,6 +1095,11 @@ namespace libmmd
 
 	Eigen::Matrix4f MMDRigidBody::GetTransform() const
 	{
+		if (m_rigidBody == nullptr)
+		{
+			return Eigen::Matrix4f::Identity();
+		}
+
 		const btTransform transform = m_rigidBody->getCenterOfMassTransform();
 		alignas(16) Eigen::Matrix4f mat;
 		transform.getOpenGLMatrix(mat.data());

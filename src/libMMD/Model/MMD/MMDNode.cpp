@@ -26,6 +26,7 @@ namespace libmmd
 		, m_ikRotate(Eigen::Quaternionf::Identity())
 		, m_local(Eigen::Matrix4f::Identity())
 		, m_global(Eigen::Matrix4f::Identity())
+		, m_initialGlobal(Eigen::Matrix4f::Identity())
 		, m_inverseInit(Eigen::Matrix4f::Identity())
 		, m_initTranslate(Eigen::Vector3f::Zero())
 		, m_initRotate(Eigen::Quaternionf::Identity())
@@ -118,6 +119,7 @@ void MMDNode::UpdateGlobalTransform()
 
 	void MMDNode::CalculateInverseInitTransform()
 	{
+		m_initialGlobal = m_global;
 		m_inverseInit = m_global.inverse();
 	}
 

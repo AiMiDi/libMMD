@@ -6,7 +6,7 @@
 #ifndef LIBMMD_MODEL_MMD_MMDIKSOLVER_H_
 #define	LIBMMD_MODEL_MMD_MMDIKSOLVER_H_
 
-#include "MMDNode.h"
+#include "IMMDNode.h"
 
 #include <vector>
 #include <string>
@@ -25,25 +25,25 @@ namespace libmmd
 		 * @brief Set the IK node.
 		 * @param node Pointer to the IK node.
 		 */
-		void SetIKNode(MMDNode* node) { m_ikNode = node; }
+		void SetIKNode(IMMDNode* node) { m_ikNode = node; }
 
 		/**
 		 * @brief Set the target node.
 		 * @param node Pointer to the target node.
 		 */
-		void SetTargetNode(MMDNode* node) { m_ikTarget = node; }
+		void SetTargetNode(IMMDNode* node) { m_ikTarget = node; }
 
 		/**
 		 * @brief Get the IK node.
 		 * @return Pointer to the IK node.
 		 */
-		MMDNode* GetIKNode() const { return m_ikNode; }
+		IMMDNode* GetIKNode() const { return m_ikNode; }
 
 		/**
 		 * @brief Get the target node.
 		 * @return Pointer to the target node.
 		 */
-		MMDNode* GetTargetNode() const { return m_ikTarget; }
+		IMMDNode* GetTargetNode() const { return m_ikTarget; }
 
 		/**
 		 * @brief Get the name of the IK node.
@@ -87,7 +87,7 @@ namespace libmmd
 		 * @param node Pointer to the node.
 		 * @param isKnee Whether the node is a knee.
 		 */
-		void AddIKChain(MMDNode* node, bool isKnee = false);
+		void AddIKChain(IMMDNode* node, bool isKnee = false);
 
 		/**
 		 * @brief Add an IK chain with axis limit.
@@ -97,7 +97,7 @@ namespace libmmd
 		 * @param limitMax Maximum limit.
 		 */
 		void AddIKChain(
-			MMDNode* node,
+			IMMDNode* node,
 			bool axisLimit,
 			const Eigen::Vector3f& limitMin,
 			const Eigen::Vector3f& limitMax
@@ -144,7 +144,7 @@ namespace libmmd
 	private:
 		struct IKChain
 		{
-			MMDNode*	m_node; ///< Pointer to the node
+			IMMDNode*	m_node; ///< Pointer to the node
 			bool		m_enableAxisLimit; ///< Axis limit flag
 			Eigen::Vector3f	m_limitMax; ///< Maximum limit
 			Eigen::Vector3f	m_limitMin; ///< Minimum limit
@@ -153,7 +153,7 @@ namespace libmmd
 			float		m_planeModeAngle; ///< Plane mode angle
 
 		IKChain(
-			MMDNode* node = nullptr,
+			IMMDNode* node = nullptr,
 			const bool enableAxisLimit = false,
 			const Eigen::Vector3f& limitMin = Eigen::Vector3f::Zero(),
 			const Eigen::Vector3f& limitMax = Eigen::Vector3f::Zero(),
@@ -185,14 +185,14 @@ namespace libmmd
 		void UpdateChainPathGlobalTransform(size_t fromPathIdx);
 
 		std::vector<IKChain>	m_chains; ///< List of IK chains
-		MMDNode*	m_ikNode; ///< Pointer to the IK node
-		MMDNode*	m_ikTarget; ///< Pointer to the target node
+		IMMDNode*	m_ikNode; ///< Pointer to the IK node
+		IMMDNode*	m_ikTarget; ///< Pointer to the target node
 		uint32_t	m_iterateCount; ///< Iterate count
 		float		m_limitAngle; ///< Limit angle
 		bool		m_enable; ///< Enable flag
 		bool		m_baseAnimEnable; ///< Base animation enable flag
 
-		std::vector<MMDNode*>	m_chainPath; ///< Nodes from shallowest chain to IK target
+		std::vector<IMMDNode*>	m_chainPath; ///< Nodes from shallowest chain to IK target
 		std::vector<size_t>		m_chainNodePathIndices; ///< Path index for each chain node
 	};
 }

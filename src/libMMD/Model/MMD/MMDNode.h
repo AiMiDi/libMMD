@@ -6,6 +6,8 @@
 #ifndef LIBMMD_MODEL_MMD_MMDNODE_H_
 #define LIBMMD_MODEL_MMD_MMDNODE_H_
 
+#include "IMMDNode.h"
+
 #include <string>
 #include <Eigen/Geometry>
 
@@ -14,13 +16,13 @@ namespace libmmd
 	/**
 	 * @brief Represents a node in an MMD model.
 	 */
-	class MMDNode
+	class MMDNode : public IMMDNode
 	{
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 		MMDNode();
-		virtual ~MMDNode() = default;
+		~MMDNode() override = default;
 
 		/**
 		 * @brief Add a child node.
@@ -41,12 +43,12 @@ namespace libmmd
 		/**
 		 * @brief Update the local transform.
 		 */
-		void UpdateLocalTransform();
+		void UpdateLocalTransform() override;
 
 		/**
 		 * @brief Update the global transform.
 		 */
-		void UpdateGlobalTransform();
+		void UpdateGlobalTransform() override;
 
 		/**
 		 * @brief Update the transform of child nodes.
@@ -75,7 +77,7 @@ namespace libmmd
 		 * @brief Get the name of the node.
 		 * @return The name of the node.
 		 */
-		const std::string& GetName() const { return m_name; }
+		const std::string& GetName() const override { return m_name; }
 
 		/**
 		 * @brief Enable or disable IK for the node.
@@ -159,25 +161,25 @@ namespace libmmd
 		 * @brief Get the combined rotation for animation.
 		 * @return The combined rotation quaternion.
 		 */
-		Eigen::Quaternionf AnimateRotate() const { return m_animRotate * m_rotate; }
+		Eigen::Quaternionf AnimateRotate() const override { return m_animRotate * m_rotate; }
 
 		/**
 		 * @brief Set the IK rotation of the node.
 		 * @param ikr The IK rotation quaternion.
 		 */
-		void SetIKRotate(const Eigen::Quaternionf& ikr) { m_ikRotate = ikr; }
+		void SetIKRotate(const Eigen::Quaternionf& ikr) override { m_ikRotate = ikr; }
 
 		/**
 		 * @brief Get the IK rotation of the node.
 		 * @return The IK rotation quaternion.
 		 */
-		const Eigen::Quaternionf& GetIKRotate() const { return m_ikRotate; }
+		const Eigen::Quaternionf& GetIKRotate() const override { return m_ikRotate; }
 
 		/**
 		 * @brief Get the parent node.
 		 * @return A pointer to the parent node.
 		 */
-		MMDNode* GetParent() const { return m_parent; }
+		MMDNode* GetParent() const override { return m_parent; }
 
 		/**
 		 * @brief Get the child node.
@@ -207,19 +209,25 @@ namespace libmmd
 		 * @brief Get the local transform matrix.
 		 * @return The local transform matrix.
 		 */
-		const Eigen::Matrix4f& GetLocalTransform() const { return m_local; }
+		const Eigen::Matrix4f& GetLocalTransform() const override { return m_local; }
 
 		/**
 		 * @brief Set the global transform matrix.
 		 * @param m The global transform matrix.
 		 */
-		void SetGlobalTransform(const Eigen::Matrix4f& m) { m_global = m; }
+		void SetGlobalTransform(const Eigen::Matrix4f& m) override { m_global = m; }
 
 		/**
 		 * @brief Get the global transform matrix.
 		 * @return The global transform matrix.
 		 */
-		const Eigen::Matrix4f& GetGlobalTransform() const { return m_global; }
+		const Eigen::Matrix4f& GetGlobalTransform() const override { return m_global; }
+
+		/**
+		 * @brief Get the captured bind-pose global transform matrix.
+		 * @return The initial global transform matrix.
+		 */
+		const Eigen::Matrix4f& GetInitialGlobalTransform() const override { return m_initialGlobal; }
 
 		/**
 		 * @brief Calculate the inverse of the initial transform.
@@ -350,6 +358,7 @@ namespace libmmd
 
 		Eigen::Matrix4f		m_local;
 		Eigen::Matrix4f		m_global;
+		Eigen::Matrix4f		m_initialGlobal;
 		Eigen::Matrix4f		m_inverseInit;
 
 		Eigen::Vector3f	m_initTranslate;

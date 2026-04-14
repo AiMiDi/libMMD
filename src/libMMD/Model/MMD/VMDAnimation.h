@@ -6,6 +6,7 @@
 #ifndef LIBMMD_MODEL_MMD_VMDANIMATION_H_
 #define LIBMMD_MODEL_MMD_VMDANIMATION_H_
 
+#include "VMDInterpolation.h"
 #include "MMDModel.h"
 #include "VMDFile.h"
 
@@ -13,54 +14,8 @@
 #include <algorithm>
 #include <memory>
 
-#include <Eigen/Geometry>
-
 namespace libmmd
 {
-	/**
-	 * @brief Represents a Bezier curve used in VMD animation.
-	 */
-	struct VMDBezier
-	{
-		/**
-		 * @brief Evaluate the X component of the Bezier curve at time t.
-		 * @param t The time parameter.
-		 * @return The evaluated X component.
-		 */
-		float EvalX(float t) const;
-
-		/**
-		 * @brief Evaluate the Y component of the Bezier curve at time t.
-		 * @param t The time parameter.
-		 * @return The evaluated Y component.
-		 */
-		float EvalY(float t) const;
-
-		/**
-		 * @brief Evaluate both X and Y components of the Bezier curve at time t.
-		 * @param t The time parameter.
-		 * @return The evaluated X and Y components as a Eigen::Vector2f.
-		 */
-		Eigen::Vector2f Eval(float t) const;
-
-		/**
-		 * @brief Evaluate the derivative of the X component at time t.
-		 * @param t The time parameter.
-		 * @return dX/dt at the given time.
-		 */
-		float EvalDX(float t) const;
-
-		/**
-		 * @brief Find the parameter t such that EvalX(t) ≈ time, using Newton-Raphson.
-		 * @param time The target X value in [0, 1].
-		 * @return The parameter t corresponding to the given X value.
-		 */
-		float FindBezierX(float time) const;
-
-		Eigen::Vector2f	m_cp1; ///< Control point 1
-		Eigen::Vector2f	m_cp2; ///< Control point 2
-	};
-
 	class VMDNodeController;
 	class VMDMorphController;
 	class VMDIKController;

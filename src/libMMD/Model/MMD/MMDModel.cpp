@@ -19,16 +19,20 @@ namespace libmmd
 
 	MMDPhysicsManager::~MMDPhysicsManager()
 	{
-		for (auto& joint : m_joints)
+		if (m_mmdPhysics != nullptr)
 		{
-			m_mmdPhysics->RemoveJoint(joint.get());
-		}
-		m_joints.clear();
+			for (auto& joint : m_joints)
+			{
+				m_mmdPhysics->RemoveJoint(joint.get());
+			}
 
-		for (auto& rb : m_rigidBodys)
-		{
-			m_mmdPhysics->RemoveRigidBody(rb.get());
+			for (auto& rb : m_rigidBodys)
+			{
+				m_mmdPhysics->RemoveRigidBody(rb.get());
+			}
 		}
+
+		m_joints.clear();
 		m_rigidBodys.clear();
 
 		m_mmdPhysics.reset();
