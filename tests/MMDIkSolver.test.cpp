@@ -185,7 +185,7 @@ static void ResetNodePose(TNode& node, bool enableIK)
 template <typename TNode>
 static float GlobalDistance(const TNode& a, const TNode& b)
 {
-    return (a.GetGlobalTransform().col(3).head<3>() - b.GetGlobalTransform().col(3).head<3>()).norm();
+    return (a.GetGlobalTransform().col(3).template head<3>() - b.GetGlobalTransform().col(3).template head<3>()).norm();
 }
 
 template <typename TNode>
