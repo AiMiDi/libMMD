@@ -60,9 +60,76 @@ static int g_failedTests = 0;
         }                                                                  \
     } while (0)
 
+#ifndef LIBMMD_TEST_GROUP_CORE
+#define LIBMMD_TEST_GROUP_CORE 0
+#endif
+
+#ifndef LIBMMD_TEST_GROUP_IO
+#define LIBMMD_TEST_GROUP_IO 0
+#endif
+
+#ifndef LIBMMD_TEST_GROUP_ANIMATION
+#define LIBMMD_TEST_GROUP_ANIMATION 0
+#endif
+
+#ifndef LIBMMD_TEST_GROUP_REGRESSION
+#define LIBMMD_TEST_GROUP_REGRESSION 0
+#endif
+
+#ifndef LIBMMD_TEST_GROUP_BENCHMARK
+#define LIBMMD_TEST_GROUP_BENCHMARK 0
+#endif
+
+#if !LIBMMD_TEST_GROUP_CORE && !LIBMMD_TEST_GROUP_IO && !LIBMMD_TEST_GROUP_ANIMATION && !LIBMMD_TEST_GROUP_REGRESSION && !LIBMMD_TEST_GROUP_BENCHMARK
+#undef LIBMMD_TEST_GROUP_CORE
+#undef LIBMMD_TEST_GROUP_IO
+#undef LIBMMD_TEST_GROUP_ANIMATION
+#undef LIBMMD_TEST_GROUP_REGRESSION
+#undef LIBMMD_TEST_GROUP_BENCHMARK
+#define LIBMMD_TEST_GROUP_CORE 1
+#define LIBMMD_TEST_GROUP_IO 1
+#define LIBMMD_TEST_GROUP_ANIMATION 1
+#define LIBMMD_TEST_GROUP_REGRESSION 1
+#define LIBMMD_TEST_GROUP_BENCHMARK 1
+#endif
+
+static const char* GetLibMMDTestSuiteName()
+{
+#if LIBMMD_TEST_GROUP_CORE && !LIBMMD_TEST_GROUP_IO && !LIBMMD_TEST_GROUP_ANIMATION && !LIBMMD_TEST_GROUP_REGRESSION && !LIBMMD_TEST_GROUP_BENCHMARK
+    return "libMMD Core Tests";
+#elif !LIBMMD_TEST_GROUP_CORE && LIBMMD_TEST_GROUP_IO && !LIBMMD_TEST_GROUP_ANIMATION && !LIBMMD_TEST_GROUP_REGRESSION && !LIBMMD_TEST_GROUP_BENCHMARK
+    return "libMMD File IO Tests";
+#elif !LIBMMD_TEST_GROUP_CORE && !LIBMMD_TEST_GROUP_IO && LIBMMD_TEST_GROUP_ANIMATION && !LIBMMD_TEST_GROUP_REGRESSION && !LIBMMD_TEST_GROUP_BENCHMARK
+    return "libMMD Animation Tests";
+#elif !LIBMMD_TEST_GROUP_CORE && !LIBMMD_TEST_GROUP_IO && !LIBMMD_TEST_GROUP_ANIMATION && LIBMMD_TEST_GROUP_REGRESSION && !LIBMMD_TEST_GROUP_BENCHMARK
+    return "libMMD Regression Tests";
+#elif !LIBMMD_TEST_GROUP_CORE && !LIBMMD_TEST_GROUP_IO && !LIBMMD_TEST_GROUP_ANIMATION && !LIBMMD_TEST_GROUP_REGRESSION && LIBMMD_TEST_GROUP_BENCHMARK
+    return "libMMD Benchmark Tests";
+#else
+    return "libMMD Unit Tests";
+#endif
+}
+
+static int FinishLibMMDTests()
+{
+    std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
+              << " / " << g_totalTests << " passed ===\n";
+
+    if (g_failedTests > 0)
+    {
+        std::cerr << g_failedTests << " test(s) FAILED.\n";
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "All tests passed.\n";
+    return EXIT_SUCCESS;
+}
+
 // ===========================================================================
 // MMDNode tests
 // ===========================================================================
+
+#if LIBMMD_TEST_GROUP_CORE
 
 static void test_MMDNode_DefaultConstruction()
 {
@@ -1237,6 +1304,8 @@ static void test_CoordSystem_InverseInitTransformConsistency()
     }
 }
 
+#endif
+
 // ===========================================================================
 // Helper: read file into byte vector
 // ===========================================================================
@@ -1256,6 +1325,8 @@ static bool ReadFileToBuffer(const std::string& path, std::vector<uint8_t>& buff
 // ===========================================================================
 // PMXFile reading/parsing tests
 // ===========================================================================
+
+#if LIBMMD_TEST_GROUP_IO || LIBMMD_TEST_GROUP_ANIMATION || LIBMMD_TEST_GROUP_REGRESSION || LIBMMD_TEST_GROUP_BENCHMARK
 
 static const std::string g_pmxTestFile = std::string(TEST_DATA_DIR) + "/pmx_test/test.pmx";
 
@@ -1633,9 +1704,13 @@ static void test_VMDFile_CamBufferAndPathSameResult()
     TEST_ASSERT_EQ(vmdFromPath.m_lights.size(), vmdFromBuf.m_lights.size());
 }
 
+#endif
+
 // ===========================================================================
 // MMDNode UpdateLocalTransform / UpdateGlobalTransform tests
 // ===========================================================================
+
+#if LIBMMD_TEST_GROUP_ANIMATION
 
 static void test_MMDNode_UpdateLocalTransform_IdentityPose()
 {
@@ -1863,6 +1938,8 @@ static void test_MMDNode_UpdateGlobalTransform_ThreeLevelHierarchy()
     TEST_ASSERT_FLOAT_EQ(18.0f, leaf.GetGlobalTransform()(1, 3));
 }
 
+#endif
+
 // ===========================================================================
 // VMD Animation Integration tests
 // Builds minimal PMX models programmatically and runs the full animation
@@ -1987,6 +2064,8 @@ static libmmd::VMDFile MakeTwoKeyVMD(
 
     return vmd;
 }
+
+#if LIBMMD_TEST_GROUP_ANIMATION
 
 static void test_Integration_VMD_SingleBoneRotationAtFrame0()
 {
@@ -2782,9 +2861,13 @@ static void test_VMDBezier_EvalDX_Correctness()
     }
 }
 
+#endif
+
 // ===========================================================================
 // Test helper: PMXModel subclass for accessing protected members
 // ===========================================================================
+
+#if LIBMMD_TEST_GROUP_REGRESSION || LIBMMD_TEST_GROUP_BENCHMARK
 
 class TestPMXModel : public libmmd::PMXModel
 {
@@ -4343,6 +4426,8 @@ static void test_RigidInverse_RealFile_Deviation()
     std::cout << "    Real file IK deviation: " << maxDev << "\n";
 }
 
+#if LIBMMD_TEST_GROUP_BENCHMARK
+
 static void bench_RigidInverse_Speedup()
 {
     std::cout << "[bench] RigidInverse_Speedup\n";
@@ -4382,6 +4467,8 @@ static void bench_RigidInverse_Speedup()
     std::cout << "    " << benchFrames << " frames in " << ms << " ms ("
               << (ms / benchFrames) << " ms/frame)\n";
 }
+
+#endif
 
 // ===========================================================================
 // IK Solver Optimization C: LocalTransform simplification verification
@@ -4558,6 +4645,8 @@ static void test_LocalTransform_RealFile_Deviation()
     std::cout << "    Real file local transform deviation: " << maxDev << "\n";
 }
 
+#if LIBMMD_TEST_GROUP_BENCHMARK
+
 static void bench_LocalTransform_Speedup()
 {
     std::cout << "[bench] LocalTransform_Speedup\n";
@@ -4597,6 +4686,8 @@ static void bench_LocalTransform_Speedup()
     std::cout << "    " << benchFrames << " frames in " << ms << " ms ("
               << (ms / benchFrames) << " ms/frame)\n";
 }
+
+#endif
 
 // ===========================================================================
 // IK Solver Optimization A: Chain path scoped update verification
@@ -4799,6 +4890,8 @@ static void test_ChainPath_RealFile_Deviation()
     std::cout << "    Real file chain path deviation: " << maxDev << "\n";
 }
 
+#if LIBMMD_TEST_GROUP_BENCHMARK
+
 static void bench_ChainPath_Speedup()
 {
     std::cout << "[bench] ChainPath_Speedup\n";
@@ -4838,6 +4931,8 @@ static void bench_ChainPath_Speedup()
     std::cout << "    " << benchFrames << " frames in " << ms << " ms ("
               << (ms / benchFrames) << " ms/frame)\n";
 }
+
+#endif
 
 // ===========================================================================
 // UpdateNodeAnimation DFS merge tests
@@ -5223,14 +5318,17 @@ static void test_NodeAnimMerge_RealFile_Regression()
     std::cout << "    Real file 10-frame regression passed\n";
 }
 
+#endif
+
 // ===========================================================================
 // main
 // ===========================================================================
 
 int main()
 {
-    std::cout << "=== libMMD Unit Tests ===\n\n";
+    std::cout << "=== " << GetLibMMDTestSuiteName() << " ===\n\n";
 
+#if LIBMMD_TEST_GROUP_CORE
     // MMDNode
     test_MMDNode_DefaultConstruction();
     test_MMDNode_SetName();
@@ -5323,7 +5421,9 @@ int main()
     test_CoordSystem_ParentChildTransformConsistency();
     test_CoordSystem_RotationMatrixIdentityPreserved();
     test_CoordSystem_InverseInitTransformConsistency();
+#endif
 
+#if LIBMMD_TEST_GROUP_IO
     // PMXFile reading/parsing
     test_PMXFile_ReadFromPath();
     test_PMXFile_ReadFromBuffer();
@@ -5352,7 +5452,9 @@ int main()
     test_VMDFile_CamCamerasNonEmpty();
     test_VMDFile_CamCameraDataValid();
     test_VMDFile_CamBufferAndPathSameResult();
+#endif
 
+#if LIBMMD_TEST_GROUP_ANIMATION
     // MMDNode UpdateLocalTransform / UpdateGlobalTransform
     test_MMDNode_UpdateLocalTransform_IdentityPose();
     test_MMDNode_UpdateLocalTransform_WithTranslation();
@@ -5393,7 +5495,9 @@ int main()
     test_VMDBezier_FindBezierX_EaseOutCP();
     test_VMDBezier_FindBezierX_PrecisionRegression();
     test_VMDBezier_EvalDX_Correctness();
+#endif
 
+#if LIBMMD_TEST_GROUP_REGRESSION
     // Node Partition
     test_PMXModel_NodePartition_CorrectSplit();
     test_PMXModel_NodePartition_AllBeforePhysics();
@@ -5437,20 +5541,17 @@ int main()
     test_RigidInverse_MatchesGenericInverse();
     test_RigidInverse_IKDeviation();
     test_RigidInverse_RealFile_Deviation();
-    bench_RigidInverse_Speedup();
 
     // IK Solver Optimization C: Local transform
     test_LocalTransform_Optimized_MatchesOriginal();
     test_LocalTransform_IKDeviation();
     test_LocalTransform_RealFile_Deviation();
-    bench_LocalTransform_Speedup();
 
     // IK Solver Optimization A: Chain path
     test_ChainPath_BuildCorrect();
     test_ChainPath_UpdateMatchesDFS();
     test_ChainPath_IKDeviation();
     test_ChainPath_RealFile_Deviation();
-    bench_ChainPath_Speedup();
 
     // UpdateNodeAnimation DFS merge
     test_NodeAnimMerge_SimpleHierarchy_GlobalsCorrect();
@@ -5460,16 +5561,14 @@ int main()
     test_NodeAnimMerge_IKPlusAppend_Combined();
     test_NodeAnimMerge_MultiFrame_Consistency();
     test_NodeAnimMerge_RealFile_Regression();
+#endif
 
-    std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
-              << " / " << g_totalTests << " passed ===\n";
+#if LIBMMD_TEST_GROUP_BENCHMARK
+    // IK Solver Optimization Benchmarks
+    bench_RigidInverse_Speedup();
+    bench_LocalTransform_Speedup();
+    bench_ChainPath_Speedup();
+#endif
 
-    if (g_failedTests > 0)
-    {
-        std::cerr << g_failedTests << " test(s) FAILED.\n";
-        return EXIT_FAILURE;
-    }
-
-    std::cout << "All tests passed.\n";
-    return EXIT_SUCCESS;
+    return FinishLibMMDTests();
 }

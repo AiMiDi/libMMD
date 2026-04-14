@@ -1,6 +1,9 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+#include <libMMD/Model/MMD/IMMDNode.h>
+#include <libMMD/Model/MMD/MMDModel.h>
+#include <libMMD/Model/MMD/MMDNode.h>
 #include <libMMD/Model/MMD/MMDPhysics.h>
 
 #include <btBulletDynamicsCommon.h>
@@ -73,6 +76,82 @@ struct TestRigidBody
         return t.getOrigin();
     }
 };
+
+struct MockIMMDNode final : libmmd::IMMDNode
+{
+    std::string name = "mock";
+    Eigen::Matrix4f global = Eigen::Matrix4f::Identity();
+    Eigen::Matrix4f initialGlobal = Eigen::Matrix4f::Identity();
+    Eigen::Matrix4f local = Eigen::Matrix4f::Identity();
+    Eigen::Quaternionf ikRotate = Eigen::Quaternionf::Identity();
+    libmmd::IMMDNode* parent = nullptr;
+    int setGlobalCalls = 0;
+    Eigen::Matrix4f lastSetGlobal = Eigen::Matrix4f::Identity();
+
+    const std::string& GetName() const override
+    {
+        return name;
+    }
+
+    void SetGlobalTransform(const Eigen::Matrix4f& m) override
+    {
+        global = m;
+        lastSetGlobal = m;
+        ++setGlobalCalls;
+    }
+
+    const Eigen::Matrix4f& GetGlobalTransform() const override
+    {
+        return global;
+    }
+
+    const Eigen::Matrix4f& GetInitialGlobalTransform() const override
+    {
+        return initialGlobal;
+    }
+
+    const Eigen::Matrix4f& GetLocalTransform() const override
+    {
+        return local;
+    }
+
+    void SetIKRotate(const Eigen::Quaternionf& ikr) override
+    {
+        ikRotate = ikr;
+    }
+
+    const Eigen::Quaternionf& GetIKRotate() const override
+    {
+        return ikRotate;
+    }
+
+    Eigen::Quaternionf AnimateRotate() const override
+    {
+        return Eigen::Quaternionf::Identity();
+    }
+
+    void UpdateLocalTransform() override
+    {
+    }
+
+    void UpdateGlobalTransform() override
+    {
+    }
+
+    libmmd::IMMDNode* GetParent() const override
+    {
+        return parent;
+    }
+};
+
+static Eigen::Matrix4f MakeTranslate(float x, float y, float z)
+{
+    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+    mat(0, 3) = x;
+    mat(1, 3) = y;
+    mat(2, 3) = z;
+    return mat;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -209,6 +288,152 @@ static void test_MMDPhysics_RepeatedCreateDestroy()
     }
 }
 
+static void test_MMDRigidBody_ExternalCreate_NullNodeFails()
+{
+    std::cout << "[test] MMDRigidBody_ExternalCreate_NullNodeFails\n";
+
+    libmmd::PMXRigidbody rb;
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_op = libmmd::PMXRigidbody::Operation::Static;
+
+    MockIMMDNode node;
+    libmmd::MMDRigidBody body;
+    TEST_ASSERT(body.Create(rb, &node));
+    TEST_ASSERT(body.GetRigidBody() != nullptr);
+
+    TEST_ASSERT(!body.Create(rb, static_cast<libmmd::IMMDNode*>(nullptr)));
+    TEST_ASSERT(body.GetRigidBody() == nullptr);
+}
+
+static void test_MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal()
+{
+    std::cout << "[test] MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal\n";
+
+    libmmd::PMXRigidbody rb;
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(12.0f, 0.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f::Zero();
+    rb.m_op = libmmd::PMXRigidbody::Operation::Static;
+
+    libmmd::MMDNode node;
+    node.SetGlobalTransform(MakeTranslate(10.0f, 0.0f, 0.0f));
+    node.CalculateInverseInitTransform();
+    node.SetGlobalTransform(MakeTranslate(20.0f, 0.0f, 0.0f));
+
+    libmmd::MMDRigidBody body;
+    TEST_ASSERT(body.Create(rb, static_cast<libmmd::IMMDNode*>(&node)));
+
+    btTransform world;
+    body.GetRigidBody()->getMotionState()->getWorldTransform(world);
+    TEST_ASSERT_FLOAT_EQ(22.0f, world.getOrigin().x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, world.getOrigin().y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, world.getOrigin().z());
+}
+
+static void test_MMDRigidBody_ExternalKinematic_UsesCurrentGlobalAndInitialOffset()
+{
+    std::cout << "[test] MMDRigidBody_ExternalKinematic_UsesCurrentGlobalAndInitialOffset\n";
+
+    libmmd::PMXRigidbody rb;
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(12.0f, 0.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f::Zero();
+    rb.m_op = libmmd::PMXRigidbody::Operation::Static;
+
+    MockIMMDNode node;
+    node.initialGlobal = MakeTranslate(10.0f, 0.0f, 0.0f);
+    node.global = node.initialGlobal;
+
+    libmmd::MMDRigidBody body;
+    TEST_ASSERT(body.Create(rb, &node));
+
+    node.global = MakeTranslate(20.0f, 0.0f, 0.0f);
+
+    btTransform world;
+    body.GetRigidBody()->getMotionState()->getWorldTransform(world);
+    TEST_ASSERT_FLOAT_EQ(22.0f, world.getOrigin().x());
+    TEST_ASSERT_FLOAT_EQ(0.0f, world.getOrigin().y());
+    TEST_ASSERT_FLOAT_EQ(0.0f, world.getOrigin().z());
+
+    body.CalcLocalTransform();
+    TEST_ASSERT_FLOAT_EQ(20.0f, node.global(0, 3));
+}
+
+static void test_MMDRigidBody_ExternalDynamic_ReflectWritesBackToNode()
+{
+    std::cout << "[test] MMDRigidBody_ExternalDynamic_ReflectWritesBackToNode\n";
+
+    libmmd::PMXRigidbody rb;
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(0.0f, 10.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f::Zero();
+    rb.m_mass = 1.0f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::Dynamic;
+
+    MockIMMDNode node;
+    node.initialGlobal = MakeTranslate(0.0f, 10.0f, 0.0f);
+    node.global = node.initialGlobal;
+
+    libmmd::MMDRigidBody body;
+    TEST_ASSERT(body.Create(rb, &node));
+
+    btTransform forced;
+    forced.setIdentity();
+    forced.setOrigin(btVector3(3.0f, 4.0f, 5.0f));
+    body.GetRigidBody()->setCenterOfMassTransform(forced);
+    body.GetRigidBody()->getMotionState()->setWorldTransform(forced);
+
+    body.ReflectGlobalTransform();
+
+    TEST_ASSERT(node.setGlobalCalls > 0);
+    TEST_ASSERT_FLOAT_EQ(3.0f, node.lastSetGlobal(0, 3));
+    TEST_ASSERT_FLOAT_EQ(4.0f, node.lastSetGlobal(1, 3));
+    TEST_ASSERT_FLOAT_EQ(5.0f, node.lastSetGlobal(2, 3));
+}
+
+static void test_MMDRigidBody_ExternalDynamicAndBoneMerge_SyncsPositionAndVelocity()
+{
+    std::cout << "[test] MMDRigidBody_ExternalDynamicAndBoneMerge_SyncsPositionAndVelocity\n";
+
+    libmmd::PMXRigidbody rb;
+    rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+    rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(3.0f, 0.0f, 0.0f);
+    rb.m_rotate = Eigen::Vector3f::Zero();
+    rb.m_mass = 1.0f;
+    rb.m_op = libmmd::PMXRigidbody::Operation::DynamicAndBoneMerge;
+
+    MockIMMDNode node;
+    node.initialGlobal = MakeTranslate(3.0f, 0.0f, 0.0f);
+    node.global = node.initialGlobal;
+
+    libmmd::MMDRigidBody body;
+    TEST_ASSERT(body.Create(rb, &node));
+
+    node.global = MakeTranslate(5.0f, 0.0f, 0.0f);
+    body.SyncBonePositionToPhysics(0.5f);
+
+    const Eigen::Matrix4f transform = body.GetTransform();
+    TEST_ASSERT_FLOAT_EQ(5.0f, transform(0, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, transform(1, 3));
+    TEST_ASSERT_FLOAT_EQ(0.0f, transform(2, 3));
+    TEST_ASSERT_FLOAT_EQ(4.0f, body.GetRigidBody()->getLinearVelocity().x());
+}
+
+static void test_MMDPhysicsManager_DestroyWithoutCreate()
+{
+    std::cout << "[test] MMDPhysicsManager_DestroyWithoutCreate\n";
+
+    auto manager = std::make_unique<libmmd::MMDPhysicsManager>();
+    manager.reset();
+
+    TEST_ASSERT(true);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -222,6 +447,12 @@ int main()
     test_MMDPhysics_SetFPS();
     test_MMDPhysics_MultipleRigidBodies();
     test_MMDPhysics_RepeatedCreateDestroy();
+    test_MMDRigidBody_ExternalCreate_NullNodeFails();
+    test_MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal();
+    test_MMDRigidBody_ExternalKinematic_UsesCurrentGlobalAndInitialOffset();
+    test_MMDRigidBody_ExternalDynamic_ReflectWritesBackToNode();
+    test_MMDRigidBody_ExternalDynamicAndBoneMerge_SyncsPositionAndVelocity();
+    test_MMDPhysicsManager_DestroyWithoutCreate();
 
     std::cout << "\nResults: " << (g_totalTests - g_failedTests) << " / "
               << g_totalTests << " passed\n";
