@@ -25,13 +25,21 @@ namespace libmmd
 		 * @brief Set the IK node.
 		 * @param node Pointer to the IK node.
 		 */
-		void SetIKNode(IMMDNode* node) { m_ikNode = node; }
+		void SetIKNode(IMMDNode* node)
+		{
+			m_ikNode = node;
+			InvalidateChainPathCache();
+		}
 
 		/**
 		 * @brief Set the target node.
 		 * @param node Pointer to the target node.
 		 */
-		void SetTargetNode(IMMDNode* node) { m_ikTarget = node; }
+		void SetTargetNode(IMMDNode* node)
+		{
+			m_ikTarget = node;
+			InvalidateChainPathCache();
+		}
 
 		/**
 		 * @brief Get the IK node.
@@ -106,7 +114,11 @@ namespace libmmd
 		/**
 		 * @brief Remove all IK chains, allowing a full rebuild.
 		 */
-		void ClearIKChains() { m_chains.clear(); }
+		void ClearIKChains()
+		{
+			m_chains.clear();
+			InvalidateChainPathCache();
+		}
 
 		/**
 		 * @brief Solve the IK.
@@ -114,8 +126,8 @@ namespace libmmd
 		void Solve();
 
 		/**
-		 * @brief Build the chain path from the shallowest chain node
-		 *        to the IK target for scoped global transform updates.
+		 * @brief Build tracked paths from the highest chain node to the
+		 *        IK node and target for scoped global transform updates.
 		 *        Must be called after all AddIKChain calls are done.
 		 */
 		void BuildChainPath();
@@ -172,6 +184,15 @@ namespace libmmd
 			}
 		};
 
+		void InvalidateChainPathCache()
+		{
+			m_updateRoot = nullptr;
+			m_targetPath.clear();
+			m_ikPath.clear();
+			m_targetPathIndices.clear();
+			m_ikPathIndices.clear();
+		}
+
 		void SolveCore(uint32_t iteration);
 
 		enum class SolveAxis {
@@ -182,7 +203,9 @@ namespace libmmd
 
 		void SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis);
 
-		void UpdateChainPathGlobalTransform(size_t fromPathIdx);
+		void UpdatePathGlobalTransform(const std::vector<IMMDNode*>& path, size_t fromPathIdx);
+		void UpdateTrackedGlobalTransforms();
+		void UpdateTrackedGlobalTransforms(size_t chainIdx);
 
 		std::vector<IKChain>	m_chains; ///< List of IK chains
 		IMMDNode*	m_ikNode; ///< Pointer to the IK node
@@ -192,8 +215,11 @@ namespace libmmd
 		bool		m_enable; ///< Enable flag
 		bool		m_baseAnimEnable; ///< Base animation enable flag
 
-		std::vector<IMMDNode*>	m_chainPath; ///< Nodes from shallowest chain to IK target
-		std::vector<size_t>		m_chainNodePathIndices; ///< Path index for each chain node
+		IMMDNode*	m_updateRoot; ///< Highest chain node used for final subtree refresh
+		std::vector<IMMDNode*>	m_targetPath; ///< Nodes from update root to target
+		std::vector<IMMDNode*>	m_ikPath; ///< Nodes from update root to IK node
+		std::vector<size_t>		m_targetPathIndices; ///< Target-path index for each chain node
+		std::vector<size_t>		m_ikPathIndices; ///< IK-path index for each chain node
 	};
 }
 

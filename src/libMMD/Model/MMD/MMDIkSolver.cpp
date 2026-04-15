@@ -14,6 +14,33 @@
 
 namespace libmmd
 {
+	namespace
+	{
+		constexpr size_t kInvalidPathIndex = static_cast<size_t>(-1);
+
+		bool BuildPathFromAncestor(IMMDNode* ancestor, IMMDNode* node, std::vector<IMMDNode*>& outPath)
+		{
+			outPath.clear();
+			if (ancestor == nullptr || node == nullptr)
+			{
+				return false;
+			}
+
+			std::vector<IMMDNode*> reversePath;
+			for (IMMDNode* current = node; current != nullptr; current = current->GetParent())
+			{
+				reversePath.push_back(current);
+				if (current == ancestor)
+				{
+					outPath.assign(reversePath.rbegin(), reversePath.rend());
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
 	MMDIkSolver::MMDIkSolver()
 		: m_ikNode(nullptr)
 		, m_ikTarget(nullptr)
@@ -21,11 +48,13 @@ namespace libmmd
 		, m_limitAngle(2.0f * static_cast<float>(EIGEN_PI))
 		, m_enable(true)
 		, m_baseAnimEnable(true)
+		, m_updateRoot(nullptr)
 	{
 	}
 
 	void MMDIkSolver::AddIKChain(IMMDNode * node, const bool isKnee)
 	{
+		InvalidateChainPathCache();
 		m_chains.emplace_back(node,
 			isKnee,
 			isKnee ? Eigen::Vector3f(-static_cast<float>(EIGEN_PI), 0, 0) : Eigen::Vector3f::Zero(),
@@ -40,69 +69,121 @@ namespace libmmd
 		const Eigen::Vector3f & limitMax
 	)
 	{
+		InvalidateChainPathCache();
 		m_chains.emplace_back(node, axisLimit, limitMin, limitMax, Eigen::Quaternionf::Identity());
 	}
 
 	void MMDIkSolver::BuildChainPath()
 	{
-		m_chainPath.clear();
-		m_chainNodePathIndices.clear();
+		InvalidateChainPathCache();
 
-		if (!m_ikTarget || m_chains.empty())
+		if (!m_ikNode || !m_ikTarget || m_chains.empty())
 			return;
 
 		std::unordered_set<IMMDNode*> chainNodeSet;
 		for (const auto& chain : m_chains)
-			chainNodeSet.insert(chain.m_node);
-
-		// Walk from IK target up to root, collecting ancestors
-		std::vector<IMMDNode*> ancestors;
-		IMMDNode* shallowest = nullptr;
-		for (IMMDNode* cur = m_ikTarget; cur != nullptr; cur = cur->GetParent())
 		{
-			ancestors.push_back(cur);
-			if (chainNodeSet.count(cur))
-				shallowest = cur;
+			chainNodeSet.insert(chain.m_node);
 		}
 
-		if (!shallowest)
+		// Use the highest chain node on the IK branch as the update root.
+		for (IMMDNode* cur = m_ikNode; cur != nullptr; cur = cur->GetParent())
+		{
+			if (chainNodeSet.count(cur))
+			{
+				m_updateRoot = cur;
+			}
+		}
+
+		if (m_updateRoot == nullptr)
 			return;
 
-		// Build path from shallowest chain node to IK target (reverse of ancestors)
-		bool found = false;
-		for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it)
+		if (!BuildPathFromAncestor(m_updateRoot, m_ikNode, m_ikPath))
 		{
-			if (*it == shallowest)
-				found = true;
-			if (found)
-				m_chainPath.push_back(*it);
+			InvalidateChainPathCache();
+			return;
 		}
 
-		// Map each chain's node to its index in the path
-		m_chainNodePathIndices.resize(m_chains.size(), 0);
+		BuildPathFromAncestor(m_updateRoot, m_ikTarget, m_targetPath);
+
+		m_targetPathIndices.assign(m_chains.size(), kInvalidPathIndex);
+		m_ikPathIndices.assign(m_chains.size(), kInvalidPathIndex);
 		for (size_t ci = 0; ci < m_chains.size(); ci++)
 		{
-			for (size_t pi = 0; pi < m_chainPath.size(); pi++)
+			for (size_t pi = 0; pi < m_targetPath.size(); pi++)
 			{
-				if (m_chainPath[pi] == m_chains[ci].m_node)
+				if (m_targetPath[pi] == m_chains[ci].m_node)
 				{
-					m_chainNodePathIndices[ci] = pi;
+					m_targetPathIndices[ci] = pi;
+					break;
+				}
+			}
+
+			for (size_t pi = 0; pi < m_ikPath.size(); pi++)
+			{
+				if (m_ikPath[pi] == m_chains[ci].m_node)
+				{
+					m_ikPathIndices[ci] = pi;
 					break;
 				}
 			}
 		}
 	}
 
-	void MMDIkSolver::UpdateChainPathGlobalTransform(size_t fromPathIdx)
+	void MMDIkSolver::UpdatePathGlobalTransform(const std::vector<IMMDNode*>& path, size_t fromPathIdx)
 	{
-		for (size_t i = fromPathIdx; i < m_chainPath.size(); i++)
+		for (size_t i = fromPathIdx; i < path.size(); i++)
 		{
-			IMMDNode* node = m_chainPath[i];
+			IMMDNode* node = path[i];
 			IMMDNode* parent = node->GetParent();
 			if (parent)
 				node->SetGlobalTransform(parent->GetGlobalTransform() * node->GetLocalTransform());
 			else
 				node->SetGlobalTransform(node->GetLocalTransform());
+		}
+	}
+
+	void MMDIkSolver::UpdateTrackedGlobalTransforms()
+	{
+		if (!m_ikPath.empty())
+		{
+			UpdatePathGlobalTransform(m_ikPath, 0);
+		}
+
+		if (!m_targetPath.empty())
+		{
+			UpdatePathGlobalTransform(m_targetPath, 0);
+		}
+
+		for (size_t chainIdx = 0; chainIdx < m_chains.size(); chainIdx++)
+		{
+			if (m_targetPathIndices[chainIdx] == kInvalidPathIndex &&
+				m_ikPathIndices[chainIdx] == kInvalidPathIndex)
+			{
+				m_chains[chainIdx].m_node->UpdateGlobalTransform();
+			}
+		}
+	}
+
+	void MMDIkSolver::UpdateTrackedGlobalTransforms(size_t chainIdx)
+	{
+		bool updatedTrackedPath = false;
+
+		if (m_ikPathIndices[chainIdx] != kInvalidPathIndex)
+		{
+			UpdatePathGlobalTransform(m_ikPath, m_ikPathIndices[chainIdx]);
+			updatedTrackedPath = true;
+		}
+
+		if (m_targetPathIndices[chainIdx] != kInvalidPathIndex)
+		{
+			UpdatePathGlobalTransform(m_targetPath, m_targetPathIndices[chainIdx]);
+			updatedTrackedPath = true;
+		}
+
+		if (!updatedTrackedPath)
+		{
+			m_chains[chainIdx].m_node->UpdateGlobalTransform();
 		}
 	}
 
@@ -119,7 +200,7 @@ namespace libmmd
 			return;
 		}
 
-		const bool useChainPath = !m_chainPath.empty();
+		const bool useTrackedPaths = !m_ikPath.empty();
 
 		// Initialize IKChain
 		for (auto& chain : m_chains)
@@ -130,8 +211,8 @@ namespace libmmd
 			chain.m_node->UpdateLocalTransform();
 		}
 
-		if (useChainPath)
-			UpdateChainPathGlobalTransform(0);
+		if (useTrackedPaths)
+			UpdateTrackedGlobalTransforms();
 		else
 			for (auto& chain : m_chains)
 				chain.m_node->UpdateGlobalTransform();
@@ -160,8 +241,8 @@ namespace libmmd
 					chain.m_node->UpdateLocalTransform();
 				}
 
-				if (useChainPath)
-					UpdateChainPathGlobalTransform(0);
+				if (useTrackedPaths)
+					UpdateTrackedGlobalTransforms();
 				else
 					for (auto& chain : m_chains)
 						chain.m_node->UpdateGlobalTransform();
@@ -170,8 +251,8 @@ namespace libmmd
 		}
 
 		// Final full DFS to update all descendants (not just the path)
-		if (useChainPath)
-			m_chainPath.front()->UpdateGlobalTransform();
+		if (useTrackedPaths)
+			m_updateRoot->UpdateGlobalTransform();
 	}
 
 	namespace
@@ -291,10 +372,11 @@ namespace libmmd
 	void MMDIkSolver::SolveCore(uint32_t iteration)
 	{
 		Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
-		//for (auto& chain : m_chains)
-		for (size_t chainIdx = 0; chainIdx < m_chains.size(); chainIdx++)
+		// CCD converges best when links are processed from the effector side back to the root.
+		for (size_t chainIdx = m_chains.size(); chainIdx > 0; --chainIdx)
 		{
-			auto& chain = m_chains[chainIdx];
+			auto& chain = m_chains[chainIdx - 1];
+			const size_t chainListIdx = chainIdx - 1;
 			IMMDNode* chainNode = chain.m_node;
 			if (chainNode == m_ikTarget)
 			{
@@ -314,7 +396,7 @@ namespace libmmd
 					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
 					)
 				{
-					SolvePlane(iteration, chainIdx, SolveAxis::X);
+					SolvePlane(iteration, chainListIdx, SolveAxis::X);
 					continue;
 				}
 				if ((chain.m_limitMin.y() != 0 || chain.m_limitMax.y() != 0) &&
@@ -322,7 +404,7 @@ namespace libmmd
 					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
 				)
 				{
-					SolvePlane(iteration, chainIdx, SolveAxis::Y);
+					SolvePlane(iteration, chainListIdx, SolveAxis::Y);
 					continue;
 				}
 				if ((chain.m_limitMin.z() != 0 || chain.m_limitMax.z() != 0) &&
@@ -330,7 +412,7 @@ namespace libmmd
 					(chain.m_limitMin.y() == 0 || chain.m_limitMax.y() == 0)
 				)
 				{
-					SolvePlane(iteration, chainIdx, SolveAxis::Z);
+					SolvePlane(iteration, chainListIdx, SolveAxis::Z);
 					continue;
 				}
 			}
@@ -357,7 +439,7 @@ namespace libmmd
 				continue;
 			}
 			angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
-			Eigen::Vector3f cross = chainTargetVec.cross(chainIkVec).normalized();
+			Eigen::Vector3f cross = chainIkVec.cross(chainTargetVec).normalized();
 			Eigen::Quaternionf rot = Eigen::Quaternionf(Eigen::AngleAxisf(angle, cross));
 
 			Eigen::Quaternionf chainRot = chainNode->GetIKRotate() * chainNode->AnimateRotate() * rot;
@@ -382,8 +464,8 @@ namespace libmmd
 			chainNode->SetIKRotate(ikRot);
 
 			chainNode->UpdateLocalTransform();
-			if (!m_chainPath.empty())
-				UpdateChainPathGlobalTransform(m_chainNodePathIndices[chainIdx]);
+			if (!m_ikPath.empty())
+				UpdateTrackedGlobalTransforms(chainListIdx);
 			else
 				chainNode->UpdateGlobalTransform();
 		}
@@ -475,8 +557,8 @@ namespace libmmd
 		chain.m_node->SetIKRotate(ikRotM);
 
 		chain.m_node->UpdateLocalTransform();
-		if (!m_chainPath.empty())
-			UpdateChainPathGlobalTransform(m_chainNodePathIndices[chainIdx]);
+		if (!m_ikPath.empty())
+			UpdateTrackedGlobalTransforms(chainIdx);
 		else
 			chain.m_node->UpdateGlobalTransform();
 	}

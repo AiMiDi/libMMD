@@ -189,6 +189,12 @@ static float GlobalDistance(const TNode& a, const TNode& b)
 }
 
 template <typename TNode>
+static Eigen::Vector3f GlobalPosition(const TNode& node)
+{
+    return node.GetGlobalTransform().col(3).template head<3>();
+}
+
+template <typename TNode>
 static void AssertFiniteMatrix(const TNode& node)
 {
     const auto& m = node.GetGlobalTransform();
@@ -249,7 +255,7 @@ struct SimpleIkChainFixture
         root.UpdateGlobalTransform();
     }
 
-    void ConfigureSolver(libmmd::MMDIkSolver& solver)
+    void ConfigureSolver(libmmd::MMDIkSolver& solver, bool buildChainPath = true)
     {
         solver.ClearIKChains();
         solver.SetIKNode(&ik);
@@ -260,7 +266,10 @@ struct SimpleIkChainFixture
         solver.AddIKChain(&root);
         solver.AddIKChain(&mid);
         solver.AddIKChain(&hinge);
-        solver.BuildChainPath();
+        if (buildChainPath)
+        {
+            solver.BuildChainPath();
+        }
     }
 
     std::array<TNode*, 5> Nodes()
@@ -354,6 +363,39 @@ static void test_MMDIkSolver_RealMMDNode_Regression()
     ValidateFiniteTransforms(fixtureB);
 }
 
+static void test_MMDIkSolver_BuildChainPath_MatchesFullSubtreeUpdates()
+{
+    std::cout << "[test] MMDIkSolver_BuildChainPath_MatchesFullSubtreeUpdates\n";
+
+    SimpleIkChainFixture<TestNode> scopedFixture;
+    scopedFixture.Build();
+    ValidateHierarchy(scopedFixture);
+
+    SimpleIkChainFixture<TestNode> fullFixture;
+    fullFixture.Build();
+    ValidateHierarchy(fullFixture);
+
+    libmmd::MMDIkSolver scopedSolver;
+    scopedFixture.ConfigureSolver(scopedSolver, true);
+    scopedSolver.Solve();
+
+    libmmd::MMDIkSolver fullSolver;
+    fullFixture.ConfigureSolver(fullSolver, false);
+    fullSolver.Solve();
+
+    const Eigen::Vector3f scopedTargetPos = GlobalPosition(scopedFixture.target);
+    const Eigen::Vector3f fullTargetPos = GlobalPosition(fullFixture.target);
+    const Eigen::Vector3f scopedIkPos = GlobalPosition(scopedFixture.ik);
+    const Eigen::Vector3f fullIkPos = GlobalPosition(fullFixture.ik);
+
+    TEST_ASSERT((scopedTargetPos - fullTargetPos).norm() < 1e-4f);
+    TEST_ASSERT((scopedIkPos - fullIkPos).norm() < 1e-4f);
+    TEST_ASSERT(std::fabs(GlobalDistance(scopedFixture.target, scopedFixture.ik) -
+                          GlobalDistance(fullFixture.target, fullFixture.ik)) < 1e-4f);
+    ValidateFiniteTransforms(scopedFixture);
+    ValidateFiniteTransforms(fullFixture);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -364,6 +406,7 @@ int main()
 
     test_MMDIkSolver_SolveConverges_SimpleChain();
     test_MMDIkSolver_RealMMDNode_Regression();
+    test_MMDIkSolver_BuildChainPath_MatchesFullSubtreeUpdates();
 
     std::cout << "\nResults: " << (g_totalTests - g_failedTests) << " / "
               << g_totalTests << " passed\n";
