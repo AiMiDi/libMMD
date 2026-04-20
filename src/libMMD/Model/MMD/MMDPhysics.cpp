@@ -828,11 +828,6 @@ namespace libmmd
 	{
 		Destroy();
 
-		if (node == nullptr)
-		{
-			return false;
-		}
-
 		switch (pmxRigidBody.m_shape)
 		{
 		case PMXRigidbody::Shape::Sphere:
@@ -885,23 +880,40 @@ namespace libmmd
 		translateMat.block<3, 1>(0, 3) = pmxRigidBody.m_translate;
 
 		const Eigen::Matrix4f rbMat = translateMat * rotMat;
-		m_offsetMat = node->GetInitialGlobalTransform().inverse() * rbMat;
 
 		btMotionState* motionState = nullptr;
-		m_kinematicMotionState = std::make_unique<ExternalKinematicMotionState>(node, m_offsetMat);
-		if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
+		if (node != nullptr)
 		{
-			motionState = m_kinematicMotionState.get();
+			m_offsetMat = node->GetInitialGlobalTransform().inverse() * rbMat;
+			m_kinematicMotionState = std::make_unique<ExternalKinematicMotionState>(node, m_offsetMat);
+			if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
+			{
+				motionState = m_kinematicMotionState.get();
+			}
+			else if (pmxRigidBody.m_op == PMXRigidbody::Operation::Dynamic)
+			{
+				m_activeMotionState = std::make_unique<ExternalDynamicMotionState>(node, m_offsetMat);
+				motionState = m_activeMotionState.get();
+			}
+			else if (pmxRigidBody.m_op == PMXRigidbody::Operation::DynamicAndBoneMerge)
+			{
+				m_activeMotionState = std::make_unique<ExternalDynamicAndBoneMergeMotionState>(node, m_offsetMat);
+				motionState = m_activeMotionState.get();
+			}
 		}
-		else if (pmxRigidBody.m_op == PMXRigidbody::Operation::Dynamic)
+		else
 		{
-			m_activeMotionState = std::make_unique<ExternalDynamicMotionState>(node, m_offsetMat);
-			motionState = m_activeMotionState.get();
-		}
-		else if (pmxRigidBody.m_op == PMXRigidbody::Operation::DynamicAndBoneMerge)
-		{
-			m_activeMotionState = std::make_unique<ExternalDynamicAndBoneMergeMotionState>(node, m_offsetMat);
-			motionState = m_activeMotionState.get();
+			m_offsetMat = rbMat;
+			m_kinematicMotionState = std::make_unique<DefaultMotionState>(m_offsetMat);
+			if (pmxRigidBody.m_op == PMXRigidbody::Operation::Static)
+			{
+				motionState = m_kinematicMotionState.get();
+			}
+			else
+			{
+				m_activeMotionState = std::make_unique<DefaultMotionState>(m_offsetMat);
+				motionState = m_activeMotionState.get();
+			}
 		}
 
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, m_shape.get(), localInteria);
