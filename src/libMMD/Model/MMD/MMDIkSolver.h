@@ -59,11 +59,24 @@ namespace libmmd
 		 */
 		std::string GetName() const
 		{
+			if (!m_name.empty())
+			{
+				return m_name;
+			}
 			if (m_ikNode != nullptr)
 			{
 				return m_ikNode->GetName();
 			}
 			return "";
+		}
+
+		/**
+		 * @brief Set the external/display name of the solver.
+		 * @param name Name used for UI/state lookup.
+		 */
+		void SetName(const std::string& name)
+		{
+			m_name = name;
 		}
 
 		/**
@@ -160,6 +173,8 @@ namespace libmmd
 			bool		m_enableAxisLimit; ///< Axis limit flag
 			Eigen::Vector3f	m_limitMax; ///< Maximum limit
 			Eigen::Vector3f	m_limitMin; ///< Minimum limit
+			Eigen::Vector3f	m_savePrevAngle; ///< Saved previous angle for the best solve state
+			float		m_savePlaneModeAngle; ///< Saved plane-mode angle for the best solve state
 			Eigen::Vector3f	m_prevAngle; ///< Previous angle
 			Eigen::Quaternionf	m_saveIKRot; ///< Saved IK rotation
 			float		m_planeModeAngle; ///< Plane mode angle
@@ -170,6 +185,8 @@ namespace libmmd
 			const Eigen::Vector3f& limitMin = Eigen::Vector3f::Zero(),
 			const Eigen::Vector3f& limitMax = Eigen::Vector3f::Zero(),
 			const Eigen::Quaternionf& saveIKRot = Eigen::Quaternionf::Identity(),
+			const Eigen::Vector3f& savePrevAngle = Eigen::Vector3f::Zero(),
+			const float savePlaneModeAngle = 0.0f,
 			const Eigen::Vector3f& prevAngle = Eigen::Vector3f::Zero(),
 			const float planeModeAngle = 0.0f
 		)
@@ -177,6 +194,8 @@ namespace libmmd
 			  m_enableAxisLimit(enableAxisLimit),
 			  m_limitMin(limitMin),
 			  m_limitMax(limitMax),
+			  m_savePrevAngle(savePrevAngle),
+			  m_savePlaneModeAngle(savePlaneModeAngle),
 			  m_prevAngle(prevAngle),
 			  m_saveIKRot(saveIKRot),
 			  m_planeModeAngle(planeModeAngle)
@@ -210,6 +229,7 @@ namespace libmmd
 		std::vector<IKChain>	m_chains; ///< List of IK chains
 		IMMDNode*	m_ikNode; ///< Pointer to the IK node
 		IMMDNode*	m_ikTarget; ///< Pointer to the target node
+		std::string	m_name; ///< External/display name (defaults to IK node name)
 		uint32_t	m_iterateCount; ///< Iterate count
 		float		m_limitAngle; ///< Limit angle
 		bool		m_enable; ///< Enable flag

@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <unordered_set>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -86,25 +88,36 @@ namespace libmmd
 			chainNodeSet.insert(chain.m_node);
 		}
 
-		// Use the highest chain node on the IK branch as the update root.
-		for (IMMDNode* cur = m_ikNode; cur != nullptr; cur = cur->GetParent())
+		// Find the highest chain node by walking upward from both endpoints.
+		// In PMX convention m_ikNode is the external control bone and
+		// m_ikTarget is the effector (descendant of the chain), so the walk
+		// from m_ikTarget is the one that typically discovers the chain nodes.
+		auto findRoot = [&](IMMDNode* start)
 		{
-			if (chainNodeSet.count(cur))
+			for (IMMDNode* cur = start; cur != nullptr; cur = cur->GetParent())
 			{
-				m_updateRoot = cur;
+				if (chainNodeSet.count(cur))
+					m_updateRoot = cur;
 			}
-		}
+		};
+		findRoot(m_ikTarget);
+		if (!m_updateRoot)
+			findRoot(m_ikNode);
 
 		if (m_updateRoot == nullptr)
 			return;
 
-		if (!BuildPathFromAncestor(m_updateRoot, m_ikNode, m_ikPath))
+		// Build paths from the update root to each node.  Either path may
+		// fail when the node is not a descendant of m_updateRoot (e.g. the
+		// external IK control bone lives in a different branch).
+		BuildPathFromAncestor(m_updateRoot, m_ikNode, m_ikPath);
+		BuildPathFromAncestor(m_updateRoot, m_ikTarget, m_targetPath);
+
+		if (m_ikPath.empty() && m_targetPath.empty())
 		{
 			InvalidateChainPathCache();
 			return;
 		}
-
-		BuildPathFromAncestor(m_updateRoot, m_ikTarget, m_targetPath);
 
 		m_targetPathIndices.assign(m_chains.size(), kInvalidPathIndex);
 		m_ikPathIndices.assign(m_chains.size(), kInvalidPathIndex);
@@ -196,13 +209,11 @@ namespace libmmd
 
 		if (m_ikNode == nullptr || m_ikTarget == nullptr)
 		{
-			// wrong ik
 			return;
 		}
 
-		const bool useTrackedPaths = !m_ikPath.empty();
+		const bool useTrackedPaths = !m_ikPath.empty() || !m_targetPath.empty();
 
-		// Initialize IKChain
 		for (auto& chain : m_chains)
 		{
 			chain.m_prevAngle = Eigen::Vector3f::Zero();
@@ -217,6 +228,7 @@ namespace libmmd
 			for (auto& chain : m_chains)
 				chain.m_node->UpdateGlobalTransform();
 
+		constexpr float kSolveImprovementEpsilon = 1.0e-6f;
 		float maxDist = std::numeric_limits<float>::max();
 		for (uint32_t i = 0; i < m_iterateCount; i++)
 		{
@@ -225,12 +237,15 @@ namespace libmmd
 			Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
 			Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
 			const float dist = (targetPos - ikPos).norm();
-			if (dist < maxDist)
+
+			if (dist + kSolveImprovementEpsilon < maxDist)
 			{
 				maxDist = dist;
 				for (auto& chain : m_chains)
 				{
 					chain.m_saveIKRot = chain.m_node->GetIKRotate();
+					chain.m_savePrevAngle = chain.m_prevAngle;
+					chain.m_savePlaneModeAngle = chain.m_planeModeAngle;
 				}
 			}
 			else
@@ -238,6 +253,8 @@ namespace libmmd
 				for (auto& chain : m_chains)
 				{
 					chain.m_node->SetIKRotate(chain.m_saveIKRot);
+					chain.m_prevAngle = chain.m_savePrevAngle;
+					chain.m_planeModeAngle = chain.m_savePlaneModeAngle;
 					chain.m_node->UpdateLocalTransform();
 				}
 
@@ -246,11 +263,9 @@ namespace libmmd
 				else
 					for (auto& chain : m_chains)
 						chain.m_node->UpdateGlobalTransform();
-				break;
 			}
 		}
 
-		// Final full DFS to update all descendants (not just the path)
 		if (useTrackedPaths)
 			m_updateRoot->UpdateGlobalTransform();
 	}
@@ -371,26 +386,18 @@ namespace libmmd
 
 	void MMDIkSolver::SolveCore(uint32_t iteration)
 	{
-		Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
-		// CCD converges best when links are processed from the effector side back to the root.
 		for (size_t chainIdx = m_chains.size(); chainIdx > 0; --chainIdx)
 		{
 			auto& chain = m_chains[chainIdx - 1];
 			const size_t chainListIdx = chainIdx - 1;
 			IMMDNode* chainNode = chain.m_node;
-			if (chainNode == m_ikTarget)
+			if (chainNode == m_ikTarget || chainNode == m_ikNode)
 			{
-				/*
-				ターゲットとチェインが同じ場合、 chainTargetVec が0ベクトルとなる。
-				その後の計算で求める回転値がnanになるため、計算を行わない
-				対象モデル：ぽんぷ長式比叡.pmx
-				*/
 				continue;
 			}
 
 			if (chain.m_enableAxisLimit)
 			{
-				// X,Y,Z 軸のいずれかしか回転しないものは専用の Solver を使用する
 				if ((chain.m_limitMin.x() != 0 || chain.m_limitMax.x() != 0) &&
 					(chain.m_limitMin.y() == 0 || chain.m_limitMax.y() == 0) &&
 					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
@@ -417,6 +424,7 @@ namespace libmmd
 				}
 			}
 
+			Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
 			Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
 
 			const Eigen::Matrix4f& chainGlobal = chain.m_node->GetGlobalTransform();
@@ -432,14 +440,26 @@ namespace libmmd
 			dot = std::clamp(dot, -1.0f, 1.0f);
 
 			float angle = std::acos(dot);
-			constexpr float pi_f = static_cast<float>(EIGEN_PI);
-			float angleDeg = angle * 180.0f / pi_f;
-			if (angleDeg < 1.0e-3f)
+
+			if (angle < 1.75e-5f)
 			{
 				continue;
 			}
 			angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
-			Eigen::Vector3f cross = chainIkVec.cross(chainTargetVec).normalized();
+
+			// CCD cross product: the descendant of this chain node moves with
+			// rotation; the external node stays fixed.  We need to rotate the
+			// descendant direction toward the external direction.
+			// cross = descendant_dir x external_dir
+			const bool ikIsDescendant = !m_ikPathIndices.empty() &&
+				m_ikPathIndices[chainListIdx] != kInvalidPathIndex;
+			const bool targetIsDescendant = !m_targetPathIndices.empty() &&
+				m_targetPathIndices[chainListIdx] != kInvalidPathIndex;
+			Eigen::Vector3f cross;
+			if (targetIsDescendant && !ikIsDescendant)
+				cross = chainTargetVec.cross(chainIkVec).normalized();
+			else
+				cross = chainIkVec.cross(chainTargetVec).normalized();
 			Eigen::Quaternionf rot = Eigen::Quaternionf(Eigen::AngleAxisf(angle, cross));
 
 			Eigen::Quaternionf chainRot = chainNode->GetIKRotate() * chainNode->AnimateRotate() * rot;
@@ -462,9 +482,8 @@ namespace libmmd
 
 			Eigen::Quaternionf ikRot = chainRot * chainNode->AnimateRotate().inverse();
 			chainNode->SetIKRotate(ikRot);
-
 			chainNode->UpdateLocalTransform();
-			if (!m_ikPath.empty())
+			if (m_updateRoot)
 				UpdateTrackedGlobalTransforms(chainListIdx);
 			else
 				chainNode->UpdateGlobalTransform();
@@ -473,20 +492,20 @@ namespace libmmd
 
 	void MMDIkSolver::SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis)
 	{
-		int RotateAxisIndex = 0; // X axis
+		int RotateAxisIndex = 0;
 		Eigen::Vector3f RotateAxis = Eigen::Vector3f(1, 0, 0);
 		switch (solveAxis)
 		{
 		case SolveAxis::X:
-			RotateAxisIndex = 0; // X axis
+			RotateAxisIndex = 0;
 			RotateAxis = Eigen::Vector3f(1, 0, 0);
 			break;
 		case SolveAxis::Y:
-			RotateAxisIndex = 1; // Y axis
+			RotateAxisIndex = 1;
 			RotateAxis = Eigen::Vector3f(0, 1, 0);
 			break;
 		case SolveAxis::Z:
-			RotateAxisIndex = 2; // Z axis
+			RotateAxisIndex = 2;
 			RotateAxis = Eigen::Vector3f(0, 0, 1);
 			break;
 		default:
@@ -495,7 +514,6 @@ namespace libmmd
 
 		auto& chain = m_chains[chainIdx];
 		Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
-
 		Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
 
 		const Eigen::Matrix4f& chainGlobal = chain.m_node->GetGlobalTransform();
@@ -511,16 +529,23 @@ namespace libmmd
 		dot = std::clamp(dot, -1.0f, 1.0f);
 
 		float angle = std::acos(dot);
-
 		angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
 
+		// The descendant moves with chain rotation; the external stays fixed.
+		// Test both rotation directions by checking alignment of the rotated
+		// descendant direction with the external direction.
+		const bool ikIsDescendant = !m_ikPathIndices.empty() &&
+			m_ikPathIndices[chainIdx] != kInvalidPathIndex;
+		const bool targetIsDescendant = !m_targetPathIndices.empty() &&
+			m_targetPathIndices[chainIdx] != kInvalidPathIndex;
+		const Eigen::Vector3f& descendantVec = (targetIsDescendant && !ikIsDescendant) ? chainTargetVec : chainIkVec;
+		const Eigen::Vector3f& externalVec = (targetIsDescendant && !ikIsDescendant) ? chainIkVec : chainTargetVec;
+
 		Eigen::Quaternionf rot1 = Eigen::Quaternionf(Eigen::AngleAxisf(angle, RotateAxis));
-		Eigen::Vector3f targetVec1 = rot1 * chainTargetVec;
-		float dot1 = targetVec1.dot(chainIkVec);
+		float dot1 = (rot1 * descendantVec).dot(externalVec);
 
 		Eigen::Quaternionf rot2 = Eigen::Quaternionf(Eigen::AngleAxisf(-angle, RotateAxis));
-		Eigen::Vector3f targetVec2 = rot2 * chainTargetVec;
-		float dot2 = targetVec2.dot(chainIkVec);
+		float dot2 = (rot2 * descendantVec).dot(externalVec);
 
 		float newAngle = chain.m_planeModeAngle;
 		if (dot1 > dot2)
@@ -531,6 +556,7 @@ namespace libmmd
 		{
 			newAngle -= angle;
 		}
+
 		if (iteration == 0)
 		{
 			if (newAngle < chain.m_limitMin[RotateAxisIndex] || newAngle > chain.m_limitMax[RotateAxisIndex])
@@ -557,10 +583,9 @@ namespace libmmd
 		chain.m_node->SetIKRotate(ikRotM);
 
 		chain.m_node->UpdateLocalTransform();
-		if (!m_ikPath.empty())
+		if (m_updateRoot)
 			UpdateTrackedGlobalTransforms(chainIdx);
 		else
 			chain.m_node->UpdateGlobalTransform();
 	}
 }
-
