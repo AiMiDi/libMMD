@@ -12,13 +12,31 @@
 #include <unordered_set>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <functional>
 
 namespace libmmd
 {
 	namespace
 	{
 		constexpr size_t kInvalidPathIndex = static_cast<size_t>(-1);
+
+		/** PMX IK: max rotation step scales with iteration index (standard MMD behavior). */
+		inline float IkIterationAngleLimit(float unitAngle, uint32_t iteration)
+		{
+			const float scaled = unitAngle * static_cast<float>(iteration + 1);
+			constexpr float pi = static_cast<float>(EIGEN_PI);
+			return std::min(pi, scaled);
+		}
+
+		Eigen::Vector3f StablePerpendicularAxis(const Eigen::Vector3f& v)
+		{
+			const Eigen::Vector3f basis = std::abs(v.x()) < 0.75f
+				? Eigen::Vector3f::UnitX()
+				: Eigen::Vector3f::UnitY();
+			Eigen::Vector3f axis = v.cross(basis);
+			if (axis.squaredNorm() < 1.0e-12f)
+				axis = v.cross(Eigen::Vector3f::UnitZ());
+			return axis.normalized();
+		}
 
 		bool BuildPathFromAncestor(IMMDNode* ancestor, IMMDNode* node, std::vector<IMMDNode*>& outPath)
 		{
@@ -57,10 +75,14 @@ namespace libmmd
 	void MMDIkSolver::AddIKChain(IMMDNode * node, const bool isKnee)
 	{
 		InvalidateChainPathCache();
+		// Matches benikabocha/saba knee IK limits (radians): min ≈ 0.5°, max = 180°.
+		constexpr float pi = static_cast<float>(EIGEN_PI);
+		const float knee_min_x = (0.5f * pi) / 180.0f;
+		const float knee_max_x = pi;
 		m_chains.emplace_back(node,
 			isKnee,
-			isKnee ? Eigen::Vector3f(-static_cast<float>(EIGEN_PI), 0, 0) : Eigen::Vector3f::Zero(),
-			isKnee ? Eigen::Vector3f(-0.5f * static_cast<float>(EIGEN_PI) / 180.0f, 0, 0) : Eigen::Vector3f::Zero(),
+			isKnee ? Eigen::Vector3f(knee_min_x, 0.0f, 0.0f) : Eigen::Vector3f::Zero(),
+			isKnee ? Eigen::Vector3f(knee_max_x, 0.0f, 0.0f) : Eigen::Vector3f::Zero(),
 			Eigen::Quaternionf::Identity());
 	}
 
@@ -228,42 +250,19 @@ namespace libmmd
 			for (auto& chain : m_chains)
 				chain.m_node->UpdateGlobalTransform();
 
-		constexpr float kSolveImprovementEpsilon = 1.0e-6f;
-		float maxDist = std::numeric_limits<float>::max();
+		constexpr float kSolveDistanceEpsilon = 1.0e-5f;
 		for (uint32_t i = 0; i < m_iterateCount; i++)
 		{
 			SolveCore(i);
 
-			Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
-			Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
+			const Eigen::Vector3f targetPos = m_ikTarget->GetGlobalTransform().col(3).head<3>();
+			const Eigen::Vector3f ikPos = m_ikNode->GetGlobalTransform().col(3).head<3>();
 			const float dist = (targetPos - ikPos).norm();
 
-			if (dist + kSolveImprovementEpsilon < maxDist)
-			{
-				maxDist = dist;
-				for (auto& chain : m_chains)
-				{
-					chain.m_saveIKRot = chain.m_node->GetIKRotate();
-					chain.m_savePrevAngle = chain.m_prevAngle;
-					chain.m_savePlaneModeAngle = chain.m_planeModeAngle;
-				}
-			}
-			else
-			{
-				for (auto& chain : m_chains)
-				{
-					chain.m_node->SetIKRotate(chain.m_saveIKRot);
-					chain.m_prevAngle = chain.m_savePrevAngle;
-					chain.m_planeModeAngle = chain.m_savePlaneModeAngle;
-					chain.m_node->UpdateLocalTransform();
-				}
-
-				if (useTrackedPaths)
-					UpdateTrackedGlobalTransforms();
-				else
-					for (auto& chain : m_chains)
-						chain.m_node->UpdateGlobalTransform();
-			}
+			if (!std::isfinite(dist))
+				break;
+			if (dist < kSolveDistanceEpsilon)
+				break;
 		}
 
 		if (useTrackedPaths)
@@ -386,6 +385,8 @@ namespace libmmd
 
 	void MMDIkSolver::SolveCore(uint32_t iteration)
 	{
+		const float angleLimitThisIter = IkIterationAngleLimit(m_limitAngle, iteration);
+
 		for (size_t chainIdx = m_chains.size(); chainIdx > 0; --chainIdx)
 		{
 			auto& chain = m_chains[chainIdx - 1];
@@ -409,7 +410,7 @@ namespace libmmd
 				if ((chain.m_limitMin.y() != 0 || chain.m_limitMax.y() != 0) &&
 					(chain.m_limitMin.x() == 0 || chain.m_limitMax.x() == 0) &&
 					(chain.m_limitMin.z() == 0 || chain.m_limitMax.z() == 0)
-				)
+					)
 				{
 					SolvePlane(iteration, chainListIdx, SolveAxis::Y);
 					continue;
@@ -432,6 +433,8 @@ namespace libmmd
 			Eigen::Vector3f tVec = chainGlobal.block<3,1>(0,3);
 			Eigen::Vector3f chainIkPos = Rt * (ikPos - tVec);
 			Eigen::Vector3f chainTargetPos = Rt * (targetPos - tVec);
+			if (chainIkPos.squaredNorm() < 1.0e-12f || chainTargetPos.squaredNorm() < 1.0e-12f)
+				continue;
 
 			Eigen::Vector3f chainIkVec = chainIkPos.normalized();
 			Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
@@ -445,7 +448,7 @@ namespace libmmd
 			{
 				continue;
 			}
-			angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
+			angle = std::clamp(angle, -angleLimitThisIter, angleLimitThisIter);
 
 			// CCD cross product: the descendant of this chain node moves with
 			// rotation; the external node stays fixed.  We need to rotate the
@@ -455,11 +458,16 @@ namespace libmmd
 				m_ikPathIndices[chainListIdx] != kInvalidPathIndex;
 			const bool targetIsDescendant = !m_targetPathIndices.empty() &&
 				m_targetPathIndices[chainListIdx] != kInvalidPathIndex;
+			const Eigen::Vector3f& descendantVec = (targetIsDescendant && !ikIsDescendant) ? chainTargetVec : chainIkVec;
 			Eigen::Vector3f cross;
 			if (targetIsDescendant && !ikIsDescendant)
-				cross = chainTargetVec.cross(chainIkVec).normalized();
+				cross = chainTargetVec.cross(chainIkVec);
 			else
-				cross = chainIkVec.cross(chainTargetVec).normalized();
+				cross = chainIkVec.cross(chainTargetVec);
+			if (cross.squaredNorm() < 1.0e-12f)
+				cross = StablePerpendicularAxis(descendantVec);
+			else
+				cross.normalize();
 			Eigen::Quaternionf rot = Eigen::Quaternionf(Eigen::AngleAxisf(angle, cross));
 
 			Eigen::Quaternionf chainRot = chainNode->GetIKRotate() * chainNode->AnimateRotate() * rot;
@@ -470,7 +478,7 @@ namespace libmmd
 				Eigen::Vector3f clampXYZ;
 				clampXYZ = rotXYZ.cwiseMax(chain.m_limitMin).cwiseMin(chain.m_limitMax);
 
-				clampXYZ = (clampXYZ - chain.m_prevAngle).cwiseMax(-m_limitAngle).cwiseMin(m_limitAngle) + chain.m_prevAngle;
+				clampXYZ = (clampXYZ - chain.m_prevAngle).cwiseMax(-angleLimitThisIter).cwiseMin(angleLimitThisIter) + chain.m_prevAngle;
 				Eigen::Quaternionf r = Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.x(), Eigen::Vector3f(1, 0, 0)));
 				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.y(), Eigen::Vector3f(0, 1, 0)));
 				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.z(), Eigen::Vector3f(0, 0, 1)));
@@ -492,6 +500,9 @@ namespace libmmd
 
 	void MMDIkSolver::SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis)
 	{
+		// benikabocha/saba clamps plane-mode steps with raw PMX unit angle (not iteration-scaled).
+		const float planeAngleLimit = m_limitAngle;
+
 		int RotateAxisIndex = 0;
 		Eigen::Vector3f RotateAxis = Eigen::Vector3f(1, 0, 0);
 		switch (solveAxis)
@@ -521,6 +532,8 @@ namespace libmmd
 		Eigen::Vector3f tVec = chainGlobal.block<3,1>(0,3);
 		Eigen::Vector3f chainIkPos = Rt * (ikPos - tVec);
 		Eigen::Vector3f chainTargetPos = Rt * (targetPos - tVec);
+		if (chainIkPos.squaredNorm() < 1.0e-12f || chainTargetPos.squaredNorm() < 1.0e-12f)
+			return;
 
 		Eigen::Vector3f chainIkVec = chainIkPos.normalized();
 		Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
@@ -529,7 +542,7 @@ namespace libmmd
 		dot = std::clamp(dot, -1.0f, 1.0f);
 
 		float angle = std::acos(dot);
-		angle = std::clamp(angle, -m_limitAngle, m_limitAngle);
+		angle = std::clamp(angle, -planeAngleLimit, planeAngleLimit);
 
 		// The descendant moves with chain rotation; the external stays fixed.
 		// Test both rotation directions by checking alignment of the rotated
