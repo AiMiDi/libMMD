@@ -66,7 +66,7 @@ namespace libmmd
 		/**
 		 * @brief Create a rigid body from PMX data bound to an external IMMD node.
 		 * @param pmxRigidBody PMX rigid body data.
-		 * @param node Pointer to the external node binding.
+		 * @param node Pointer to the external node binding. Must not be null.
 		 * @return True if creation is successful, false otherwise.
 		 */
 		bool Create(const PMXRigidbody& pmxRigidBody, IMMDNode* node);
