@@ -131,22 +131,23 @@ namespace libmmd
 					// Calculate interpolation parameters
 					const auto timeRange = static_cast<float>(key1.m_time - key0.m_time);
 					const auto time = (t - static_cast<float>(key0.m_time)) / timeRange;
+					const auto& interpolationKey = key1;
 
 					// Find interpolation values using Bezier curves
-					const auto ix_x = key0.m_ixBezier.FindBezierX(time);
-					const auto iy_x = key0.m_iyBezier.FindBezierX(time);
-					const auto iz_x = key0.m_izBezier.FindBezierX(time);
-					const auto rotate_x = key0.m_rotateBezier.FindBezierX(time);
-					const auto distance_x = key0.m_distanceBezier.FindBezierX(time);
-					const auto fov_x = key0.m_fovBezier.FindBezierX(time);
+					const auto ix_x = interpolationKey.m_ixBezier.FindBezierX(time);
+					const auto iy_x = interpolationKey.m_iyBezier.FindBezierX(time);
+					const auto iz_x = interpolationKey.m_izBezier.FindBezierX(time);
+					const auto rotate_x = interpolationKey.m_rotateBezier.FindBezierX(time);
+					const auto distance_x = interpolationKey.m_distanceBezier.FindBezierX(time);
+					const auto fov_x = interpolationKey.m_fovBezier.FindBezierX(time);
 
 					// Evaluate final interpolation values
-					const auto ix_y = key0.m_ixBezier.EvalY(ix_x);
-					const auto iy_y = key0.m_iyBezier.EvalY(iy_x);
-					const auto iz_y = key0.m_izBezier.EvalY(iz_x);
-					const auto rotate_y = key0.m_rotateBezier.EvalY(rotate_x);
-					const auto distance_y = key0.m_distanceBezier.EvalY(distance_x);
-					const auto fov_y = key0.m_fovBezier.EvalY(fov_x);
+					const auto ix_y = interpolationKey.m_ixBezier.EvalY(ix_x);
+					const auto iy_y = interpolationKey.m_iyBezier.EvalY(iy_x);
+					const auto iz_y = interpolationKey.m_izBezier.EvalY(iz_x);
+					const auto rotate_y = interpolationKey.m_rotateBezier.EvalY(rotate_x);
+					const auto distance_y = interpolationKey.m_distanceBezier.EvalY(distance_x);
+					const auto fov_y = interpolationKey.m_fovBezier.EvalY(fov_x);
 
 					// Interpolate camera parameters
 					m_camera.m_interest = key0.m_interest + (key1.m_interest - key0.m_interest).cwiseProduct(Eigen::Vector3f(ix_y, iy_y, iz_y));
@@ -252,4 +253,3 @@ namespace libmmd
 		return m_cameraController->GetMaxKeyTime(); 
 	}
 }
-

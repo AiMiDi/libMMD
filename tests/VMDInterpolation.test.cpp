@@ -2,7 +2,10 @@
 
 #include <libMMD/Model/MMD/VMDInterpolation.h>
 #include <libMMD/Model/MMD/VMDFile.h>
+#include <libMMD/Model/MMD/VMDCameraAnimation.h>
 
+#include <array>
+#include <cmath>
 #include <iostream>
 #include <vector>
 #include <cstdlib>
@@ -40,6 +43,38 @@ namespace
 		libmmd::VMDBezier bezier;
 		bezier.m_cp1 = Eigen::Vector2f(1.0f / 3.0f, 1.0f / 3.0f);
 		bezier.m_cp2 = Eigen::Vector2f(2.0f / 3.0f, 2.0f / 3.0f);
+		return bezier;
+	}
+
+	std::array<uint8_t, 24> MakeCameraInterpolation(
+		const uint8_t x0,
+		const uint8_t x1,
+		const uint8_t y0,
+		const uint8_t y1
+	)
+	{
+		std::array<uint8_t, 24> interpolation{};
+		for (size_t channel = 0; channel < 6; ++channel)
+		{
+			const size_t offset = channel * 4;
+			interpolation[offset + 0] = x0;
+			interpolation[offset + 1] = x1;
+			interpolation[offset + 2] = y0;
+			interpolation[offset + 3] = y1;
+		}
+		return interpolation;
+	}
+
+	libmmd::VMDBezier MakeCameraBezier(
+		const uint8_t x0,
+		const uint8_t x1,
+		const uint8_t y0,
+		const uint8_t y1
+	)
+	{
+		libmmd::VMDBezier bezier;
+		bezier.m_cp1 = Eigen::Vector2f(static_cast<float>(x0) / 127.0f, static_cast<float>(y0) / 127.0f);
+		bezier.m_cp2 = Eigen::Vector2f(static_cast<float>(x1) / 127.0f, static_cast<float>(y1) / 127.0f);
 		return bezier;
 	}
 
@@ -222,6 +257,43 @@ static void test_FindBoundKey_WithSequentialHint()
 	TEST_ASSERT(pastEnd == keys.end());
 }
 
+static void test_VMDCameraAnimation_UsesUpperKeyInterpolation()
+{
+	std::cout << "[test] VMDCameraAnimation_UsesUpperKeyInterpolation\n";
+
+	libmmd::VMDFile vmd;
+	vmd.m_cameras.emplace_back(
+		0,
+		0.0f,
+		Eigen::Vector3f::Zero(),
+		Eigen::Vector3f::Zero(),
+		45,
+		0,
+		MakeCameraInterpolation(20, 107, 20, 107));
+	vmd.m_cameras.emplace_back(
+		10,
+		0.0f,
+		Eigen::Vector3f(10.0f, 0.0f, 0.0f),
+		Eigen::Vector3f::Zero(),
+		45,
+		0,
+		MakeCameraInterpolation(20, 107, 0, 0));
+
+	libmmd::VMDCameraAnimation animation;
+	TEST_ASSERT(animation.Create(vmd));
+
+	animation.Evaluate(5.0f);
+
+	const auto upperKeyBezier = MakeCameraBezier(20, 107, 0, 0);
+	const float interpolationTime = upperKeyBezier.FindBezierX(0.5f);
+	const float expectedFactor = upperKeyBezier.EvalY(interpolationTime);
+
+	TEST_ASSERT(expectedFactor < 0.5f);
+	TEST_ASSERT_NEAR(10.0f * expectedFactor, animation.GetCamera().m_interest.x(), 1e-3f);
+	TEST_ASSERT_NEAR(0.0f, animation.GetCamera().m_interest.y(), 1e-6f);
+	TEST_ASSERT_NEAR(0.0f, animation.GetCamera().m_interest.z(), 1e-6f);
+}
+
 int main()
 {
 	std::cout << "=== VMDInterpolation Tests ===\n";
@@ -232,6 +304,7 @@ int main()
 	test_InterpolateBoneKeys_NonLinearPerAxis();
 	test_InterpolateBoneKeys_BoundaryFrames();
 	test_FindBoundKey_WithSequentialHint();
+	test_VMDCameraAnimation_UsesUpperKeyInterpolation();
 
 	std::cout << "\nResults: " << (g_totalTests - g_failedTests) << " / "
 	          << g_totalTests << " passed\n";

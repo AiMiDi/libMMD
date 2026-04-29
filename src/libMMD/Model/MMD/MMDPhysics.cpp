@@ -828,11 +828,6 @@ namespace libmmd
 	{
 		Destroy();
 
-		if (node == nullptr)
-		{
-			return false;
-		}
-
 		switch (pmxRigidBody.m_shape)
 		{
 		case PMXRigidbody::Shape::Sphere:
@@ -905,6 +900,12 @@ namespace libmmd
 				m_activeMotionState = std::make_unique<ExternalDynamicAndBoneMergeMotionState>(node, m_offsetMat);
 				motionState = m_activeMotionState.get();
 			}
+		}
+		else
+		{
+			m_offsetMat = rbMat;
+			m_activeMotionState = std::make_unique<DefaultMotionState>(m_offsetMat);
+			motionState = m_activeMotionState.get();
 		}
 
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, m_shape.get(), localInteria);
