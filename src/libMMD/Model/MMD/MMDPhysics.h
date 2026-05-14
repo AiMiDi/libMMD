@@ -133,7 +133,7 @@ namespace libmmd
 		 */
 		void SetActivation(bool activation) const;
 		/**
-		 * @brief Reset the transform of the rigid body.
+		 * @brief Snap the rigid body transform to the current bound bone transform.
 		 */
 		void ResetTransform() const;
 		/**

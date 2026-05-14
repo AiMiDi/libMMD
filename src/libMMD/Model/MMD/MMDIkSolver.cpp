@@ -19,10 +19,10 @@ namespace libmmd
 	{
 		constexpr size_t kInvalidPathIndex = static_cast<size_t>(-1);
 
-		/** PMX IK: max rotation step scales with iteration index (standard MMD behavior). */
-		inline float IkIterationAngleLimit(float unitAngle, uint32_t iteration)
+		/** Match reze-engine: max rotation step scales with the IK link index. */
+		inline float IkChainAngleLimit(float unitAngle, size_t chainIndex)
 		{
-			const float scaled = unitAngle * static_cast<float>(iteration + 1);
+			const float scaled = unitAngle * static_cast<float>(chainIndex + 1);
 			constexpr float pi = static_cast<float>(EIGEN_PI);
 			return std::min(pi, scaled);
 		}
@@ -385,12 +385,11 @@ namespace libmmd
 
 	void MMDIkSolver::SolveCore(uint32_t iteration)
 	{
-		const float angleLimitThisIter = IkIterationAngleLimit(m_limitAngle, iteration);
-
 		for (size_t chainIdx = m_chains.size(); chainIdx > 0; --chainIdx)
 		{
 			auto& chain = m_chains[chainIdx - 1];
 			const size_t chainListIdx = chainIdx - 1;
+			const float angleLimitThisChain = IkChainAngleLimit(m_limitAngle, chainListIdx);
 			IMMDNode* chainNode = chain.m_node;
 			if (chainNode == m_ikTarget || chainNode == m_ikNode)
 			{
@@ -448,7 +447,7 @@ namespace libmmd
 			{
 				continue;
 			}
-			angle = std::clamp(angle, -angleLimitThisIter, angleLimitThisIter);
+			angle = std::clamp(angle, -angleLimitThisChain, angleLimitThisChain);
 
 			// CCD cross product: the descendant of this chain node moves with
 			// rotation; the external node stays fixed.  We need to rotate the
@@ -478,7 +477,7 @@ namespace libmmd
 				Eigen::Vector3f clampXYZ;
 				clampXYZ = rotXYZ.cwiseMax(chain.m_limitMin).cwiseMin(chain.m_limitMax);
 
-				clampXYZ = (clampXYZ - chain.m_prevAngle).cwiseMax(-angleLimitThisIter).cwiseMin(angleLimitThisIter) + chain.m_prevAngle;
+				clampXYZ = (clampXYZ - chain.m_prevAngle).cwiseMax(-angleLimitThisChain).cwiseMin(angleLimitThisChain) + chain.m_prevAngle;
 				Eigen::Quaternionf r = Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.x(), Eigen::Vector3f(1, 0, 0)));
 				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.y(), Eigen::Vector3f(0, 1, 0)));
 				r = r * Eigen::Quaternionf(Eigen::AngleAxisf(clampXYZ.z(), Eigen::Vector3f(0, 0, 1)));
@@ -500,8 +499,7 @@ namespace libmmd
 
 	void MMDIkSolver::SolvePlane(uint32_t iteration, size_t chainIdx, SolveAxis solveAxis)
 	{
-		// benikabocha/saba clamps plane-mode steps with raw PMX unit angle (not iteration-scaled).
-		const float planeAngleLimit = m_limitAngle;
+		const float planeAngleLimit = IkChainAngleLimit(m_limitAngle, chainIdx);
 
 		int RotateAxisIndex = 0;
 		Eigen::Vector3f RotateAxis = Eigen::Vector3f(1, 0, 0);

@@ -1023,9 +1023,28 @@ namespace libmmd
 
 	void MMDRigidBody::ResetTransform() const
 	{
+		btTransform transform;
+		bool hasTransform = false;
+
 		if (m_activeMotionState != nullptr)
 		{
 			m_activeMotionState->Reset();
+			m_activeMotionState->getWorldTransform(transform);
+			hasTransform = true;
+		}
+		else if (m_kinematicMotionState != nullptr)
+		{
+			m_kinematicMotionState->getWorldTransform(transform);
+			hasTransform = true;
+		}
+
+		if (m_rigidBody != nullptr && hasTransform)
+		{
+			m_rigidBody->setWorldTransform(transform);
+			m_rigidBody->setCenterOfMassTransform(transform);
+			m_rigidBody->setInterpolationWorldTransform(transform);
+			if (btMotionState* const motionState = m_rigidBody->getMotionState())
+				motionState->setWorldTransform(transform);
 		}
 	}
 

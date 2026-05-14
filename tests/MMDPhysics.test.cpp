@@ -288,22 +288,25 @@ static void test_MMDPhysics_RepeatedCreateDestroy()
     }
 }
 
-static void test_MMDRigidBody_ExternalCreate_NullNodeFails()
+static void test_MMDRigidBody_ExternalCreate_NullNodeKeepsPmxWorldTransform()
 {
-    std::cout << "[test] MMDRigidBody_ExternalCreate_NullNodeFails\n";
+    std::cout << "[test] MMDRigidBody_ExternalCreate_NullNodeKeepsPmxWorldTransform\n";
 
     libmmd::PMXRigidbody rb;
     rb.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
     rb.m_shapeSize = Eigen::Vector3f(0.5f, 0.0f, 0.0f);
+    rb.m_translate = Eigen::Vector3f(12.0f, 3.0f, -4.0f);
     rb.m_op = libmmd::PMXRigidbody::Operation::Static;
 
-    MockIMMDNode node;
     libmmd::MMDRigidBody body;
-    TEST_ASSERT(body.Create(rb, &node));
+    TEST_ASSERT(body.Create(rb, static_cast<libmmd::IMMDNode*>(nullptr)));
     TEST_ASSERT(body.GetRigidBody() != nullptr);
 
-    TEST_ASSERT(!body.Create(rb, static_cast<libmmd::IMMDNode*>(nullptr)));
-    TEST_ASSERT(body.GetRigidBody() == nullptr);
+    btTransform world;
+    body.GetRigidBody()->getMotionState()->getWorldTransform(world);
+    TEST_ASSERT_FLOAT_EQ(12.0f, world.getOrigin().x());
+    TEST_ASSERT_FLOAT_EQ(3.0f, world.getOrigin().y());
+    TEST_ASSERT_FLOAT_EQ(-4.0f, world.getOrigin().z());
 }
 
 static void test_MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal()
@@ -447,7 +450,7 @@ int main()
     test_MMDPhysics_SetFPS();
     test_MMDPhysics_MultipleRigidBodies();
     test_MMDPhysics_RepeatedCreateDestroy();
-    test_MMDRigidBody_ExternalCreate_NullNodeFails();
+    test_MMDRigidBody_ExternalCreate_NullNodeKeepsPmxWorldTransform();
     test_MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal();
     test_MMDRigidBody_ExternalKinematic_UsesCurrentGlobalAndInitialOffset();
     test_MMDRigidBody_ExternalDynamic_ReflectWritesBackToNode();
