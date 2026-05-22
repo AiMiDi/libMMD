@@ -94,6 +94,12 @@ if (LIBMMD_ENABLE_TEST)
         LABELS "io;roundtrip"
     )
 
+    libmmd_add_ctest_runner(pmx_export_invariants_test PmxExportInvariants.test.cpp
+        INCLUDE_DIRS
+            ${LIBMMD_EIGEN_ROOT}
+        LABELS "io;roundtrip;export"
+    )
+
     libmmd_add_ctest_runner(mmd_physics_test MMDPhysics.test.cpp
         INCLUDE_DIRS
             ${LIBMMD_EIGEN_ROOT}

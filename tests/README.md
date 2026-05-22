@@ -16,6 +16,7 @@
 | File Base | `file_base_test` | `base;io;unit` | `MemoryReader` / `TextFileReader` |
 | Path Util | `path_util_test` | `path;unit` | 路径处理工具 |
 | File Round-trip | `file_roundtrip_test` | `io;roundtrip` | 读写回环一致性 |
+| PMX Export Invariants | `pmx_export_invariants_test` | `io;roundtrip;export` | PMX 导出不变量、读写失败路径与 round-trip |
 | Physics | `mmd_physics_test` | `integration;physics` | Bullet 世界、刚体、外部节点同步 |
 | IK Solver | `mmd_ik_solver_test` | `ik;unit` | IK 求解器与 `IMMDNode` 适配测试 |
 | VMD Interpolation | `vmd_interpolation_test` | `animation;interpolation` | VMD 插值实现与边界行为 |
@@ -45,8 +46,16 @@ ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -L physics --output-on-fai
 
 ```bash
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R mmd_model_io_test --output-on-failure
+ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R pmx_export_invariants_test --output-on-failure
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R mmd_model_benchmark_test --output-on-failure
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R vmd_interpolation_test --output-on-failure
+```
+
+PMX 导出插件改动的常用 focused 验证组合：
+
+```bash
+cmake --build _build_msvc/cmt_deps/libMMD/tests --config Debug --target pmx_export_invariants_test
+ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R "(pmx_export_invariants_test|mmd_ik_solver_test|mmd_physics_test)" --output-on-failure
 ```
 
 ## 单独构建 libMMD
