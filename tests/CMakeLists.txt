@@ -94,6 +94,12 @@ if (LIBMMD_ENABLE_TEST)
         LABELS "io;roundtrip"
     )
 
+    libmmd_add_ctest_runner(vpd_file_test VPDFile.test.cpp
+        INCLUDE_DIRS
+            ${LIBMMD_EIGEN_ROOT}
+        LABELS "io;parser;roundtrip"
+    )
+
     libmmd_add_ctest_runner(pmx_export_invariants_test PmxExportInvariants.test.cpp
         INCLUDE_DIRS
             ${LIBMMD_EIGEN_ROOT}

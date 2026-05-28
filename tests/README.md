@@ -16,6 +16,7 @@
 | File Base | `file_base_test` | `base;io;unit` | `MemoryReader` / `TextFileReader` |
 | Path Util | `path_util_test` | `path;unit` | 路径处理工具 |
 | File Round-trip | `file_roundtrip_test` | `io;roundtrip` | 读写回环一致性 |
+| VPD File | `vpd_file_test` | `io;parser;roundtrip` | VPD 读取、SJIS 名称解码、姿势/morph 数据与 write/read 回环 |
 | PMX Export Invariants | `pmx_export_invariants_test` | `io;roundtrip;export` | PMX 导出不变量、读写失败路径与 round-trip |
 | Physics | `mmd_physics_test` | `integration;physics` | Bullet 世界、刚体、外部节点同步 |
 | IK Solver | `mmd_ik_solver_test` | `ik;unit` | IK 求解器与 `IMMDNode` 适配测试 |
@@ -48,6 +49,7 @@ ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -L physics --output-on-fai
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R mmd_model_io_test --output-on-failure
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R pmx_export_invariants_test --output-on-failure
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R mmd_model_benchmark_test --output-on-failure
+ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R vpd_file_test --output-on-failure
 ctest --test-dir _build_msvc/cmt_deps/libMMD -C Debug -R vmd_interpolation_test --output-on-failure
 ```
 
