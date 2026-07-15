@@ -106,6 +106,12 @@ if (LIBMMD_ENABLE_TEST)
         LABELS "io;roundtrip;export"
     )
 
+    libmmd_add_ctest_runner(pmx_material_morph_test PmxMaterialMorph.test.cpp
+        INCLUDE_DIRS
+            ${LIBMMD_EIGEN_ROOT}
+        LABELS "io;roundtrip;morph;material"
+    )
+
     libmmd_add_ctest_runner(mmd_physics_test MMDPhysics.test.cpp
         INCLUDE_DIRS
             ${LIBMMD_EIGEN_ROOT}
