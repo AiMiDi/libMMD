@@ -503,6 +503,30 @@ static void test_PMX_ReadFailure_InvalidFile()
 // main
 // ===========================================================================
 
+static void test_PMX_Export_VersionedSoftbodySection()
+{
+    std::cout << "[test] PMX_Export_VersionedSoftbodySection\n";
+    libmmd::PMXFile minimal{};
+    minimal.m_header = MakePluginStyleExportPMX().m_header;
+    TempFile pmx20("_20.pmx"), pmx21("_21.pmx"), unsupported("_unsupported.pmx");
+
+    // Empty PMX: 17-byte header, four empty string lengths, nine section counts.
+    // The 2.1 softbody count adds exactly four bytes; 2.0 must end at joints.
+    TEST_ASSERT(libmmd::WritePMXFile(&minimal, pmx20.path()));
+    TEST_ASSERT_EQ(69u, std::filesystem::file_size(pmx20.path()));
+    minimal.m_header.m_version = 2.1f;
+    TEST_ASSERT(libmmd::WritePMXFile(&minimal, pmx21.path()));
+    TEST_ASSERT_EQ(73u, std::filesystem::file_size(pmx21.path()));
+    libmmd::PMXFile loaded{};
+    TEST_ASSERT(libmmd::ReadPMXFile(&loaded, pmx21.path()));
+    TEST_ASSERT(loaded.m_softbodies.empty());
+
+    minimal.m_header.m_version = 2.0f;
+    minimal.m_softbodies.emplace_back();
+    TEST_ASSERT(!libmmd::WritePMXFile(&minimal, unsupported.path()));
+    TEST_ASSERT_EQ(0u, std::filesystem::file_size(unsupported.path()));
+}
+
 int main()
 {
     std::cout << "=== libMMD PMX Export Invariant Tests ===\n\n";
@@ -513,6 +537,7 @@ int main()
     test_PMX_WriteFailure_InvalidPath();
     test_PMX_ReadFailure_MissingFile();
     test_PMX_ReadFailure_InvalidFile();
+    test_PMX_Export_VersionedSoftbodySection();
 
     std::cout << "\n=== Results: " << (g_totalTests - g_failedTests)
               << " / " << g_totalTests << " passed ===\n";

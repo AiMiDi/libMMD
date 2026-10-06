@@ -1541,6 +1541,10 @@ namespace libmmd
 
 		bool WritePMXFile(const PMXFile* pmxFile, File& file)
 		{
+			// Softbodies were introduced in PMX 2.1. Reject unsupported data
+			// before writing any section rather than appending a 2.1 payload to 2.0.
+			if (pmxFile->m_header.m_version <= 2.0f && !pmxFile->m_softbodies.empty())
+				return false;
 			if (!WriteHeader(pmxFile, file))
 			{
 				LIBMMD_ERROR("WriteHeader Fail.");
@@ -1607,7 +1611,7 @@ namespace libmmd
 				return false;
 			}
 
-			if (!WriteSoftbody(pmxFile, file))
+			if (pmxFile->m_header.m_version > 2.0f && !WriteSoftbody(pmxFile, file))
 			{
 				LIBMMD_ERROR("WriteSoftbody Fail.");
 				return false;
