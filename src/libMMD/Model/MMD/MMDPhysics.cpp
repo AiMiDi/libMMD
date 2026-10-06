@@ -83,6 +83,7 @@ namespace libmmd
 
 		m_world->getSolverInfo().m_solverMode |= SOLVER_CACHE_FRIENDLY;
 		m_world->getDispatchInfo().m_allowedCcdPenetration = 0.0001f;
+		m_world->getDispatchInfo().m_deterministicOverlappingPairs = m_deterministicOverlappingPairs;
 		m_world->setGravity(btVector3(0, -9.8f * 10.0f, 0));
 
 		m_groundShape = std::make_unique<btStaticPlaneShape>(btVector3(0, 1, 0), 0.0f);
@@ -144,6 +145,17 @@ namespace libmmd
 		return m_maxSubStepCount;
 	}
 
+	void MMDPhysics::SetDeterministicOverlappingPairs(const bool enabled)
+	{
+		m_deterministicOverlappingPairs = enabled;
+		if (m_world)
+			m_world->getDispatchInfo().m_deterministicOverlappingPairs = enabled;
+	}
+
+	bool MMDPhysics::GetDeterministicOverlappingPairs() const
+	{
+		return m_deterministicOverlappingPairs;
+	}
 
 	void MMDPhysics::Update(const float time) const
 	{

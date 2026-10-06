@@ -306,6 +306,18 @@ namespace libmmd
 		 */
 		int GetMaxSubStepCount() const;
 		/**
+		 * @brief Order collision dispatch and contact manifolds by stable body IDs.
+		 * Disabled by default to preserve existing consumers' simulation scheduling.
+		 * The setting survives Destroy/Create and can be changed on a live world.
+		 * It retains contact algorithms and warmstart caches; collision parameters
+		 * and solver iteration settings are not changed.
+		 */
+		void SetDeterministicOverlappingPairs(bool enabled);
+		/**
+		 * @brief Get the configured collision/contact ordering setting.
+		 */
+		bool GetDeterministicOverlappingPairs() const;
+		/**
 		 * @brief Update the physics simulation.
 		 * @param time Time step for the update.
 		 */
@@ -351,6 +363,7 @@ namespace libmmd
 
 		double	m_fps = 120.;
 		int		m_maxSubStepCount = 10;
+		bool	m_deterministicOverlappingPairs = false;
 	};
 
 }

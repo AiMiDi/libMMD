@@ -261,6 +261,118 @@ static void test_MMDPhysics_MultipleRigidBodies()
     physics.Destroy();
 }
 
+static void test_MMDPhysics_DeterministicOrderingConfiguration()
+{
+    std::cout << "[test] MMDPhysics_DeterministicOrderingConfiguration\n";
+
+    libmmd::MMDPhysics physics;
+    TEST_ASSERT(!physics.GetDeterministicOverlappingPairs());
+    TEST_ASSERT(physics.Create());
+    auto* world = physics.GetDynamicsWorld();
+    TEST_ASSERT(world != nullptr);
+    if (!world)
+        return;
+    TEST_ASSERT(!world->getDispatchInfo().m_deterministicOverlappingPairs);
+    const int solverMode = world->getSolverInfo().m_solverMode;
+    const int iterations = world->getSolverInfo().m_numIterations;
+    const btVector3 gravity = world->getGravity();
+
+    physics.SetDeterministicOverlappingPairs(true);
+    TEST_ASSERT(physics.GetDeterministicOverlappingPairs());
+    TEST_ASSERT(world->getDispatchInfo().m_deterministicOverlappingPairs);
+    TEST_ASSERT(world->getSolverInfo().m_solverMode == solverMode);
+    TEST_ASSERT(world->getSolverInfo().m_numIterations == iterations);
+    TEST_ASSERT(world->getGravity() == gravity);
+
+    physics.Destroy();
+    TEST_ASSERT(physics.GetDeterministicOverlappingPairs());
+    TEST_ASSERT(physics.Create());
+    TEST_ASSERT(physics.GetDynamicsWorld()->getDispatchInfo().m_deterministicOverlappingPairs);
+    physics.SetDeterministicOverlappingPairs(false);
+    TEST_ASSERT(!physics.GetDynamicsWorld()->getDispatchInfo().m_deterministicOverlappingPairs);
+    physics.Destroy();
+
+    // A setting chosen before a world exists must also apply on Create().
+    physics.SetDeterministicOverlappingPairs(true);
+    TEST_ASSERT(physics.Create());
+    TEST_ASSERT(physics.GetDynamicsWorld()->getDispatchInfo().m_deterministicOverlappingPairs);
+    physics.Destroy();
+}
+
+static void test_MMDPhysics_DeterministicOrderingRetainsContactCache()
+{
+    std::cout << "[test] MMDPhysics_DeterministicOrderingRetainsContactCache\n";
+
+    libmmd::MMDPhysics physics;
+    physics.SetDeterministicOverlappingPairs(true);
+    TEST_ASSERT(physics.Create());
+    auto* world = physics.GetDynamicsWorld();
+    TEST_ASSERT(world != nullptr);
+    if (!world)
+        return;
+
+    // A resting sphere/ground contact stays overlapping while Update runs the
+    // real broadphase, dispatcher and solver. Recreating algorithms every frame
+    // could reuse an address, so also require the persistent point lifetime to
+    // keep increasing rather than relying on pointer equality alone.
+    auto sphere = TestRigidBody::CreateDynamic(1.0f, btVector3(0, 0.5f, 0));
+    btCollisionObject* ground = world->getCollisionObjectArray()[0];
+    world->addRigidBody(sphere.body.get());
+    for (int step = 0; step < 8; ++step)
+        physics.Update(1.0f / 120.0f);
+
+    btCollisionAlgorithm* previousAlgorithm = nullptr;
+    btPersistentManifold* previousManifold = nullptr;
+    int previousLifetime = -1;
+    for (int step = 0; step < 8; ++step)
+    {
+        // Switching scheduling on the live world must not clear contact state.
+        if (step == 4)
+            physics.SetDeterministicOverlappingPairs(false);
+        if (step == 5)
+            physics.SetDeterministicOverlappingPairs(true);
+        physics.Update(1.0f / 120.0f);
+        btBroadphasePair* pair = world->getPairCache()->findPair(
+            ground->getBroadphaseHandle(), sphere.body->getBroadphaseHandle());
+        TEST_ASSERT(pair != nullptr && pair->m_algorithm != nullptr);
+        if (!pair || !pair->m_algorithm)
+            break;
+
+        btPersistentManifold* contact = nullptr;
+        auto* dispatcher = world->getDispatcher();
+        for (int index = 0; index < dispatcher->getNumManifolds(); ++index)
+        {
+            auto* manifold = dispatcher->getManifoldByIndexInternal(index);
+            if (((manifold->getBody0() == ground && manifold->getBody1() == sphere.body.get()) ||
+                 (manifold->getBody1() == ground && manifold->getBody0() == sphere.body.get())) &&
+                manifold->getNumContacts() > 0)
+            {
+                contact = manifold;
+                break;
+            }
+        }
+        TEST_ASSERT(contact != nullptr);
+        if (!contact)
+            break;
+        const int lifetime = contact->getContactPoint(0).getLifeTime();
+        TEST_ASSERT(contact->getContactPoint(0).getAppliedImpulse() > btScalar(0));
+        if (previousAlgorithm)
+        {
+            TEST_ASSERT(pair->m_algorithm == previousAlgorithm);
+            TEST_ASSERT(contact == previousManifold);
+            TEST_ASSERT(lifetime > previousLifetime);
+        }
+        previousAlgorithm = pair->m_algorithm;
+        previousManifold = contact;
+        previousLifetime = lifetime;
+        TEST_ASSERT(std::isfinite(static_cast<float>(sphere.GetPosition().y())));
+    }
+
+    TEST_ASSERT(previousLifetime > 1);
+    world->removeRigidBody(sphere.body.get());
+    physics.Destroy();
+}
+
 static void test_MMDPhysics_RepeatedCreateDestroy()
 {
     std::cout << "[test] MMDPhysics_RepeatedCreateDestroy\n";
@@ -449,6 +561,8 @@ int main()
     test_MMDPhysics_GravitySimulation();
     test_MMDPhysics_SetFPS();
     test_MMDPhysics_MultipleRigidBodies();
+    test_MMDPhysics_DeterministicOrderingConfiguration();
+    test_MMDPhysics_DeterministicOrderingRetainsContactCache();
     test_MMDPhysics_RepeatedCreateDestroy();
     test_MMDRigidBody_ExternalCreate_NullNodeKeepsPmxWorldTransform();
     test_MMDRigidBody_ExternalCreate_RealMMDNodeUsesCapturedInitialGlobal();
