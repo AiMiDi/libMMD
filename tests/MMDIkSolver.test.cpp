@@ -396,6 +396,57 @@ static void test_MMDIkSolver_BuildChainPath_MatchesFullSubtreeUpdates()
     ValidateFiniteTransforms(fullFixture);
 }
 
+static void test_MMDIkSolver_NearParallelLinks_PreserveSmallAngles()
+{
+    std::cout << "[test] MMDIkSolver_NearParallelLinks_PreserveSmallAngles\n";
+
+    // A small but resolvable rotation must not disappear into a float dot
+    // rounded to one. Exercise both CCD paths, both signs and uniform scales.
+    for (const bool plane : { false, true })
+    {
+        for (const float radius : { 1.0f, 8.5f, 100.0f })
+        {
+            for (const float angle : { -3.0e-4f, 3.0e-4f })
+            {
+                libmmd::MMDNode joint, effector, goal;
+                joint.AddChild(&effector);
+                ResetNodePose(joint, true);
+                ResetNodePose(effector, false);
+                ResetNodePose(goal, false);
+                joint.SetTranslate(Eigen::Vector3f::Zero());
+                effector.SetTranslate(Eigen::Vector3f(0.0f, radius, 0.0f));
+                goal.SetTranslate(Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitX()) *
+                    Eigen::Vector3f(0.0f, radius, 0.0f));
+                joint.UpdateLocalTransform();
+                effector.UpdateLocalTransform();
+                goal.UpdateLocalTransform();
+                joint.UpdateGlobalTransform();
+                goal.UpdateGlobalTransform();
+
+                libmmd::MMDIkSolver solver;
+                solver.SetIKNode(&goal);
+                solver.SetTargetNode(&effector);
+                solver.SetIterateCount(4);
+                solver.SetLimitAngle(0.3f);
+                if (plane)
+                    solver.AddIKChain(&joint, true, Eigen::Vector3f(-1.0f, 0.0f, 0.0f),
+                        Eigen::Vector3f(1.0f, 0.0f, 0.0f));
+                else
+                    solver.AddIKChain(&joint);
+                solver.BuildChainPath();
+                solver.Solve();
+
+                const float relativeError = GlobalDistance(effector, goal) / radius;
+                std::cout << "  plane=" << plane << " radius=" << radius
+                          << " angle=" << angle << " relativeError=" << relativeError << '\n';
+                TEST_ASSERT(relativeError < 1.0e-5f);
+                AssertFiniteMatrix(joint);
+                AssertFiniteMatrix(effector);
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -407,6 +458,7 @@ int main()
     test_MMDIkSolver_SolveConverges_SimpleChain();
     test_MMDIkSolver_RealMMDNode_Regression();
     test_MMDIkSolver_BuildChainPath_MatchesFullSubtreeUpdates();
+    test_MMDIkSolver_NearParallelLinks_PreserveSmallAngles();
 
     std::cout << "\nResults: " << (g_totalTests - g_failedTests) << " / "
               << g_totalTests << " passed\n";

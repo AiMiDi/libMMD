@@ -38,6 +38,16 @@ namespace libmmd
 			return axis.normalized();
 		}
 
+		float StableAngleBetween(const Eigen::Vector3f& first, const Eigen::Vector3f& second)
+		{
+			// acos of a normalized float dot loses small angles near parallel links.
+			// Use the original vectors and double products to preserve those angles
+			// without making the result depend on the model's uniform scale.
+			const Eigen::Vector3d a = first.cast<double>();
+			const Eigen::Vector3d b = second.cast<double>();
+			return static_cast<float>(std::atan2(a.cross(b).norm(), a.dot(b)));
+		}
+
 		bool BuildPathFromAncestor(IMMDNode* ancestor, IMMDNode* node, std::vector<IMMDNode*>& outPath)
 		{
 			outPath.clear();
@@ -438,10 +448,7 @@ namespace libmmd
 			Eigen::Vector3f chainIkVec = chainIkPos.normalized();
 			Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
 
-			float dot = chainTargetVec.dot(chainIkVec);
-			dot = std::clamp(dot, -1.0f, 1.0f);
-
-			float angle = std::acos(dot);
+			float angle = StableAngleBetween(chainTargetPos, chainIkPos);
 
 			if (angle < 1.75e-5f)
 			{
@@ -536,10 +543,7 @@ namespace libmmd
 		Eigen::Vector3f chainIkVec = chainIkPos.normalized();
 		Eigen::Vector3f chainTargetVec = chainTargetPos.normalized();
 
-		float dot = chainTargetVec.dot(chainIkVec);
-		dot = std::clamp(dot, -1.0f, 1.0f);
-
-		float angle = std::acos(dot);
+		float angle = StableAngleBetween(chainTargetPos, chainIkPos);
 		angle = std::clamp(angle, -planeAngleLimit, planeAngleLimit);
 
 		// The descendant moves with chain rotation; the external stays fixed.
