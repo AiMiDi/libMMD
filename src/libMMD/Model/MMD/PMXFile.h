@@ -91,21 +91,48 @@ namespace libmmd
 	 */
 	struct PMXVertex
 	{
-		Eigen::Vector3f	m_position; ///< Position vector
-		Eigen::Vector3f	m_normal; ///< Normal vector
-		Eigen::Vector2f	m_uv; ///< UV coordinates
+		Eigen::Vector3f	m_position = Eigen::Vector3f::Zero(); ///< Position vector
+		Eigen::Vector3f	m_normal = Eigen::Vector3f::Zero(); ///< Normal vector
+		Eigen::Vector2f	m_uv = Eigen::Vector2f::Zero(); ///< UV coordinates
 
-		Eigen::Vector4f	m_addUV[4]; ///< Additional UVs
+		Eigen::Vector4f	m_addUV[4] = {Eigen::Vector4f::Zero(), Eigen::Vector4f::Zero(),
+			Eigen::Vector4f::Zero(), Eigen::Vector4f::Zero()}; ///< Additional UVs
 
-		PMXVertexWeight	m_weightType; ///< Weight type
-		int32_t		m_boneIndices[4]; ///< Bone indices
-		float		m_boneWeights[4]; ///< Bone weights
-		Eigen::Vector3f	m_sdefC; ///< SDEF C vector
-		Eigen::Vector3f	m_sdefR0; ///< SDEF R0 vector
-		Eigen::Vector3f	m_sdefR1; ///< SDEF R1 vector
+		PMXVertexWeight	m_weightType = PMXVertexWeight::BDEF1; ///< Weight type
+		int32_t		m_boneIndices[4] = {}; ///< Bone indices
+		float		m_boneWeights[4] = {1.F, 0.F, 0.F, 0.F}; ///< Stored weights; BDEF2/SDEF use only slot zero
+		Eigen::Vector3f	m_sdefC = Eigen::Vector3f::Zero(); ///< SDEF C vector
+		Eigen::Vector3f	m_sdefR0 = Eigen::Vector3f::Zero(); ///< SDEF R0 vector
+		Eigen::Vector3f	m_sdefR1 = Eigen::Vector3f::Zero(); ///< SDEF R1 vector
 
-		float	m_edgeMag; ///< Edge magnitude
+		float	m_edgeMag = 1.F; ///< Edge magnitude
 	};
+
+	/// Number of valid bone-index slots. Unknown weight types have no influences.
+	inline int GetPMXVertexInfluenceCount(PMXVertexWeight type)
+	{
+		switch (type)
+		{
+		case PMXVertexWeight::BDEF1: return 1;
+		case PMXVertexWeight::BDEF2:
+		case PMXVertexWeight::SDEF: return 2;
+		case PMXVertexWeight::BDEF4:
+		case PMXVertexWeight::QDEF: return 4;
+		default: return 0;
+		}
+	}
+
+	/// Effective weight, including implicit BDEF1 and BDEF2/SDEF weights.
+	/// Invalid influence indices return zero. Explicit weights are not clamped
+	/// or normalized, so callers can still diagnose malformed input.
+	inline float GetPMXVertexInfluenceWeight(const PMXVertex& vertex, int influence)
+	{
+		if (influence < 0 || influence >= GetPMXVertexInfluenceCount(vertex.m_weightType)) return 0.F;
+		if (vertex.m_weightType == PMXVertexWeight::BDEF1) return 1.F;
+		if ((vertex.m_weightType == PMXVertexWeight::BDEF2 || vertex.m_weightType == PMXVertexWeight::SDEF) && influence == 1)
+			return 1.F - vertex.m_boneWeights[0];
+		return vertex.m_boneWeights[influence];
+	}
 
 	/**
 	 * @brief Represents a face in a PMX file.

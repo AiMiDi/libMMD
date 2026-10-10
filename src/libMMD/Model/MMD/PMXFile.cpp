@@ -199,10 +199,8 @@ namespace libmmd
 					ReadIndex(&vertex.m_boneIndices[1], pmx->m_header.m_boneIndexSize, file);
 					ReadIndex(&vertex.m_boneIndices[2], pmx->m_header.m_boneIndexSize, file);
 					ReadIndex(&vertex.m_boneIndices[3], pmx->m_header.m_boneIndexSize, file);
-					Read(&vertex.m_boneWeights[0], file);
-					Read(&vertex.m_boneWeights[1], file);
-					Read(&vertex.m_boneWeights[3], file);
-					Read(&vertex.m_boneWeights[4], file);
+					for (int influence = 0; influence < 4; ++influence)
+						Read(&vertex.m_boneWeights[influence], file);
 					break;
 				default:
 					return false;
@@ -991,10 +989,8 @@ namespace libmmd
 					WriteIndex(&vertex.m_boneIndices[1], pmx->m_header.m_boneIndexSize, file);
 					WriteIndex(&vertex.m_boneIndices[2], pmx->m_header.m_boneIndexSize, file);
 					WriteIndex(&vertex.m_boneIndices[3], pmx->m_header.m_boneIndexSize, file);
-					Write(&vertex.m_boneWeights[0], file);
-					Write(&vertex.m_boneWeights[1], file);
-					Write(&vertex.m_boneWeights[3], file);
-					Write(&vertex.m_boneWeights[4], file);
+					for (int influence = 0; influence < 4; ++influence)
+						Write(&vertex.m_boneWeights[influence], file);
 					break;
 				default:
 					return false;

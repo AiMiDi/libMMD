@@ -164,10 +164,9 @@ double ToeZ(const libmmd::PMXFile& model, const Index& index, Analysis& analysis
     double front = std::numeric_limits<double>::infinity();
     for (const auto& vertex : model.m_vertices)
     {
-        const int count = vertex.m_weightType == libmmd::PMXVertexWeight::BDEF1 ? 1 :
-            (vertex.m_weightType == libmmd::PMXVertexWeight::BDEF2 || vertex.m_weightType == libmmd::PMXVertexWeight::SDEF ? 2 : 4);
+        const int count = libmmd::GetPMXVertexInfluenceCount(vertex.m_weightType);
         for (int j = 0; j < count; ++j)
-            if (candidates.count(vertex.m_boneIndices[j]) && (count == 1 || vertex.m_boneWeights[j] > 0))
+            if (candidates.count(vertex.m_boneIndices[j]) && libmmd::GetPMXVertexInfluenceWeight(vertex, j) > 0)
             {
                 Require(vertex.m_position.allFinite(), "Non-finite foot vertex");
                 front = std::min(front, static_cast<double>(vertex.m_position.z()));

@@ -116,6 +116,12 @@ if (LIBMMD_ENABLE_TEST)
         LABELS "io;roundtrip;export"
     )
 
+    libmmd_add_ctest_runner(pmx_vertex_weights_test PMXVertexWeights.test.cpp
+        INCLUDE_DIRS
+            ${LIBMMD_EIGEN_ROOT}
+        LABELS "io;roundtrip;regression"
+    )
+
     libmmd_add_ctest_runner(pmx_material_morph_test PmxMaterialMorph.test.cpp
         INCLUDE_DIRS
             ${LIBMMD_EIGEN_ROOT}

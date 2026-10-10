@@ -12,6 +12,37 @@ void Check(bool condition, const char* message)
 {
     if (!condition) throw std::runtime_error(message);
 }
+
+void CheckImplicitToeWeight(const libmmd::PMXFile& source, const libmmd::PMXFile& target, const libmmd::VMDFile& motion)
+{
+    int foot = -1, other = -1;
+    for (size_t i = 0; i < target.m_bones.size(); ++i)
+    {
+        if (target.m_bones[i].m_name == "左足首") foot = static_cast<int>(i);
+        if (target.m_bones[i].m_name == "センター") other = static_cast<int>(i);
+    }
+    Check(foot >= 0 && other >= 0, "Missing toe regression fixture bones");
+    auto explicitFoot = target;
+    libmmd::PMXVertex vertex;
+    vertex.m_position = target.m_bones[foot].m_position + Eigen::Vector3f(0, 0, -4);
+    vertex.m_boneIndices[0] = foot;
+    explicitFoot.m_vertices = {vertex};
+    const auto reference = libmmd::sizing::Run(source, explicitFoot, motion);
+    Check(reference.success && reference.analysis.localOffsets.count("センター"), "Toe reference case failed");
+    for (const auto type : {libmmd::PMXVertexWeight::BDEF2, libmmd::PMXVertexWeight::SDEF})
+    {
+        auto implicitFoot = explicitFoot;
+        auto& weighted = implicitFoot.m_vertices[0];
+        weighted.m_weightType = type;
+        weighted.m_boneIndices[0] = other; weighted.m_boneIndices[1] = foot;
+        weighted.m_boneWeights[0] = .25F;
+        weighted.m_boneWeights[1] = std::numeric_limits<float>::quiet_NaN();
+        const auto candidate = libmmd::sizing::Run(source, implicitFoot, motion);
+        Check(candidate.success && candidate.analysis.localOffsets.count("センター"), "Implicit toe case failed");
+        Check((candidate.analysis.localOffsets.at("センター") - reference.analysis.localOffsets.at("センター")).norm() < 1.e-12,
+              "Toe reference ignored the second bone's implicit weight");
+    }
+}
 }
 
 int main(int argc, char** argv)
@@ -25,6 +56,7 @@ int main(int argc, char** argv)
         Check(libmmd::ReadPMXFile(&source, (directory + "/source.pmx").c_str()), "Source parse");
         Check(libmmd::ReadPMXFile(&target, (directory + "/target.pmx").c_str()), "Target parse");
         Check(libmmd::ReadVMDFile(&motion, (directory + "/motion.vmd").c_str()), "Motion parse");
+        CheckImplicitToeWeight(source, target, motion);
         const auto result = libmmd::sizing::Run(source, target, motion);
         if (!result.success) throw std::runtime_error(result.error);
         const auto compareReference = [&](const libmmd::sizing::Result& candidate,
