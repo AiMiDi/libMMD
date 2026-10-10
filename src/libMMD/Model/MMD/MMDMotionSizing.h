@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -16,6 +17,22 @@ namespace libmmd::sizing
 {
 enum class Stage : size_t { Original, Scale, Offset, Stance, Twist, Avoidance, Contact, MultiCharacter, Count };
 
+enum class ProgressPhase { Validation, Movement, Stance, Twist, Avoidance, Contact, MultiCharacter, Camera, LegAvoidance };
+
+// Progress is local to the named phase, not an estimate of elapsed time.
+// total == 0 means indeterminate; characterIndex == 0 means the whole batch.
+// Callbacks execute synchronously on the caller/solver thread. Hosts must marshal
+// UI updates to their main thread. Throwing from a callback fails the solve.
+struct Progress
+{
+    ProgressPhase phase = ProgressPhase::Validation;
+    uint64_t completed = 0;
+    uint64_t total = 0;
+    size_t characterIndex = 1;
+    size_t characterCount = 1;
+};
+using ProgressCallback = std::function<void(const Progress&)>;
+
 struct Options
 {
     double movementMultiplier = 1.;
@@ -25,6 +42,7 @@ struct Options
     bool stance = false;
     bool twist = false;
     bool avoidance = false;
+    bool legAvoidance = false;
     bool wristContact = false;
     bool fingerContact = false;
     bool floorContact = false;
@@ -78,7 +96,7 @@ struct Result
 
 Result Run(const libmmd::PMXFile& source, const libmmd::PMXFile& target,
            const libmmd::VMDFile& input, const Options& options = {},
-           const std::atomic_bool* cancel = nullptr);
+           const std::atomic_bool* cancel = nullptr, const ProgressCallback& progress = {});
 
 struct CharacterInput
 {
@@ -106,5 +124,5 @@ struct BatchResult
 
 BatchResult RunBatch(const std::vector<CharacterInput>& characters,
                      const libmmd::VMDFile& camera = libmmd::VMDFile(), const CameraOptions& cameraOptions = {},
-                     const std::atomic_bool* cancel = nullptr);
+                     const std::atomic_bool* cancel = nullptr, const ProgressCallback& progress = {});
 }

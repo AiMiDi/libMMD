@@ -3,6 +3,7 @@
 #include "libMMD/Model/MMD/MMDMotionSizing.h"
 #include <unordered_map>
 #include <set>
+#include "MMDMotionIK.h"
 
 namespace libmmd::sizing::detail
 {
@@ -21,9 +22,11 @@ class Motion
 public:
     explicit Motion(const libmmd::VMDFile& file);
     LocalPose Sample(const std::string& bone, uint32_t frame) const;
+    bool IKEnabled(const std::string& bone, uint32_t frame) const;
     uint32_t LastFrame() const { return last_; }
 private:
     std::unordered_map<std::string, std::vector<libmmd::VMDMotion>> tracks_;
+    std::unordered_map<std::string, std::vector<std::pair<uint32_t, bool>>> ikTracks_;
     uint32_t last_ = 0;
 };
 
@@ -40,6 +43,9 @@ public:
     std::vector<bool> appendValid;
     std::vector<bool> supported;
     std::vector<std::string> warnings;
+    std::vector<int> ikControllers;
+    std::vector<bool> ikAffected;
+    std::shared_ptr<PlaybackIK> playbackIK;
 private:
     std::unordered_map<std::string, int> names_;
 };
@@ -53,6 +59,7 @@ struct Pose
     std::vector<LocalPose> append;
     std::vector<Vector> positions;
     std::vector<Rotation> rotations;
+    std::vector<uint8_t> ikEnabled;
 };
 
 class Baker
@@ -77,5 +84,6 @@ struct Goal
     std::vector<int> joints;
     Vector target;
 };
-void SolveGoals(Pose& pose, const std::vector<Goal>& goals, const Options& options, const std::atomic_bool* cancel);
+void SolveGoals(Pose& pose, const std::vector<Goal>& goals, const Options& options, const std::atomic_bool* cancel,
+                double maximumRotationDelta = 3.141592653589793);
 }

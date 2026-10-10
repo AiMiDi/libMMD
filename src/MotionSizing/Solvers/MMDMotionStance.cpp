@@ -1,6 +1,7 @@
 // Arm-axis compensation follows StanceService e5c3035 (MIT). Twist distribution
 // is a geometric swing/twist implementation; it is not upstream's elbow search.
 #include "MMDMotionPose.h"
+#include "MMDMotionProgress.h"
 #include <algorithm>
 #include <cmath>
 
@@ -85,7 +86,8 @@ void Stance(const Rig& source, const Rig& target, libmmd::VMDFile& motion, Analy
 
 struct TwistChain { int parent, twist, child; Vector axis; };
 
-void Twist(const Rig& target, libmmd::VMDFile& motion, const Options& options, Analysis& analysis, const std::atomic_bool* cancel)
+void Twist(const Rig& target, libmmd::VMDFile& motion, const Options& options, Analysis& analysis, const std::atomic_bool* cancel,
+           const ProgressCallback& progress)
 {
     std::vector<TwistChain> chains;
     for (const std::string side : {"左", "右"})
@@ -123,6 +125,7 @@ void Twist(const Rig& target, libmmd::VMDFile& motion, const Options& options, A
     for (uint32_t frame = 0; frame <= last; ++frame)
     {
         CheckCancel(cancel);
+        ReportProgress(progress, ProgressPhase::Twist, frame, uint64_t(last) + 1);
         Pose pose(target, original, frame);
         for (const auto& chain : chains)
         {
@@ -176,18 +179,24 @@ void Twist(const Rig& target, libmmd::VMDFile& motion, const Options& options, A
         }
     }
     baker.Finish(motion);
+    ReportProgress(progress, ProgressPhase::Twist, uint64_t(last) + 1, uint64_t(last) + 1);
 }
 }
 
 void ApplyStanceAndTwist(const Rig& source, const Rig& target, const Options& options,
-                         Result& result, const std::atomic_bool* cancel)
+                         Result& result, const std::atomic_bool* cancel, const ProgressCallback& progress)
 {
     auto& stance = result.stages[static_cast<size_t>(Stage::Stance)];
     stance = result.stages[static_cast<size_t>(Stage::Offset)];
-    if (options.stance) Stance(source, target, stance, result.analysis);
+    if (options.stance)
+    {
+        ReportProgress(progress, ProgressPhase::Stance);
+        Stance(source, target, stance, result.analysis);
+        ReportProgress(progress, ProgressPhase::Stance, 1, 1);
+    }
     CheckCancel(cancel);
     auto& twist = result.stages[static_cast<size_t>(Stage::Twist)];
     twist = stance;
-    if (options.twist) Twist(target, twist, options, result.analysis, cancel);
+    if (options.twist) Twist(target, twist, options, result.analysis, cancel, progress);
 }
 }

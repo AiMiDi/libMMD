@@ -1,6 +1,7 @@
 #include "libMMD/Model/MMD/MMDMotionSizing.h"
 #include "MMDMotionPose.h"
 #include "MMDMotionConstraints.h"
+#include "MMDMotionLegs.h"
 #include "libMMD/Model/MMD/VMDInterpolation.h"
 #include <filesystem>
 #include <fstream>
@@ -119,6 +120,169 @@ void CheckPlaybackInterpolation()
     }
     std::cout << "playback_interpolation=passed\n";
 }
+
+void CheckLegPlaybackAndAvoidance()
+{
+    libmmd::PMXFile model;
+    const auto bone = [&](const std::string& name, int parent, const Eigen::Vector3f& position, uint16_t flags) {
+        libmmd::PMXBone value{};
+        value.m_name = name; value.m_parentBoneIndex = parent; value.m_position = position;
+        value.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(flags);
+        model.m_bones.push_back(value);
+        return static_cast<int>(model.m_bones.size() - 1);
+    };
+    bone("センター", -1, Eigen::Vector3f::Zero(), 6);
+    for (const std::string side : {"左", "右"})
+    {
+        const float x = side == "左" ? .8f : -.8f;
+        const int hip = bone(side + "足", 0, Eigen::Vector3f(x, 8, 0), 2);
+        const int knee = bone(side + "ひざ", hip, Eigen::Vector3f(x, 4, -.3f), 2);
+        const int ankle = bone(side + "足首", knee, Eigen::Vector3f(x, 0, 0), 2);
+        const int goal = bone(side + "足ＩＫ", 0, Eigen::Vector3f(x, 0, 0), 0x26);
+        model.m_bones[goal].m_ikTargetBoneIndex = ankle;
+        model.m_bones[goal].m_ikIterationCount = 128;
+        model.m_bones[goal].m_ikLimit = .3f;
+        for (int index : {knee, hip})
+        {
+            libmmd::PMXIKLink link{}; link.m_ikBoneIndex = index;
+            model.m_bones[goal].m_ikLinks.push_back(link);
+        }
+        libmmd::PMXRigidbody body{};
+        body.m_name = side + "ひざ"; body.m_boneIndex = knee;
+        body.m_shape = libmmd::PMXRigidbody::Shape::Capsule;
+        body.m_shapeSize = Eigen::Vector3f(.35f, 3.2f, 0);
+        body.m_translate = Eigen::Vector3f(x, 2, 0); body.m_rotate.setZero();
+        body.m_op = libmmd::PMXRigidbody::Operation::Static;
+        model.m_rigidbodies.push_back(body);
+    }
+    libmmd::VMDFile motion;
+    motion.m_motions.push_back(Key("センター", 0));
+    for (const std::string side : {"左", "右"})
+    {
+        auto key = Key(side + "足ＩＫ", 0);
+        key.m_translate = Eigen::Vector3f(side == "左" ? -.65f : .65f, 1, 0);
+        motion.m_motions.push_back(key);
+    }
+    const Rig rig(model);
+    const Pose before(rig, Motion(motion), 0);
+    auto limited = model;
+    for (auto& bone : limited.m_bones)
+        if ((static_cast<uint16_t>(bone.m_boneFlag) & 0x20u) != 0)
+        { bone.m_ikIterationCount = 1; bone.m_ikLimit = .05f; }
+    const Rig oneIteration(limited);
+    const Pose oneIterationPose(oneIteration, Motion(motion), 0);
+    for (auto& bone : limited.m_bones) bone.m_ikIterationCount = 4;
+    const Rig fourIterations(limited);
+    const Pose fourIterationPose(fourIterations, Motion(motion), 0);
+    const int leftAnkle = rig.Find("左足首");
+    Check((oneIterationPose.positions[leftAnkle] - fourIterationPose.positions[leftAnkle]).norm() > .01,
+          "Positive PMX IK iteration counts below four were silently raised");
+    for (auto& bone : limited.m_bones) bone.m_ikIterationCount = 0;
+    const Rig defaultIterations(limited);
+    const Pose defaultIterationPose(defaultIterations, Motion(motion), 0);
+    Check((defaultIterationPose.positions[leftAnkle] - fourIterationPose.positions[leftAnkle]).norm() < 1.e-7,
+          "Zero PMX IK iteration count does not match the host fallback");
+    for (const std::string side : {"左", "右"})
+        Check((before.positions[rig.Find(side + "足首")] - before.positions[rig.Find(side + "足ＩＫ")]).norm() < .02,
+              "Offline playback did not execute the foot IK chain");
+
+    auto switched = motion;
+    libmmd::VMDIk key(5, 1);
+    libmmd::VMDIkInfo info; std::u16string utf16;
+    libmmd::ConvU8ToU16("左足ＩＫ", utf16);
+    info.m_name.Set(libmmd::ConvertU16ToSjisString(utf16).c_str()); info.m_enable = 0;
+    key.m_ikInfos.push_back(info); switched.m_iks.push_back(key);
+    Check(Motion(switched).LastFrame() == 5, "Bake range dropped the final IK-only frame");
+    const Pose enabled(rig, Motion(switched), 4), disabled(rig, Motion(switched), 5);
+    Check(enabled.ikEnabled[rig.Find("左足ＩＫ")] && !disabled.ikEnabled[rig.Find("左足ＩＫ")], "VMD IK toggle timing is wrong");
+    Check((disabled.positions[rig.Find("左足首")] - disabled.positions[rig.Find("左足ＩＫ")]).norm() > .5,
+          "Disabled IK was still solved offline");
+    const Pose enabledAgain(rig, Motion(switched), 4);
+    Check((enabledAgain.positions[rig.Find("左ひざ")] - enabled.positions[rig.Find("左ひざ")]).norm() < 1.e-7,
+          "IK evaluation depends on the previously sampled frame");
+
+    Options options = BaseOptions(); options.legAvoidance = true;
+    const auto result = Run(model, model, motion, options); RequireResult(result);
+    auto lowIterationModel = model;
+    for (auto& bone : lowIterationModel.m_bones) bone.m_ikIterationCount = 4;
+    auto nearGround = motion;
+    for (auto& key : nearGround.m_motions)
+        if (key.m_boneName.ToUtf8String() != "センター") key.m_translate = Eigen::Vector3f(key.m_translate.x(), .1f, 1.f);
+    const auto guarded = Run(lowIterationModel, lowIterationModel, nearGround, options); RequireResult(guarded);
+    const Rig lowIterationRig(lowIterationModel);
+    const Pose beforeGuard(lowIterationRig, Motion(nearGround), 0), afterGuard(lowIterationRig, Motion(guarded.stages[6]), 0);
+    for (const std::string side : {"左", "右"})
+    {
+        const int ankle = rig.Find(side + "足首"), goal = rig.Find(side + "足ＩＫ");
+        Check((afterGuard.positions[ankle] - afterGuard.positions[goal]).norm() <=
+              (beforeGuard.positions[ankle] - beforeGuard.positions[goal]).norm() + options.tolerance + 1.e-6,
+              "Leg correction increased the playback IK target error");
+    }
+    for (uint16_t flags : {uint16_t(0x226), uint16_t(0x22)})
+    {
+        auto driven = model;
+        for (auto& bone : driven.m_bones)
+            if ((static_cast<uint16_t>(bone.m_boneFlag) & 0x20u) != 0)
+            { bone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(flags); bone.m_appendBoneIndex = 0; bone.m_appendWeight = .5f; }
+        auto withFloor = options; withFloor.floorContact = true;
+        const auto skipped = Run(driven, driven, nearGround, withFloor); RequireResult(skipped);
+        bool warned = false;
+        for (const auto& warning : skipped.analysis.warnings) warned |= warning.find("Floor contact skipped") != std::string::npos;
+        Check(warned, "Driven/non-translatable foot goals were not reported");
+        for (const std::string side : {"左", "右"})
+            Check((Motion(skipped.stages[6]).Sample(side + "足ＩＫ", 0).translation -
+                   Motion(nearGround).Sample(side + "足ＩＫ", 0).translation).norm() < 1.e-7,
+                  "Constraints baked an unwritable foot channel");
+    }
+    auto floorOnly = options; floorOnly.legAvoidance = false; floorOnly.floorContact = true;
+    const auto unreachableFloor = Run(lowIterationModel, lowIterationModel, nearGround, floorOnly); RequireResult(unreachableFloor);
+    Check(unreachableFloor.analysis.unresolved > 0, "Floor diagnostics hid an unresolved ankle IK target");
+    const auto switchedResult = Run(model, model, switched, options); RequireResult(switchedResult);
+    Check((Motion(switchedResult.stages[6]).Sample("左足ＩＫ", 5).translation -
+           Motion(switched).Sample("左足ＩＫ", 5).translation).norm() < 1.e-7,
+          "Leg avoidance changed a disabled foot IK goal");
+    std::atomic_bool cancel{false};
+    const auto cancelled = Run(model, model, switched, options, &cancel,
+        [&](const Progress& value) { if (value.phase == ProgressPhase::LegAvoidance) cancel = true; });
+    Check(!cancelled.success && cancelled.cancelled, "Leg avoidance does not honor progress cancellation");
+    const Pose after(rig, Motion(result.stages[6]), 0);
+    const auto pairs = LegCollisionPairs(rig);
+    const auto oldDepths = LegPenetrations(before, pairs, options.collisionMargin);
+    const auto newDepths = LegPenetrations(after, pairs, options.collisionMargin);
+    Check(pairs.size() == 1 && oldDepths[0] > .1 && newDepths[0] < oldDepths[0] * .5,
+          "Leg capsule avoidance did not reduce a reachable crossing");
+    for (const std::string side : {"左", "右"})
+    {
+        const int goal = rig.Find(side + "足ＩＫ"), ankle = rig.Find(side + "足首");
+        Check(std::abs(before.positions[goal].y() - after.positions[goal].y()) < 1.e-5, "Leg avoidance changed foot height");
+        Check((before.positions[goal] - after.positions[goal]).norm() < .643, "Leg avoidance exceeded its foot travel budget");
+        Check((after.positions[ankle] - after.positions[goal]).norm() < .02, "Corrected VMD no longer follows playback IK");
+        for (const auto* part : {"足", "ひざ"})
+            Check(before.local[rig.Find(side + part)].rotation.angularDistance(after.local[rig.Find(side + part)].rotation) < 1.e-7,
+                  "Leg correction baked IK rotations back into FK channels");
+    }
+    auto invalid = model; invalid.m_bones[rig.Find("左足ＩＫ")].m_ikLinks[0].m_ikBoneIndex = 999;
+    Check(!Run(invalid, model, motion, options).success, "Invalid PMX IK link accepted");
+    auto released = motion;
+    for (const std::string side : {"左", "右"})
+        for (uint32_t frame = 1; frame <= 40; ++frame)
+        {
+            auto foot = Key(side + "足ＩＫ", frame);
+            foot.m_translate = frame <= 8 ? Motion(motion).Sample(side + "足ＩＫ", 0).translation.cast<float>().eval() : Eigen::Vector3f::Zero().eval();
+            released.m_motions.push_back(foot);
+        }
+    const auto releaseResult = Run(model, model, released, options); RequireResult(releaseResult);
+    const Motion releaseMotion(released), correctedMotion(releaseResult.stages[6]);
+    for (uint32_t frame = 0; frame <= 40; ++frame)
+    {
+        const auto originalDepth = LegPenetrations(Pose(rig, releaseMotion, frame), pairs, options.collisionMargin);
+        const auto correctedDepth = LegPenetrations(Pose(rig, correctedMotion, frame), pairs, options.collisionMargin);
+        Check(correctedDepth[0] <= originalDepth[0] + 2.e-6, "Temporal filtering introduced a worse leg crossing");
+    }
+    Check(correctedMotion.Sample("左足ＩＫ", 40).translation.norm() < 1.e-4,
+          "Leg correction left a permanent offset after contact ended");
+    std::cout << "leg_ik_depth=" << oldDepths[0] << " -> " << newDepths[0] << '\n';
+}
 }
 
 int main(int argc, char** argv)
@@ -128,6 +292,7 @@ int main(int argc, char** argv)
         Check(argc >= 3, "Expected base and advanced fixture directories");
         CheckAppendEvaluation();
         CheckPlaybackInterpolation();
+        CheckLegPlaybackAndAvoidance();
         const std::filesystem::path base(argv[1]), fixtures(argv[2]);
         libmmd::PMXFile source, target;
         libmmd::VMDFile motion;
@@ -246,6 +411,72 @@ int main(int argc, char** argv)
         const auto fingers = Run(fingerSource, fingerTarget, touch, options); RequireResult(fingers);
         const double fingerGap = (Point(fingerTarget, fingers.stages[6], "左中指３") - Point(fingerTarget, fingers.stages[6], "右中指３")).norm();
         Check(fingers.analysis.constraints == 22 && fingerGap < .02, "Finger contact did not converge");
+
+        // Nearby wrists are not coincident wrists: preserve the authored gap.
+        auto separatedTouch = touch;
+        for (const std::string side : {"左", "右"})
+        {
+            auto key = Key(side + "手首", 0);
+            key.m_translate.x() = side == "左" ? .1f : -.1f;
+            separatedTouch.m_motions.push_back(key);
+        }
+        options = BaseOptions(); options.wristContact = true;
+        const auto separated = Run(contactSource, contactTarget, separatedTouch, options); RequireResult(separated);
+        const Vector authoredGap = Point(contactSource, separatedTouch, "左手首") - Point(contactSource, separatedTouch, "右手首");
+        const Vector adjustedGap = Point(contactTarget, separated.stages[6], "左手首") - Point(contactTarget, separated.stages[6], "右手首");
+        Check(authoredGap.norm() > .15 && (adjustedGap - authoredGap).norm() < .02,
+              "Wrist contact collapsed a nonzero authored separation");
+        auto twiceSized = contactSource;
+        for (auto& bone : twiceSized.m_bones) bone.m_position *= 2.f;
+        const auto scaledContact = Run(contactSource, twiceSized, separatedTouch, options); RequireResult(scaledContact);
+        const Vector scaledGap = Point(twiceSized, scaledContact.stages[6], "左手首") - Point(twiceSized, scaledContact.stages[6], "右手首");
+        Check((scaledGap - 2. * authoredGap).norm() < .02, "Contact spacing did not follow target palm scale");
+
+        // Several neighboring finger landmarks form a constellation, not one
+        // contact point. An already correct gesture on the same rig is a no-op.
+        auto gestureRig = fingerSource;
+        for (const std::string side : {"左", "右"})
+        {
+            auto tip = gestureRig.m_bones[static_cast<size_t>(Find(gestureRig, side + "中指３"))];
+            tip.m_name = side + "人指３";
+            tip.m_position += Eigen::Vector3f(.06f, 0, .04f);
+            gestureRig.m_bones.push_back(tip);
+        }
+        options = BaseOptions(); options.wristContact = options.fingerContact = true;
+        const auto identityGesture = Run(gestureRig, gestureRig, touch, options); RequireResult(identityGesture);
+        Check(identityGesture.analysis.constraints > 22, "Multi-finger identity fixture did not activate contacts");
+        const Rig gestureSkeleton(gestureRig);
+        const Pose gestureBefore(gestureSkeleton, Motion(identityGesture.stages[5]), 0);
+        const Pose gestureAfter(gestureSkeleton, Motion(identityGesture.stages[6]), 0);
+        for (size_t bone = 0; bone < gestureRig.m_bones.size(); ++bone)
+            Check((gestureBefore.positions[bone] - gestureAfter.positions[bone]).norm() < 1.e-5 &&
+                  gestureBefore.rotations[bone].angularDistance(gestureAfter.rotations[bone]) < 1.e-5,
+                  "Contact changed an already correct multi-finger gesture");
+
+        // Retargeting may move a whole hand, but cannot rewrite its finger curl
+        // or palm orientation to satisfy incompatible positional constraints.
+        auto curled = separatedTouch;
+        for (const std::string side : {"左", "右"})
+            curled.m_motions.push_back(Key(side + "中指１", 0, Rotation(Eigen::AngleAxisd(.7, Vector::UnitZ()))));
+        const auto preserved = Run(fingerSource, fingerTarget, curled, options); RequireResult(preserved);
+        const Rig fingerSkeleton(fingerTarget);
+        for (uint32_t frame = 0; frame <= 10; ++frame)
+        {
+            const Pose before(fingerSkeleton, Motion(preserved.stages[5]), frame);
+            const Pose after(fingerSkeleton, Motion(preserved.stages[6]), frame);
+            for (size_t bone = 0; bone < fingerTarget.m_bones.size(); ++bone)
+            {
+                Check(before.local[bone].rotation.angularDistance(after.local[bone].rotation) < .5236 + 1.e-5,
+                      "Contact exceeded the total pose correction budget");
+                if (fingerTarget.m_bones[bone].m_name.find("指") != std::string::npos)
+                    Check(before.local[bone].rotation.angularDistance(after.local[bone].rotation) < 1.e-6,
+                          "Contact rewrote an authored finger rotation");
+                if (fingerTarget.m_bones[bone].m_name.find("手首") != std::string::npos)
+                    Check(before.rotations[bone].angularDistance(after.rotations[bone]) < 1.e-5,
+                          "Contact changed palm orientation");
+            }
+        }
+        std::cout << "gesture_preservation=passed authored_wrist_gap=" << authoredGap.norm() << '\n';
         auto floorTarget = contactTarget;
         for (auto& bone : floorTarget.m_bones)
             if (bone.m_name.find("腕") != std::string::npos || bone.m_name.find("ひじ") != std::string::npos || bone.m_name.find("手首") != std::string::npos) bone.m_position.y() += 1;
@@ -282,6 +513,22 @@ int main(int argc, char** argv)
         std::cout << "avoidance_penetration=" << penetration << '\n';
         Check(penetration < .01, "Reachable avoidance failed");
 
+        options.wristContact = true;
+        const auto guarded = Run(contactSource, avoidedTarget, touch, options); RequireResult(guarded);
+        for (uint32_t frame = 0; frame <= 10; ++frame)
+        {
+            const Pose before(avoidRig, Motion(guarded.stages[5]), frame);
+            const Pose after(avoidRig, Motion(guarded.stages[6]), frame);
+            for (const auto* name : {"左手首", "右手首", "左ひじ", "右ひじ"})
+            {
+                const int bone = avoidRig.Find(name);
+                const double oldDepth = (ProjectOutside(body, before, before.positions[bone], options.collisionMargin) - before.positions[bone]).norm();
+                const double newDepth = (ProjectOutside(body, after, after.positions[bone], options.collisionMargin) - after.positions[bone]).norm();
+                Check(newDepth <= std::max(oldDepth, options.tolerance) + 1.e-5,
+                      "Contact reintroduced a collision resolved by avoidance");
+            }
+        }
+
         // An unreachable target remains finite and explicitly unresolved.
         auto unreachableTarget = contactTarget;
         for (auto& bone : unreachableTarget.m_bones)
@@ -289,6 +536,12 @@ int main(int argc, char** argv)
         options = BaseOptions(); options.wristContact = true;
         const auto unreachable = Run(contactSource, unreachableTarget, touch, options); RequireResult(unreachable);
         Check(unreachable.analysis.unresolved > 0 && std::isfinite(unreachable.analysis.maxResidual), "Unreachable contact not reported");
+        const Rig unreachableRig(unreachableTarget);
+        const Pose unreachableBefore(unreachableRig, Motion(unreachable.stages[5]), 0);
+        const Pose unreachableAfter(unreachableRig, Motion(unreachable.stages[6]), 0);
+        for (size_t bone = 0; bone < unreachableTarget.m_bones.size(); ++bone)
+            Check(unreachableBefore.local[bone].rotation.angularDistance(unreachableAfter.local[bone].rotation) <= .5236 + 1.e-5,
+                  "Unreachable contact exceeded the pose correction budget");
         options.maxBakeFrames = 5;
         Check(!Run(contactSource, contactTarget, touch, options).success, "Bake budget not enforced");
         std::atomic_bool cancel{true};
@@ -314,6 +567,77 @@ int main(int argc, char** argv)
         const double crossGap = (Point(contactSource, batch.characters[0].stages[7], "左手首") - Point(contactTarget, batch.characters[1].stages[7], "左手首")).norm();
         std::cout << "cross_character_gap=" << crossGap << '\n';
         Check(crossGap < .05 && batch.characters[0].analysis.constraints > 0, "Cross-character contact failed");
+
+        auto multiFinger = BaseOptions(); multiFinger.multiContact = multiFinger.fingerContact = true;
+        const auto identityBatch = RunBatch({CharacterInput{gestureRig, gestureRig, touch, multiFinger},
+            CharacterInput{gestureRig, gestureRig, touch, multiFinger}});
+        Check(identityBatch.success && identityBatch.characters[0].analysis.constraints > 0,
+              "Cross-character finger fixture did not activate");
+        for (const auto& character : identityBatch.characters)
+        {
+            const Pose before(gestureSkeleton, Motion(character.stages[6]), 0);
+            const Pose after(gestureSkeleton, Motion(character.stages[7]), 0);
+            for (size_t bone = 0; bone < gestureRig.m_bones.size(); ++bone)
+                Check((before.positions[bone] - after.positions[bone]).norm() < 1.e-5 &&
+                      before.rotations[bone].angularDistance(after.rotations[bone]) < 1.e-5,
+                      "Cross-character contacts collapsed an existing gesture");
+        }
+
+        // Progress reports actual completed phase work, including batch identity.
+        // Observers must not perturb the result or prevent mid-stage cancellation.
+        std::vector<Progress> observed;
+        const auto observedBatch = RunBatch({CharacterInput{contactSource, contactSource, touch, options},
+            CharacterInput{contactSource, contactTarget, touch, options}}, libmmd::VMDFile(), CameraOptions(), nullptr,
+            [&](const Progress& value) { observed.push_back(value); });
+        Check(observedBatch.success && !observed.empty(), "Progress callback was not invoked");
+        bool firstCharacter = false, secondCharacter = false, batchFinished = false;
+        for (const auto& value : observed)
+        {
+            Check(value.characterCount == 2 && value.characterIndex <= 2, "Invalid progress character identity");
+            Check(value.total == 0 || value.completed <= value.total, "Progress exceeded phase work");
+            firstCharacter |= value.characterIndex == 1;
+            secondCharacter |= value.characterIndex == 2;
+            batchFinished |= value.phase == ProgressPhase::MultiCharacter && value.characterIndex == 0 &&
+                value.total > 0 && value.completed == value.total;
+        }
+        Check(firstCharacter && secondCharacter && batchFinished, "Batch progress did not cover all members and completion");
+        for (size_t member = 0; member < batch.characters.size(); ++member)
+            for (size_t stage = 0; stage < static_cast<size_t>(Stage::Count); ++stage)
+            {
+                const auto& expected = batch.characters[member].stages[stage].m_motions;
+                const auto& actual = observedBatch.characters[member].stages[stage].m_motions;
+                Check(expected.size() == actual.size(), "Progress changed baked key count");
+                for (size_t key = 0; key < expected.size(); ++key)
+                    Check(expected[key].m_frame == actual[key].m_frame &&
+                        (expected[key].m_translate.array() == actual[key].m_translate.array()).all() &&
+                        (expected[key].m_quaternion.coeffs().array() == actual[key].m_quaternion.coeffs().array()).all(),
+                        "Progress changed an animation key");
+            }
+
+        auto longTouch = touch;
+        for (auto& key : longTouch.m_motions) if (key.m_frame == 10) key.m_frame = 256;
+        options = BaseOptions(); options.wristContact = true;
+        cancel.store(false);
+        bool cancelledDuringContact = false;
+        const auto interrupted = Run(contactSource, contactTarget, longTouch, options, &cancel,
+            [&](const Progress& value) {
+                if (value.phase == ProgressPhase::Contact && value.completed == 64)
+                { cancelledDuringContact = true; cancel.store(true); }
+            });
+        Check(cancelledDuringContact && interrupted.cancelled && !interrupted.success,
+            "Progress observer could not cancel an in-flight contact stage");
+        for (const auto& stage : interrupted.stages) Check(stage.m_motions.empty(), "Cancelled progress exposed partial motion");
+        const auto observerFailure = Run(contactSource, contactTarget, touch, options, nullptr,
+            [](const Progress&) { throw std::runtime_error("observer failure"); });
+        Check(!observerFailure.success && observerFailure.error == "observer failure", "Progress exception escaped failure handling");
+
+        bool cameraFinished = false;
+        const auto observedCamera = RunBatch({CharacterInput{source, doubled, still, BaseOptions()}}, camera,
+            CameraOptions{true, 5.}, nullptr, [&](const Progress& value) {
+                cameraFinished |= value.phase == ProgressPhase::Camera && value.characterIndex == 0 &&
+                    value.completed == 1 && value.total == 1;
+            });
+        Check(observedCamera.success && cameraFinished, "Camera progress did not finish");
         std::cout << "advanced sizing regression passed\n";
         return 0;
     }

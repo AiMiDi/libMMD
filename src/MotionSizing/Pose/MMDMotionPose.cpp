@@ -29,6 +29,24 @@ Motion::Motion(const libmmd::VMDFile& file)
     }
     for (auto& track : tracks_)
         std::sort(track.second.begin(), track.second.end(), [](const auto& a, const auto& b) { return a.m_frame < b.m_frame; });
+    for (const auto& frame : file.m_iks)
+    {
+        last_ = std::max(last_, frame.m_frame);
+        for (const auto& info : frame.m_ikInfos)
+            ikTracks_[info.m_name.ToUtf8String()].emplace_back(frame.m_frame, info.m_enable != 0);
+    }
+    for (auto& track : ikTracks_)
+        std::stable_sort(track.second.begin(), track.second.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+}
+
+bool Motion::IKEnabled(const std::string& bone, uint32_t frame) const
+{
+    const auto found = ikTracks_.find(bone);
+    if (found == ikTracks_.end()) return true;
+    const auto& keys = found->second;
+    const auto next = std::upper_bound(keys.begin(), keys.end(), frame,
+        [](uint32_t value, const auto& key) { return value < key.first; });
+    return next == keys.begin() || (next - 1)->second;
 }
 
 LocalPose Motion::Sample(const std::string& bone, uint32_t frame) const
@@ -113,6 +131,35 @@ Rig::Rig(const libmmd::PMXFile& file) : model(file)
         supported[static_cast<size_t>(index)] = appendValid[static_cast<size_t>(index)] && (static_cast<uint16_t>(bone.m_boneFlag) & 0x2000u) == 0 &&
             (bone.m_parentBoneIndex < 0 || supported[static_cast<size_t>(bone.m_parentBoneIndex)]);
     }
+    ikAffected.assign(count, false);
+    for (size_t i = 0; i < count; ++i)
+        if ((static_cast<uint16_t>(model.m_bones[i].m_boneFlag) & 0x20u) != 0)
+        {
+            ikControllers.push_back(static_cast<int>(i));
+            for (const auto& link : model.m_bones[i].m_ikLinks)
+            {
+                Require(link.m_ikBoneIndex >= 0 && link.m_ikBoneIndex < static_cast<int>(count), "Invalid IK chain index");
+                ikAffected[link.m_ikBoneIndex] = true;
+            }
+        }
+    if (!ikControllers.empty())
+    {
+        // Include descendants and append consumers without making unrelated
+        // upper-body FK lose double precision through the playback bridge.
+        bool changed = true;
+        while (changed)
+        {
+            changed = false;
+            for (int i : order)
+            {
+                const auto& bone = model.m_bones[i];
+                const bool inherited = (bone.m_parentBoneIndex >= 0 && ikAffected[bone.m_parentBoneIndex]) ||
+                    ((static_cast<uint16_t>(bone.m_boneFlag) & 0x300u) && bone.m_appendBoneIndex >= 0 && ikAffected[bone.m_appendBoneIndex]);
+                if (!ikAffected[i] && inherited) { ikAffected[i] = true; changed = true; }
+            }
+        }
+        playbackIK = CreatePlaybackIK(model, order, appendOrder);
+    }
 }
 
 int Rig::Find(const std::string& name) const
@@ -139,6 +186,8 @@ Pose::Pose(const Rig& skeleton, const Motion& motion, uint32_t frame) : rig(skel
     positions.resize(local.size());
     rotations.resize(local.size());
     append.resize(local.size());
+    ikEnabled.resize(local.size(), 1);
+    for (int index : rig.ikControllers) ikEnabled[index] = motion.IKEnabled(rig.model.m_bones[index].m_name, frame);
     Update();
 }
 
@@ -177,6 +226,21 @@ void Pose::Update()
             positions[i] = positions[p] + rotations[p] * (offset - rig.model.m_bones[p].m_position.cast<double>());
             rotations[i] = (rotations[p] * rotation).normalized();
         }
+    }
+    if (rig.playbackIK)
+    {
+        std::vector<PlaybackChannel> channels(local.size()), world;
+        for (size_t i = 0; i < local.size(); ++i)
+            channels[i] = {local[i].translation.x(), local[i].translation.y(), local[i].translation.z(),
+                local[i].rotation.x(), local[i].rotation.y(), local[i].rotation.z(), local[i].rotation.w()};
+        rig.playbackIK->Evaluate(channels, ikEnabled, world);
+        for (size_t i = 0; i < world.size(); ++i)
+            if (rig.ikAffected[i])
+            {
+                const auto& value = world[i];
+                positions[i] = Vector(value[0], value[1], value[2]);
+                rotations[i] = Rotation(value[6], value[3], value[4], value[5]).normalized();
+            }
     }
 }
 
@@ -256,9 +320,11 @@ void Solve(Pose& pose, int effector, const std::vector<int>& joints, const Vecto
     pose.Update();
 }
 
-void SolveGoals(Pose& pose, const std::vector<Goal>& goals, const Options& options, const std::atomic_bool* cancel)
+void SolveGoals(Pose& pose, const std::vector<Goal>& goals, const Options& options, const std::atomic_bool* cancel,
+                double maximumRotationDelta)
 {
     if (goals.empty()) return;
+    const auto reference = pose.local;
     struct Axis { int joint; Vector local; };
     std::set<int> joints;
     for (const auto& goal : goals) joints.insert(goal.joints.begin(), goal.joints.end());
@@ -323,6 +389,10 @@ void SolveGoals(Pose& pose, const std::vector<Goal>& goals, const Options& optio
                 if (angle < 1.e-12) continue;
                 const size_t joint = static_cast<size_t>(correction.first);
                 pose.local[joint].rotation = (Rotation(Eigen::AngleAxisd(angle * scale * std::ldexp(1., -search), correction.second / angle)) * before[joint].rotation).normalized();
+                const double deviation = reference[joint].rotation.angularDistance(pose.local[joint].rotation);
+                if (deviation > maximumRotationDelta)
+                    pose.local[joint].rotation = reference[joint].rotation.slerp(maximumRotationDelta / deviation,
+                        pose.local[joint].rotation).normalized();
             }
             pose.Update();
             if (residual().squaredNorm() < errors.squaredNorm() - 1.e-14) { accepted = true; break; }

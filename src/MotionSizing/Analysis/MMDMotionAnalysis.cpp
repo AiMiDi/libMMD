@@ -1,6 +1,7 @@
 // Movement formulae adapted from miu200521358/vmd_sizing (MIT), revision
 // e5c3035. See license/vmd_sizing-MIT.txt and docs/MotionSizing.md.
 #include "libMMD/Model/MMD/MMDMotionSizing.h"
+#include "MMDMotionProgress.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -144,9 +145,9 @@ std::vector<size_t> RotationChain(const libmmd::PMXFile& model, const Index& nam
 bool HasAdvancedAxis(const libmmd::PMXFile& model, const std::vector<size_t>& chain)
 {
     // Upstream's append/fixed-axis conventions differ from runtime PMX IK.
-    // Until those are ported in P2, skip this offset explicitly, keep scaling.
+    // This legacy offset formula cannot evaluate those channels; keep scaling.
     for (size_t index : chain)
-        if ((static_cast<uint16_t>(model.m_bones[index].m_boneFlag) & 0x2500u) != 0) return true;
+        if ((static_cast<uint16_t>(model.m_bones[index].m_boneFlag) & 0x2700u) != 0) return true;
     return false;
 }
 
@@ -230,7 +231,7 @@ void CalculateOffsets(const libmmd::PMXFile& source, const libmmd::PMXFile& targ
 }
 
 Result RunMovement(const libmmd::PMXFile& source, const libmmd::PMXFile& target,
-           const libmmd::VMDFile& input, const Options& options, const std::atomic_bool* cancel)
+           const libmmd::VMDFile& input, const Options& options, const std::atomic_bool* cancel, const ProgressCallback& progress)
 {
     const auto started = std::chrono::steady_clock::now();
     Result result;
@@ -238,6 +239,7 @@ Result RunMovement(const libmmd::PMXFile& source, const libmmd::PMXFile& target,
     try
     {
         if (cancelled()) { result.cancelled = true; return result; }
+        ReportProgress(progress, ProgressPhase::Validation);
         Require(std::isfinite(options.movementMultiplier) && options.movementMultiplier > 0 &&
                 std::isfinite(options.legOffset), "Invalid sizing options");
         const Index si = ValidateModel(source), ti = ValidateModel(target);
@@ -279,6 +281,7 @@ Result RunMovement(const libmmd::PMXFile& source, const libmmd::PMXFile& target,
         for (size_t i = 0; i < input.m_motions.size(); ++i)
         {
             if (cancelled()) { result.cancelled = true; for (auto& stage : result.stages) stage = libmmd::VMDFile(); return result; }
+            ReportProgress(progress, ProgressPhase::Movement, i, input.m_motions.size());
             const auto& key = input.m_motions[i];
             const std::string name = key.m_boneName.ToUtf8String();
             const auto chain = chains.find(name);
@@ -302,6 +305,7 @@ Result RunMovement(const libmmd::PMXFile& source, const libmmd::PMXFile& target,
             ++result.analysis.modifiedKeys;
         }
         if (cancelled()) { result.cancelled = true; for (auto& stage : result.stages) stage = libmmd::VMDFile(); return result; }
+        ReportProgress(progress, ProgressPhase::Movement, input.m_motions.size(), input.m_motions.size());
         result.success = true;
     }
     catch (const std::exception& error)

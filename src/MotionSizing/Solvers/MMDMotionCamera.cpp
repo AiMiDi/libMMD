@@ -8,7 +8,7 @@
 namespace libmmd::sizing::detail
 {
 void ApplyCamera(const std::vector<CharacterInput>& input, BatchResult& result,
-                 const CameraOptions& options, const std::atomic_bool* cancel)
+                 const CameraOptions& options, const std::atomic_bool* cancel, const ProgressCallback& progress)
 {
     Require(!result.camera.m_cameras.empty(), "Camera sizing requires camera keys");
     Require(std::isfinite(options.maxDistanceRatio) && options.maxDistanceRatio >= 1., "Invalid camera distance limit");
@@ -33,9 +33,11 @@ void ApplyCamera(const std::vector<CharacterInput>& input, BatchResult& result,
         Require(landmarks.back().size() >= 2, "Insufficient common camera landmarks");
     }
     std::set<uint32_t> frames;
+    size_t completed = 0;
     for (auto& key : result.camera.m_cameras)
     {
         CheckCancel(cancel);
+        ReportProgress(progress, ProgressPhase::Camera, completed++, result.camera.m_cameras.size());
         Require(key.m_frame <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()) && frames.insert(key.m_frame).second &&
                 key.m_interest.allFinite() && key.m_rotate.allFinite() && std::isfinite(key.m_distance) &&
                 key.m_viewAngle > 0 && key.m_viewAngle < 180 && key.m_isPerspective <= 1, "Invalid or duplicate camera key");
@@ -67,5 +69,6 @@ void ApplyCamera(const std::vector<CharacterInput>& input, BatchResult& result,
         key.m_distance = static_cast<float>(key.m_distance * ratio);
         Require(key.m_interest.allFinite() && std::isfinite(key.m_distance), "Camera output exceeds float range");
     }
+    ReportProgress(progress, ProgressPhase::Camera, completed, result.camera.m_cameras.size());
 }
 }

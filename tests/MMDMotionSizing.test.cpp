@@ -96,6 +96,26 @@ int main(int argc, char** argv)
         badMotion = motion;
         badMotion.m_motions[0].m_quaternion.coeffs().setZero();
         Check(!libmmd::sizing::Run(source, target, badMotion).success, "Zero quaternion accepted");
+        // Translation-only append must get the same conservative P1 handling
+        // as rotation append; the legacy offset formula cannot evaluate either.
+        auto appended = target;
+        libmmd::PMXBone donor{};
+        donor.m_name = "append-offset-reference"; donor.m_parentBoneIndex = -1;
+        donor.m_position.setZero();
+        const int donorIndex = static_cast<int>(appended.m_bones.size());
+        appended.m_bones.push_back(donor);
+        for (auto& bone : appended.m_bones)
+            if (bone.m_name == "センター")
+            {
+                bone.m_boneFlag = static_cast<libmmd::PMXBoneFlags>(static_cast<uint16_t>(bone.m_boneFlag) | 0x200u);
+                bone.m_appendBoneIndex = donorIndex; bone.m_appendWeight = .5f;
+            }
+        const auto appendResult = libmmd::sizing::Run(source, appended, motion);
+        Check(appendResult.success, "Translation append offset preflight failed");
+        bool skippedAppendOffset = false;
+        for (const auto& warning : appendResult.analysis.warnings)
+            skippedAppendOffset |= warning.find("Offset skipped for append/fixed-axis/outer-parent chain: センター") != std::string::npos;
+        Check(skippedAppendOffset, "Translation-only append used an incompatible movement offset");
         // Compare serialized bytes after restoring the deliberately modified
         // motion channel. This covers every other public VMD channel at once.
         auto mixed = motion;

@@ -52,6 +52,7 @@ set(MOTION_SIZING_SOURCE
     MotionSizing/Pose/MMDMotionPose.cpp
     MotionSizing/Solvers/MMDMotionStance.cpp
     MotionSizing/Solvers/MMDMotionConstraints.cpp
+    MotionSizing/Solvers/MMDMotionLegs.cpp
     MotionSizing/Solvers/MMDMotionCamera.cpp
     MotionSizing/Pipeline/MMDMotionSizing.cpp
     MotionSizing/Diagnostics/MMDMotionDiagnostics.cpp
@@ -64,6 +65,7 @@ endif()
 set (
     MODEL_MMD_SOURCE
     libMMD/Model/MMD/MMDIkSolver.cpp
+    libMMD/Model/MMD/MMDMotionIK.cpp
     libMMD/Model/MMD/MMDMaterial.cpp
     libMMD/Model/MMD/MMDModel.cpp
     libMMD/Model/MMD/MMDMorph.cpp
