@@ -1,0 +1,39 @@
+{
+  "kind": "synthetic-upstream-MoveService",
+  "upstream_revision": "e5c3035",
+  "input_sha256": {
+    "source.pmx": "f3227794cf3ccbe831d0391148a0071cc4ad207cf47dde7539d6d5cff935d766",
+    "target.pmx": "0d16f4b1dc6b14dac1a0b4b4306e0adabedeabf08276d6a769b96d4f2d13e168",
+    "motion.vmd": "12dc36afacd02051dbdf2a9b211b08cc0723fbf6f5119e065c5c25e985b429cf"
+  },
+  "options": {
+    "movement_multiplier": 1,
+    "leg_offset": 0
+  },
+  "horizontal_ratio": 1.3512018612342238,
+  "vertical_ratio": 1.349999949336052,
+  "elapsed_ms": 77.64529998530634,
+  "keys": 31,
+  "runtime_compatibility": [
+    "numpy.float=float",
+    "numpy.int=int",
+    "MFileUtils filename alias"
+  ],
+  "local_offsets": {
+    "センター": [
+      0.0,
+      -0.07453147152388873,
+      -0.12499999284744236
+    ],
+    "左足IK親": [
+      -0.2999999523162842,
+      0.0,
+      0.0
+    ],
+    "右足IK親": [
+      0.2999999523162842,
+      0.0,
+      0.0
+    ]
+  }
+}

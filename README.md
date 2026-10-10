@@ -1,3 +1,9 @@
+## Motion sizing
+
+The SDK-independent `libmmd::sizing` API adapts PMX/VMD motion in stages and is
+part of the existing libMMD library. See [Motion sizing](docs/MotionSizing.md)
+for the public header, boundaries, standalone tests and upstream license.
+
 ## Path
 
 Saba uses UTF-8 as the path string.

@@ -1,4 +1,14 @@
 if (LIBMMD_ENABLE_TEST)
+    include(MotionSizing.cmake)
+    libmmd_add_motion_sizing_targets("${PROJECT_SOURCE_DIR}")
+    add_test(NAME mmd_motion_sizing_test COMMAND mmd_motion_sizing_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/vmd-sizing")
+    add_test(NAME mmd_motion_sizing_advanced_test COMMAND mmd_motion_sizing_advanced_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/vmd-sizing"
+        "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/vmd-sizing-advanced")
+    set_tests_properties(mmd_motion_sizing_test mmd_motion_sizing_advanced_test
+        PROPERTIES LABELS "animation;sizing;regression")
+
     function(libmmd_add_ctest_runner target source)
         set(options)
         set(one_value_args LABELS)

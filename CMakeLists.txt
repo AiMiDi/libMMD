@@ -78,6 +78,7 @@ if (LIBMMD_INSTALL)
     install (DIRECTORY src/libMMD DESTINATION include  FILES_MATCHING PATTERN "*.h")
     # copy Eigen to include
     install (DIRECTORY ${LIBMMD_EIGEN_ROOT}/Eigen DESTINATION include)
+    install (FILES license/vmd_sizing-MIT.txt DESTINATION share/libMMD/licenses)
     if (LIBMMD_BUILD_MMD2OBJ)
         install (TARGETS mmd2obj RUNTIME DESTINATION bin)
     endif()

@@ -44,6 +44,22 @@ set (
 )
 endif ()
 
+# Motion sizing retains its original SSE2 compilation on MSVC. Enabling AVX2
+# for the existing playback library must not also change iterative contact
+# solutions through different Eigen packet/FMA rounding during this migration.
+set(MOTION_SIZING_SOURCE
+    MotionSizing/Analysis/MMDMotionAnalysis.cpp
+    MotionSizing/Pose/MMDMotionPose.cpp
+    MotionSizing/Solvers/MMDMotionStance.cpp
+    MotionSizing/Solvers/MMDMotionConstraints.cpp
+    MotionSizing/Solvers/MMDMotionCamera.cpp
+    MotionSizing/Pipeline/MMDMotionSizing.cpp
+    MotionSizing/Diagnostics/MMDMotionDiagnostics.cpp
+)
+if(MSVC)
+    set_source_files_properties(${MOTION_SIZING_SOURCE} PROPERTIES COMPILE_OPTIONS "/arch:SSE2")
+endif()
+
 # MMD Model
 set (
     MODEL_MMD_SOURCE
@@ -53,6 +69,7 @@ set (
     libMMD/Model/MMD/MMDMorph.cpp
     libMMD/Model/MMD/MMDNode.cpp
     libMMD/Model/MMD/MMDPhysics.cpp
+    ${MOTION_SIZING_SOURCE}
     libMMD/Model/MMD/MMDCamera.cpp
     libMMD/Model/MMD/PMDFile.cpp
     libMMD/Model/MMD/PMDModel.cpp
@@ -75,6 +92,9 @@ set (
     libMMD/Model/MMD/MMDMorph.h
     libMMD/Model/MMD/MMDNode.h
     libMMD/Model/MMD/MMDPhysics.h
+    libMMD/Model/MMD/MMDMotionSizing.h
+    MotionSizing/Pose/MMDMotionPose.h
+    MotionSizing/Solvers/MMDMotionConstraints.h
     libMMD/Model/MMD/MMDCamera.h
     libMMD/Model/MMD/PMDFile.h
     libMMD/Model/MMD/PMDModel.h
@@ -101,7 +121,16 @@ add_library(
     ${MODEL_MMD_HEADER}
 )
 
-target_include_directories(libMMD PUBLIC ${LIBMMD_EIGEN_ROOT})
+target_compile_features(libMMD PUBLIC cxx_std_17)
+target_include_directories(libMMD PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+    "$<INSTALL_INTERFACE:include>"
+    ${LIBMMD_EIGEN_ROOT})
+target_include_directories(libMMD PRIVATE MotionSizing/Pose MotionSizing/Solvers)
+target_compile_options(libMMD PRIVATE
+    "$<$<CXX_COMPILER_ID:MSVC>:/bigobj>"
+    "$<$<CXX_COMPILER_ID:MSVC>:/EHsc>")
+set_target_properties(libMMD PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(libMMD PRIVATE ${PROJECT_SOURCE_DIR}/external/spdlog/include)
 
 if (LIBMMD_BUILD_OBJ_MODEL)

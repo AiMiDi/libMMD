@@ -1,0 +1,39 @@
+{
+  "kind": "synthetic-upstream-stance",
+  "upstream_revision": "e5c3035",
+  "input_sha256": {
+    "source.pmx": "c282fae2c35c0f2a8bd713c562439fdade7f0e641fa0ea36bc8dfd0c7a451684",
+    "target.pmx": "d68045feb5115a450bf60051ca72e207c4d72a7efdd69d6cb22bf4dfee9677f4",
+    "motion.vmd": "6d6be36a8973d5a848fc782181e5f093e474d318b20317938c43fb427f36b0e5"
+  },
+  "options": {
+    "movement_multiplier": 1,
+    "leg_offset": 0
+  },
+  "horizontal_ratio": 1.3512018612342238,
+  "vertical_ratio": 1.349999949336052,
+  "elapsed_ms": 34.4858999887947,
+  "keys": 49,
+  "runtime_compatibility": [
+    "numpy.float=float",
+    "numpy.int=int",
+    "MFileUtils filename alias"
+  ],
+  "local_offsets": {
+    "センター": [
+      0.0,
+      -0.07453147152388873,
+      -0.12499999284744236
+    ],
+    "左足IK親": [
+      -0.2999999523162842,
+      0.0,
+      0.0
+    ],
+    "右足IK親": [
+      0.2999999523162842,
+      0.0,
+      0.0
+    ]
+  }
+}
