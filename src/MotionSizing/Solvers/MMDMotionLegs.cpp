@@ -24,6 +24,26 @@ bool PreservesFootIK(const Pose& pose, const std::vector<int>& controls, const s
     return true;
 }
 
+template<typename Depths, typename Reference>
+bool PreservesLegPairs(const Depths& depths, const Reference& before, double tolerance)
+{
+    for (size_t i = 0; i < static_cast<size_t>(depths.size()); ++i)
+        if (depths[i] > std::max(before[i], tolerance) + 1.e-8) return false;
+    return true;
+}
+
+Eigen::Vector4d BoundCorrection(const Pose& pose, const std::vector<int>& controls,
+                               Eigen::Vector4d value, double budget)
+{
+    for (size_t i = 0; i < controls.size(); ++i)
+    {
+        if (!pose.ikEnabled[controls[i]]) value.segment<2>(i * 2).setZero();
+        const double distance = value.segment<2>(i * 2).norm();
+        if (distance > budget) value.segment<2>(i * 2) *= budget / distance;
+    }
+    return value;
+}
+
 Capsule WorldCapsule(const Pose& pose, size_t index)
 {
     const auto& body = pose.rig.model.m_rigidbodies[index];
@@ -158,25 +178,28 @@ void ApplyLegAvoidance(const Rig& rig, libmmd::VMDFile& motion, const Options& o
             return residual;
         };
         Eigen::VectorXd residual = evaluate(offset);
+        const Eigen::VectorXd originalDepths = residual;
         const Eigen::Vector4d previous = corrections.empty() ? Eigen::Vector4d::Zero().eval() : corrections.back();
         const auto objective = [&](const Eigen::VectorXd& depths, const Eigen::Vector4d& correction) {
             return depths.squaredNorm() + .05 * correction.squaredNorm() + .15 * (correction - previous).squaredNorm();
         };
         // Release a completed contact gradually. Carrying the previous value
         // unchanged would leave a permanent foot offset after the crossing.
-        Eigen::Vector4d warm = .75 * previous;
-        for (size_t i = 0; i < controls.size(); ++i)
-            if (!pose.ikEnabled[controls[i]]) warm.segment<2>(i * 2).setZero();
+        const Eigen::Vector4d warm = BoundCorrection(pose, controls, .75 * previous, budget);
+        CheckCancel(cancel);
         const auto warmResidual = evaluate(warm);
         if (warmResidual.maxCoeff() <= residual.maxCoeff() + 1.e-6 && objective(warmResidual, warm) < objective(residual, offset) &&
+            PreservesLegPairs(warmResidual, originalDepths, options.tolerance) &&
             PreservesFootIK(pose, controls, footErrors, options.tolerance))
         { offset = warm; residual = warmResidual; }
+        bool triedSeeds = false;
         for (unsigned iteration = 0; iteration < std::min(options.iterations, 16u) && residual.maxCoeff() > options.tolerance; ++iteration)
         {
             CheckCancel(cancel);
             Eigen::MatrixXd jacobian(residual.size(), 4);
             for (int axis = 0; axis < 4; ++axis)
             {
+                CheckCancel(cancel);
                 auto positive = offset, negative = offset;
                 positive[axis] += epsilon; negative[axis] -= epsilon;
                 jacobian.col(axis) = (evaluate(positive) - evaluate(negative)) / (2. * epsilon);
@@ -190,16 +213,40 @@ void ApplyLegAvoidance(const Rig& rig, libmmd::VMDFile& motion, const Options& o
             bool accepted = false;
             for (int search = 0; search < 8; ++search)
             {
-                Eigen::Vector4d candidate = offset + std::ldexp(1., -search) * step;
-                for (int foot = 0; foot < 2; ++foot)
-                {
-                    const double distance = candidate.segment<2>(foot * 2).norm();
-                    if (distance > budget) candidate.segment<2>(foot * 2) *= budget / distance;
-                }
+                CheckCancel(cancel);
+                const Eigen::Vector4d candidate = BoundCorrection(pose, controls, offset + std::ldexp(1., -search) * step, budget);
                 const auto next = evaluate(candidate);
                 if (objective(next, candidate) < objective(residual, offset) - 1.e-10 &&
-                    next.maxCoeff() <= residual.maxCoeff() + 1.e-6 && PreservesFootIK(pose, controls, footErrors, options.tolerance))
+                    next.maxCoeff() <= residual.maxCoeff() + 1.e-6 &&
+                    PreservesLegPairs(next, originalDepths, options.tolerance) &&
+                    PreservesFootIK(pose, controls, footErrors, options.tolerance))
                 { offset = candidate; residual = next; accepted = true; break; }
+            }
+            if (!accepted && !triedSeeds)
+            {
+                // Finite differences can stall where the closest capsule
+                // feature changes. Try a bounded deterministic set only once,
+                // keeping the same pose/temporal objective and every guard.
+                triedSeeds = true;
+                const Eigen::Vector2d directions[] = {Eigen::Vector2d::Zero(),
+                    Eigen::Vector2d(1., 0.), Eigen::Vector2d(-1., 0.),
+                    Eigen::Vector2d(0., 1.), Eigen::Vector2d(0., -1.)};
+                for (double radius : {.5 * budget, budget})
+                    for (const auto& left : directions)
+                        for (const auto& right : directions)
+                        {
+                            CheckCancel(cancel);
+                            if (left.isZero() && right.isZero()) continue;
+                            Eigen::Vector4d candidate;
+                            candidate << radius * left, radius * right;
+                            candidate = BoundCorrection(pose, controls, candidate, budget);
+                            const auto next = evaluate(candidate);
+                            if (objective(next, candidate) < objective(residual, offset) - 1.e-10 &&
+                                next.maxCoeff() <= residual.maxCoeff() + 1.e-6 &&
+                                PreservesLegPairs(next, originalDepths, options.tolerance) &&
+                                PreservesFootIK(pose, controls, footErrors, options.tolerance))
+                            { offset = candidate; residual = next; accepted = true; }
+                        }
             }
             if (!accepted) break;
         }
@@ -208,6 +255,7 @@ void ApplyLegAvoidance(const Rig& rig, libmmd::VMDFile& motion, const Options& o
     // Independent frame solutions can choose opposite sides of a crossing.
     // Smooth only the correction, never the authored foot trajectory, then
     // re-evaluate IK and reject smoothing that makes the original collision worse.
+    Eigen::Vector4d previousAccepted = Eigen::Vector4d::Zero();
     for (uint32_t frame = 0; frame <= last; ++frame)
     {
         CheckCancel(cancel);
@@ -225,27 +273,118 @@ void ApplyLegAvoidance(const Rig& rig, libmmd::VMDFile& motion, const Options& o
         const auto original = pose.local;
         const auto footErrors = FootIKErrors(pose, controls);
         const auto originalDepths = LegPenetrations(pose, pairs, options.collisionMargin);
-        const double originalMaximum = *std::max_element(originalDepths.begin(), originalDepths.end());
+        const Eigen::Vector4d previous = BoundCorrection(pose, controls, previousAccepted, budget);
         std::vector<Rotation> parentRotations;
         for (int control : controls)
         {
             const int parent = rig.model.m_bones[control].m_parentBoneIndex;
             parentRotations.push_back(parent < 0 ? Rotation::Identity() : pose.rotations[parent]);
         }
-        std::vector<double> residual;
-        for (int search = 0; search <= 8; ++search)
-        {
+        const auto evaluate = [&](const Eigen::Vector4d& value) {
             pose.local = original;
-            const double strength = search == 8 ? 0. : std::ldexp(1., -search);
             for (size_t i = 0; i < controls.size(); ++i)
                 if (pose.ikEnabled[controls[i]])
                     pose.local[controls[i]].translation += parentRotations[i].conjugate() *
-                        Vector(strength * offset[i * 2], 0., strength * offset[i * 2 + 1]);
+                        Vector(value[i * 2], 0., value[i * 2 + 1]);
             pose.Update();
-            residual = LegPenetrations(pose, pairs, options.collisionMargin);
-            if (*std::max_element(residual.begin(), residual.end()) <= originalMaximum + 1.e-6 &&
-                PreservesFootIK(pose, controls, footErrors, options.tolerance)) break;
+            return LegPenetrations(pose, pairs, options.collisionMargin);
+        };
+        const auto objective = [&](const std::vector<double>& depths, const Eigen::Vector4d& correction) {
+            double squared = 0.;
+            for (double depth : depths) squared += depth * depth;
+            return squared + .05 * correction.squaredNorm() + .15 * (correction - previous).squaredNorm();
+        };
+        Eigen::Vector4d accepted = Eigen::Vector4d::Zero();
+        std::vector<double> residual = originalDepths;
+        // A correction larger than one temporal step needs a safe exit before
+        // the next capsule-feature change. Cache at most four incoming poses
+        // and test a bounded release path, rather than discovering too late
+        // that every continuation fails and snapping the whole offset to zero.
+        std::vector<Pose> releasePoses;
+        const auto canRelease = [&](const Eigen::Vector4d& candidate) {
+            const double step = budget * .25;
+            if (candidate.segment<2>(0).norm() <= step && candidate.segment<2>(2).norm() <= step) return true;
+            if (releasePoses.empty())
+                for (uint32_t ahead = 1; ahead <= 4 && ahead <= last - frame; ++ahead)
+                {
+                    CheckCancel(cancel);
+                    releasePoses.emplace_back(rig, input, frame + ahead);
+                }
+            for (size_t ahead = 0; ahead < releasePoses.size(); ++ahead)
+            {
+                CheckCancel(cancel);
+                auto future = releasePoses[ahead];
+                const auto depths = LegPenetrations(future, pairs, options.collisionMargin);
+                const auto errors = FootIKErrors(future, controls);
+                for (size_t i = 0; i < controls.size(); ++i)
+                {
+                    const double distance = candidate.segment<2>(i * 2).norm();
+                    if (!future.ikEnabled[controls[i]] || distance <= step * (ahead + 1)) continue;
+                    const int parent = rig.model.m_bones[controls[i]].m_parentBoneIndex;
+                    const Rotation rotation = parent < 0 ? Rotation::Identity() : future.rotations[parent];
+                    const double strength = 1. - step * (ahead + 1) / distance;
+                    future.local[controls[i]].translation += rotation.conjugate() *
+                        Vector(strength * candidate[i * 2], 0., strength * candidate[i * 2 + 1]);
+                }
+                future.Update();
+                const auto next = LegPenetrations(future, pairs, options.collisionMargin);
+                if (*std::max_element(next.begin(), next.end()) > *std::max_element(depths.begin(), depths.end()) + 1.e-6 ||
+                    !PreservesLegPairs(next, depths, options.tolerance) || !PreservesFootIK(future, controls, errors, options.tolerance))
+                    return false;
+            }
+            return true;
+        };
+        Eigen::Vector4d release = previous;
+        bool needsRelease = false;
+        for (size_t i = 0; i < controls.size(); ++i)
+        {
+            const double distance = release.segment<2>(i * 2).norm();
+            needsRelease |= distance > budget * .25 + 1.e-8;
+            if (distance > 0.) release.segment<2>(i * 2) *= std::max(0., 1. - budget * .25 / distance);
         }
+        if (frame > 0 && needsRelease)
+        {
+            // Zero is not a continuous fallback when the preceding correction
+            // exceeds one step. Retain the previously validated release path
+            // even if its objective is slightly higher than jumping to zero.
+            // This can occur when a pair below tolerance remains spatially
+            // safe but contributes a larger squared residual during release.
+            CheckCancel(cancel);
+            const auto next = evaluate(release);
+            if (*std::max_element(next.begin(), next.end()) <= *std::max_element(originalDepths.begin(), originalDepths.end()) + 1.e-6 &&
+                PreservesLegPairs(next, originalDepths, options.tolerance) &&
+                PreservesFootIK(pose, controls, footErrors, options.tolerance) && canRelease(release))
+            { accepted = release; residual = next; }
+        }
+        const auto consider = [&](const Eigen::Vector4d& value) {
+            CheckCancel(cancel);
+            const Eigen::Vector4d candidate = BoundCorrection(pose, controls, value, budget);
+            // Spatially safe seeds may lie on the opposite side of a crossing.
+            // Approach them through bounded correction changes; never trade a
+            // large one-frame foot jump for a lower penetration objective.
+            if (frame > 0)
+                for (size_t i = 0; i < controls.size(); ++i)
+                    if ((candidate.segment<2>(i * 2) - previous.segment<2>(i * 2)).norm() > budget * .25 + 1.e-8)
+                        return;
+            const auto next = evaluate(candidate);
+            if (*std::max_element(next.begin(), next.end()) <= *std::max_element(residual.begin(), residual.end()) + 1.e-6 &&
+                PreservesLegPairs(next, originalDepths, options.tolerance) &&
+                PreservesFootIK(pose, controls, footErrors, options.tolerance) &&
+                objective(next, candidate) < objective(residual, accepted) - 1.e-10 && canRelease(candidate))
+            { accepted = candidate; residual = next; }
+        };
+        for (int search = 0; search < 8; ++search) consider(std::ldexp(1., -search) * offset);
+        // Compare against the correction actually written on the preceding
+        // frame, applied relative to this frame's incoming authored pose.
+        // A safe predecessor can avoid a half-step spike introduced by the
+        // filter's discrete backtracking. Decay remains available for release.
+        consider(previous);
+        consider(release);
+        consider(.75 * previous);
+        for (int search = 1; search < 8; ++search) consider(std::ldexp(1., -search) * previous);
+        for (int search = 0; search < 8; ++search) consider(std::ldexp(1., -search) * corrections[size_t(frame)]);
+        residual = evaluate(accepted);
+        previousAccepted = accepted;
         for (size_t i = 0; i < pairs.size(); ++i)
         {
             const auto& body = rig.model.m_rigidbodies[pairs[i].left];

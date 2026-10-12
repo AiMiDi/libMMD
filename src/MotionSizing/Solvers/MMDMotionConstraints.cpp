@@ -1,8 +1,10 @@
 #include "MMDMotionConstraints.h"
 #include "MMDMotionLegs.h"
+#include "MMDMotionFloor.h"
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <Eigen/Cholesky>
 
 namespace libmmd::sizing::detail
 {
@@ -130,13 +132,29 @@ std::vector<size_t> AvoidanceBodies(const Rig& rig, const Options& options, Anal
     return indices;
 }
 
+bool WritablePalm(const Pose& pose, int wrist)
+{
+    const auto flags = static_cast<uint16_t>(pose.rig.model.m_bones[wrist].m_boneFlag);
+    return (flags & 2u) != 0 && (flags & 0x700u) == 0;
+}
+
+void PreserveAvoidancePalms(Pose& pose, const std::vector<Effector>& effectors,
+    const std::vector<size_t>& bodies, const Options& options,
+    const std::vector<Rotation>& incomingOrientations, const std::atomic_bool* cancel);
+
 void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>& effectors,
            const Options& options, Analysis& analysis, const std::atomic_bool* cancel, const ProgressCallback& progress)
 {
     const auto bodies = AvoidanceBodies(rig, options, analysis);
     if (bodies.empty() || effectors.empty()) return;
     const Motion input(motion);
-    const auto controlled = ControlledBones(effectors);
+    auto controlled = ControlledBones(effectors);
+    for (const auto& effector : effectors)
+        if (!effector.finger)
+        {
+            const auto flags = static_cast<uint16_t>(rig.model.m_bones[effector.wrist].m_boneFlag);
+            if ((flags & 2u) != 0 && (flags & 0x700u) == 0) controlled.insert(effector.wrist);
+        }
     const uint32_t last = BakeLimit(input, options, controlled.size());
     Baker baker;
     for (uint32_t frame = 0; frame <= last; ++frame)
@@ -144,6 +162,7 @@ void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>&
         CheckCancel(cancel);
         ReportProgress(progress, ProgressPhase::Avoidance, frame, uint64_t(last) + 1);
         Pose pose(rig, input, frame);
+        const auto incomingOrientations = pose.rotations;
         // Multiple passes let later obstacle pushes settle against earlier ones.
         // Record only the final residual, not transient inner-iteration errors.
         for (unsigned pass = 0; pass < 4; ++pass)
@@ -169,6 +188,7 @@ void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>&
                     }
                 }
             }
+        PreserveAvoidancePalms(pose, effectors, bodies, options, incomingOrientations, cancel);
         for (const auto& effector : effectors)
         {
             if (effector.finger) continue;
@@ -192,36 +212,58 @@ void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>&
 }
 
 struct ContactPoint { Vector source, target; double scale; };
-using ContactEdge = std::pair<size_t, size_t>;
+struct ContactEdge { size_t first, second; double confidence; };
+struct ContactTarget { Vector position; double confidence; };
+using ContactTargets = std::map<size_t, ContactTarget>;
 
-std::map<size_t, Vector> ContactGoals(const std::vector<ContactPoint>& points, const std::vector<ContactEdge>& edges)
+double ContactConfidence(double distance, double threshold)
 {
-    std::vector<size_t> parents(points.size());
-    std::set<size_t> active;
-    for (size_t i = 0; i < parents.size(); ++i) parents[i] = i;
-    const auto root = [&](size_t node) { while (parents[node] != node) node = parents[node]; return node; };
+    // Full influence below 80% of the detection distance, with a smooth release
+    // to zero at its boundary. A zero threshold still means exact coincidence.
+    if (threshold == 0.) return distance == 0. ? 1. : 0.;
+    const double value = std::clamp(5. * (1. - distance / threshold), 0., 1.);
+    return value * value * (3. - 2. * value);
+}
+
+ContactTargets ContactGoals(const std::vector<ContactPoint>& points, const std::vector<ContactEdge>& edges)
+{
+    std::map<size_t, Eigen::Index> active;
+    std::vector<double> confidence(points.size(), 0.);
     for (const auto& edge : edges)
     {
-        parents[root(edge.second)] = root(edge.first);
-        active.insert(edge.first); active.insert(edge.second);
+        if (edge.confidence <= 0.) continue;
+        if (!active.count(edge.first)) active.emplace(edge.first, static_cast<Eigen::Index>(active.size()));
+        if (!active.count(edge.second)) active.emplace(edge.second, static_cast<Eigen::Index>(active.size()));
+        confidence[edge.first] = std::max(confidence[edge.first], edge.confidence);
+        confidence[edge.second] = std::max(confidence[edge.second], edge.confidence);
     }
-    struct Group { Vector source = Vector::Zero(), target = Vector::Zero(); double scale = 0.; size_t count = 0; };
-    std::map<size_t, Group> groups;
-    for (size_t i : active)
+    if (active.empty()) return {};
+    // Solve for landmark displacements, anchored to the incoming pose. A weak
+    // new edge must not abruptly merge two strong groups and move their centroid.
+    // Pair-local desired offsets also avoid changes when the graph connects.
+    const auto count = static_cast<Eigen::Index>(active.size());
+    Eigen::MatrixXd normal = Eigen::MatrixXd::Identity(count, count);
+    Eigen::MatrixXd rhs = Eigen::MatrixXd::Zero(count, 3);
+    for (const auto& edge : edges)
     {
-        auto& group = groups[root(i)];
-        group.source += points[i].source; group.target += points[i].target;
-        group.scale += points[i].scale; ++group.count;
+        if (edge.confidence <= 0.) continue;
+        const auto a = active.at(edge.first), b = active.at(edge.second);
+        const auto& first = points[edge.first];
+        const auto& second = points[edge.second];
+        const double weight = edge.confidence / (1. - edge.confidence + 1.e-6);
+        const Vector offset = (first.source - second.source) * ((first.scale + second.scale) * .5) -
+            (first.target - second.target);
+        normal(a, a) += weight; normal(b, b) += weight;
+        normal(a, b) -= weight; normal(b, a) -= weight;
+        rhs.row(a) += weight * offset.transpose();
+        rhs.row(b) -= weight * offset.transpose();
     }
-    std::map<size_t, Vector> goals;
-    for (size_t i : active)
-    {
-        const auto& group = groups.at(root(i));
-        const double count = static_cast<double>(group.count);
-        // One centroid anchors the group, but each landmark keeps its own
-        // source offset. Nearby fingers/wrists must not collapse to one point.
-        goals.emplace(i, group.target / count + (points[i].source - group.source / count) * (group.scale / count));
-    }
+    const Eigen::MatrixXd displacement = normal.ldlt().solve(rhs);
+    Require(displacement.allFinite(), "Non-finite contact targets");
+    ContactTargets goals;
+    for (const auto& entry : active)
+        goals.emplace(entry.first, ContactTarget{points[entry.first].target + displacement.row(entry.second).transpose(),
+            confidence[entry.first]});
     return goals;
 }
 
@@ -264,14 +306,77 @@ std::vector<double> HandPenetrations(const Pose& pose, const std::vector<Effecto
     return depths;
 }
 
-void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const std::map<size_t, Vector>& targets,
+void PreserveAvoidancePalms(Pose& pose, const std::vector<Effector>& effectors,
+    const std::vector<size_t>& bodies, const Options& options,
+    const std::vector<Rotation>& incomingOrientations, const std::atomic_bool* cancel)
+{
+    const auto before = pose.local;
+    const auto penetrations = HandPenetrations(pose, effectors, bodies, options);
+    std::map<int, Rotation> targets;
+    constexpr double maximumAngle = .5235987755982988;
+    for (const auto& effector : effectors)
+    {
+        if (effector.finger || !WritablePalm(pose, effector.wrist)) continue;
+        const int wrist = effector.wrist, parent = pose.rig.model.m_bones[wrist].m_parentBoneIndex;
+        const Rotation parentRotation = parent < 0 ? Rotation::Identity() : pose.rotations[parent];
+        Rotation local = (parentRotation.conjugate() * incomingOrientations[wrist]).normalized();
+        const double angle = before[wrist].rotation.angularDistance(local);
+        if (angle > maximumAngle)
+            local = before[wrist].rotation.slerp(maximumAngle / angle, local).normalized();
+        targets.emplace(wrist, local);
+    }
+    if (targets.empty()) return;
+    const auto error = [&]() {
+        double sum = 0.;
+        for (const auto& entry : targets)
+        {
+            const double angle = pose.rotations[entry.first].angularDistance(incomingOrientations[entry.first]);
+            sum += angle * angle;
+        }
+        return sum;
+    };
+    const double initialError = error();
+    const auto tryWeight = [&](double weight) {
+        CheckCancel(cancel);
+        pose.local = before;
+        for (const auto& entry : targets)
+            pose.local[entry.first].rotation = before[entry.first].rotation.slerp(weight, entry.second).normalized();
+        pose.Update();
+        if (error() > initialError + 1.e-12) return false;
+        // A wrist-following box/capsule on one hand can affect the other arm.
+        // Preserve all sampled avoidance clearances when counter-rotating palms.
+        const auto depths = HandPenetrations(pose, effectors, bodies, options);
+        for (size_t sample = 0; sample < depths.size(); ++sample)
+            if (depths[sample] > std::max(penetrations[sample], options.tolerance) + 1.e-8) return false;
+        return true;
+    };
+    for (int search = 0; search < 16; ++search)
+    {
+        double safeWeight = std::ldexp(1., -search);
+        if (!tryWeight(safeWeight)) continue;
+        auto accepted = pose.local;
+        double acceptedError = error(), rejectedWeight = search == 0 ? safeWeight : 2. * safeWeight;
+        for (int refine = 0; refine < 12 && rejectedWeight > safeWeight; ++refine)
+        {
+            const double middle = .5 * (safeWeight + rejectedWeight);
+            if (tryWeight(middle) && error() <= acceptedError + 1.e-12)
+            { safeWeight = middle; accepted = pose.local; acceptedError = error(); }
+            else rejectedWeight = middle;
+        }
+        pose.local = std::move(accepted); pose.Update();
+        return;
+    }
+    pose.local = before; pose.Update();
+}
+
+void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const ContactTargets& targets,
                        const std::vector<size_t>& bodies, const Options& options, const std::atomic_bool* cancel)
 {
     if (targets.empty()) return;
     const auto before = pose.local;
     const auto orientations = pose.rotations;
     const auto penetrations = HandPenetrations(pose, effectors, bodies, options);
-    std::map<int, std::pair<Vector, size_t>> wristTargets;
+    std::map<int, std::pair<Vector, double>> wristTargets;
     std::map<int, std::vector<int>> chains;
     for (const auto& entry : targets)
     {
@@ -280,27 +385,30 @@ void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const
         // A constrained/append-driven wrist cannot be freely counter-rotated.
         // Keep that hand unchanged and let diagnostics expose the residual.
         if ((flags & 2u) == 0 || (flags & 0x700u) != 0) continue;
-        auto accumulated = wristTargets.emplace(effector.wrist, std::make_pair(Vector::Zero().eval(), size_t(0)));
-        accumulated.first->second.first += entry.second - pose.positions[effector.target] + pose.positions[effector.wrist];
-        ++accumulated.first->second.second;
+        if (entry.second.confidence <= 0.) continue;
+        auto accumulated = wristTargets.emplace(effector.wrist, std::make_pair(Vector::Zero().eval(), 0.));
+        // A newly active weak fingertip must not acquire an equal vote and
+        // halve a strong wrist/finger correction on this same hand.
+        accumulated.first->second.first += entry.second.confidence *
+            (entry.second.position - pose.positions[effector.target] + pose.positions[effector.wrist]);
+        accumulated.first->second.second += entry.second.confidence;
         chains[effector.wrist] = effector.joints;
     }
     std::vector<Goal> goals;
     for (const auto& entry : wristTargets)
-        goals.push_back({entry.first, chains.at(entry.first), entry.second.first / static_cast<double>(entry.second.second)});
+        goals.push_back({entry.first, chains.at(entry.first), entry.second.first / entry.second.second});
     const auto error = [&]() {
         double sum = 0.;
-        for (const auto& entry : targets) sum += (entry.second - pose.positions[effectors[entry.first].target]).squaredNorm();
+        for (const auto& entry : targets)
+            sum += entry.second.confidence * (entry.second.position - pose.positions[effectors[entry.first].target]).squaredNorm();
         return sum;
     };
     const double initialError = error();
     constexpr double maximumAngle = .5235987755982988; // 30 degrees from the incoming pose, not per iteration.
     SolveGoals(pose, goals, options, cancel, maximumAngle);
     const auto solved = pose.local;
-    for (int search = 0; search < 16; ++search)
-    {
+    const auto tryWeight = [&](double weight) {
         CheckCancel(cancel);
-        const double weight = std::ldexp(1., -search);
         pose.local = before;
         for (const auto& chain : chains)
             for (int joint : chain.second)
@@ -315,12 +423,34 @@ void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const
             bounded &= before[wrist].rotation.angularDistance(pose.local[wrist].rotation) <= maximumAngle + 1.e-9;
         }
         pose.Update();
-        if (!bounded || error() > initialError + 1.e-12) continue;
+        if (!bounded || error() > initialError + 1.e-12) return false;
         const auto candidateDepths = HandPenetrations(pose, effectors, bodies, options);
         bool collisionSafe = true;
         for (size_t i = 0; i < candidateDepths.size(); ++i)
             if (candidateDepths[i] > std::max(penetrations[i], options.tolerance) + 1.e-8) { collisionSafe = false; break; }
-        if (collisionSafe) return;
+        return collisionSafe;
+    };
+    for (int search = 0; search < 16; ++search)
+    {
+        double safeWeight = std::ldexp(1., -search);
+        if (!tryWeight(safeWeight)) continue;
+        auto accepted = pose.local;
+        double acceptedError = error();
+        double rejectedWeight = search == 0 ? safeWeight : 2. * safeWeight;
+        // A compensated wrist can just exceed its budget at weight 1. Simply
+        // taking 0.5 creates a visible jump when 1 becomes legal next frame.
+        // Refine the bracket while retaining only fully validated candidates;
+        // never trade a larger step for worse residual or relaxed protection.
+        for (int refine = 0; refine < 12 && rejectedWeight > safeWeight; ++refine)
+        {
+            const double middle = (safeWeight + rejectedWeight) * .5;
+            if (tryWeight(middle) && error() <= acceptedError + 1.e-12)
+            { safeWeight = middle; accepted = pose.local; acceptedError = error(); }
+            else rejectedWeight = middle;
+        }
+        pose.local = std::move(accepted);
+        pose.Update();
+        return;
     }
     pose.local = before;
     pose.Update();
@@ -349,12 +479,19 @@ void Contact(const Rig& source, const Rig& target, const libmmd::VMDFile& origin
         }
     if (controlled.empty()) return;
     const uint32_t last = BakeLimit(targetMotion, options, controlled.size());
+    std::vector<std::vector<FootFloorTarget>> footTargets(size_t(last) + 1, std::vector<FootFloorTarget>(feet.size()));
+    const uint64_t contactWork = (feet.empty() ? 1 : 2) * (uint64_t(last) + 1);
+    double maximumWithoutFeet = analysis.maxResidual;
+    const auto recordHand = [&](uint32_t frame, const std::string& name, const Vector& goal, const Vector& actual) {
+        Record(analysis, options, Stage::Contact, frame, name, goal, actual);
+        maximumWithoutFeet = std::max(maximumWithoutFeet, (goal - actual).norm());
+    };
     Baker baker;
     for (uint32_t frame = 0; frame <= last; ++frame)
     {
         CheckCancel(cancel);
         Pose sourcePose(source, sourceMotion, frame), pose(target, targetMotion, frame);
-        ReportProgress(progress, ProgressPhase::Contact, frame, uint64_t(last) + 1);
+        ReportProgress(progress, ProgressPhase::Contact, frame, contactWork);
         std::vector<ContactPoint> points;
         for (const auto& effector : effectors)
             points.push_back({sourcePose.positions[effector.source], pose.positions[effector.target], effector.handScale});
@@ -365,48 +502,57 @@ void Contact(const Rig& source, const Rig& target, const libmmd::VMDFile& origin
                 const auto& first = effectors[a]; const auto& second = effectors[b];
                 if (first.name.substr(0, 3) == second.name.substr(0, 3) || first.finger != second.finger ||
                     (first.finger ? !options.fingerContact : !options.wristContact)) continue;
-                if ((sourcePose.positions[static_cast<size_t>(first.source)] - sourcePose.positions[static_cast<size_t>(second.source)]).norm() <= options.contactDistance)
-                    pairs.emplace_back(a, b);
+                const double confidence = ContactConfidence((points[a].source - points[b].source).norm(), options.contactDistance);
+                if (confidence > 0.) pairs.push_back({a, b, confidence});
             }
         const auto contactGoals = ContactGoals(points, pairs);
         std::vector<std::pair<size_t, Vector>> floors;
         if (options.floorContact)
             for (size_t i = 0; i < effectors.size(); ++i)
-                if (std::abs(sourcePose.positions[static_cast<size_t>(effectors[i].source)].y() - options.floorHeight) <= options.contactDistance)
+            {
+                const double confidence = ContactConfidence(std::abs(points[i].source.y() - options.floorHeight), options.contactDistance);
+                if (confidence > 0.)
                 {
                     Vector goal = pose.positions[static_cast<size_t>(effectors[i].target)];
-                    goal.y() = options.floorHeight;
+                    goal.y() += confidence * (options.floorHeight - goal.y());
                     floors.emplace_back(i, goal);
                 }
-        // Simultaneous position goals prevent later fingers from undoing an
-        // earlier finger through their shared arm. Average duplicate targets.
-        std::map<size_t, std::pair<Vector, size_t>> accumulated;
-        const auto addGoal = [&](size_t index, const Vector& goal) {
-            auto entry = accumulated.emplace(index, std::make_pair(Vector::Zero().eval(), size_t(0)));
-            entry.first->second.first += goal; ++entry.first->second.second;
-        };
-        for (const auto& goal : contactGoals) addGoal(goal.first, goal.second);
-        for (const auto& floor : floors) addGoal(floor.first, floor.second);
-        std::map<size_t, Vector> goals;
-        for (const auto& entry : accumulated)
-            goals.emplace(entry.first, entry.second.first / static_cast<double>(entry.second.second));
+            }
+        // Blend simultaneous targets without giving a newly appearing weak
+        // floor/contact edge half of an already strong constraint's influence.
+        auto goals = contactGoals;
+        for (const auto& floor : floors)
+        {
+            const size_t index = floor.first;
+            const double floorConfidence = ContactConfidence(std::abs(points[index].source.y() - options.floorHeight), options.contactDistance);
+            Vector rawFloor = points[index].target;
+            rawFloor.y() = options.floorHeight;
+            auto entry = goals.emplace(index, ContactTarget{points[index].target, 0.});
+            const double contactConfidence = entry.first->second.confidence;
+            const double weight = floorConfidence / std::max(1., contactConfidence + floorConfidence);
+            entry.first->second.position += weight * (rawFloor - entry.first->second.position);
+            entry.first->second.confidence = std::max(contactConfidence, floorConfidence);
+        }
         SolveHandContacts(pose, effectors, goals, bodies, options, cancel);
         for (const auto& goal : contactGoals)
-            Record(analysis, options, Stage::Contact, frame, effectors[goal.first].name, goal.second,
+            recordHand(frame, effectors[goal.first].name, goal.second.position,
                    pose.positions[effectors[goal.first].target]);
         for (const auto& floor : floors)
-            Record(analysis, options, Stage::Contact, frame, effectors[floor.first].name, floor.second, pose.positions[static_cast<size_t>(effectors[floor.first].target)]);
-        for (const auto& foot : feet)
+            recordHand(frame, effectors[floor.first].name, floor.second, pose.positions[static_cast<size_t>(effectors[floor.first].target)]);
+        for (size_t footIndex = 0; footIndex < feet.size(); ++footIndex)
         {
+            const auto& foot = feet[footIndex];
             const size_t s = static_cast<size_t>(foot.first), t = static_cast<size_t>(foot.second);
             // IK goals are ankle-height controls. Ground contact is displacement
             // from the source bind ankle plane, not a forced ankle at y = 0.
             const double height = sourcePose.positions[s].y() - source.model.m_bones[s].m_position.y();
-            if (std::abs(height - options.floorHeight) <= options.contactDistance)
+            const double confidence = ContactConfidence(std::abs(height - options.floorHeight), options.contactDistance);
+            if (confidence > 0.)
             {
                 if (!sourcePose.ikEnabled[s] || !pose.ikEnabled[t]) continue;
                 Vector goal = pose.positions[t];
-                goal.y() = target.model.m_bones[t].m_position.y() + options.floorHeight;
+                goal.y() += confidence * (target.model.m_bones[t].m_position.y() + options.floorHeight - goal.y());
+                const double incomingY = pose.positions[t].y();
                 const int parent = target.model.m_bones[t].m_parentBoneIndex;
                 const Rotation parentRotation = parent < 0 ? Rotation::Identity() : pose.rotations[static_cast<size_t>(parent)];
                 const auto beforeFloor = pose.local[t].translation;
@@ -414,22 +560,56 @@ void Contact(const Rig& source, const Rig& target, const libmmd::VMDFile& origin
                 const auto& targetBone = target.model.m_bones[t];
                 const int ankle = (static_cast<uint16_t>(targetBone.m_boneFlag) & 0x20u) != 0 ? targetBone.m_ikTargetBoneIndex : -1;
                 const double beforeIK = ankle < 0 ? 0. : (pose.positions[ankle] - pose.positions[t]).norm();
-                pose.local[t].translation += parentRotation.conjugate() * (goal - pose.positions[t]);
-                pose.Update();
-                const auto afterDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
-                bool rejected = ankle >= 0 && (pose.positions[ankle] - pose.positions[t]).norm() > beforeIK + options.tolerance;
-                for (size_t i = 0; i < afterDepths.size(); ++i)
-                    if (afterDepths[i] > std::max(beforeDepths[i], options.tolerance) + 1.e-8)
-                    { rejected = true; break; }
-                if (rejected) { pose.local[t].translation = beforeFloor; pose.Update(); }
-                Record(analysis, options, Stage::Contact, frame, target.model.m_bones[t].m_name, goal,
-                       pose.positions[ankle >= 0 ? ankle : static_cast<int>(t)]);
+                const Vector correction = parentRotation.conjugate() * (goal - pose.positions[t]);
+                // A full floor displacement can fail near an extended leg.
+                // Try bounded smaller steps before restoring the incoming pose;
+                // every candidate must satisfy the same collision and IK guards.
+                const auto safeStep = [&](double strength) {
+                    CheckCancel(cancel);
+                    pose.local[t].translation = beforeFloor + strength * correction;
+                    pose.Update();
+                    const auto afterDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
+                    if (ankle >= 0 && (pose.positions[ankle] - pose.positions[t]).norm() > beforeIK + options.tolerance) return false;
+                    for (size_t i = 0; i < afterDepths.size(); ++i)
+                        if (afterDepths[i] > std::max(beforeDepths[i], options.tolerance) + 1.e-8) return false;
+                    return true;
+                };
+                double upper = 1.;
+                for (int search = 0; search <= 8; ++search)
+                {
+                    double lower = search == 8 ? 0. : std::ldexp(1., -search);
+                    if (!safeStep(lower)) { upper = lower; continue; }
+                    const int floorPoint = ankle >= 0 ? ankle : static_cast<int>(t);
+                    double acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
+                    // Keep every original guard and refine only inside the last
+                    // rejected/accepted bracket. Discrete half steps otherwise
+                    // produce visible stair steps in a slowly moving foot.
+                    for (int refine = 0; refine < 12 && upper > lower; ++refine)
+                    {
+                        const double middle = (lower + upper) * .5;
+                        if (safeStep(middle) && (pose.positions[floorPoint] - goal).squaredNorm() <= acceptedError + 1.e-12)
+                        {
+                            lower = middle;
+                            acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
+                        }
+                        else upper = middle;
+                    }
+                    pose.local[t].translation = beforeFloor + lower * correction;
+                    pose.Update();
+                    break;
+                }
+                const Vector actual = pose.positions[ankle >= 0 ? ankle : static_cast<int>(t)];
+                const size_t diagnosticIndex = analysis.samples.size() < options.maxDiagnostics ? analysis.samples.size() : static_cast<size_t>(-1);
+                Record(analysis, options, Stage::Contact, frame, target.model.m_bones[t].m_name, goal, actual);
+                footTargets[frame][footIndex] = {true, goal, pose.positions[t].y() - incomingY,
+                    (goal - actual).norm(), diagnosticIndex};
             }
         }
         for (int bone : controlled) baker.Store(pose, bone, frame);
     }
     baker.Finish(output);
-    ReportProgress(progress, ProgressPhase::Contact, uint64_t(last) + 1, uint64_t(last) + 1);
+    if (!feet.empty()) ApplyFloorContinuity(source, target, targetMotion, output, feet, footTargets, maximumWithoutFeet, options, analysis, cancel, progress);
+    else ReportProgress(progress, ProgressPhase::Contact, contactWork, contactWork);
 }
 }
 
@@ -458,6 +638,7 @@ void ApplyBatchConstraints(const std::vector<CharacterInput>& input, BatchResult
     std::vector<std::vector<Effector>> effectors;
     std::vector<Baker> bakers(input.size());
     uint32_t last = 0;
+    size_t participants = 0;
     for (size_t i = 0; i < input.size(); ++i)
     {
         sources.emplace_back(std::make_unique<Rig>(input[i].source));
@@ -465,11 +646,20 @@ void ApplyBatchConstraints(const std::vector<CharacterInput>& input, BatchResult
         originals.emplace_back(input[i].motion);
         motions.emplace_back(result.characters[i].stages[static_cast<size_t>(Stage::Contact)]);
         effectors.push_back(input[i].options.multiContact ? Effectors(*sources.back(), *targets.back(), input[i].options, result.characters[i].analysis) : std::vector<Effector>());
-        last = std::max(last, motions.back().LastFrame());
+        if (!ControlledHands(effectors.back()).empty())
+        {
+            ++participants;
+            last = std::max(last, motions.back().LastFrame());
+        }
     }
+    if (participants < 2) return;
     for (size_t i = 0; i < input.size(); ++i)
+    {
+        const auto controlled = ControlledHands(effectors[i]);
+        if (controlled.empty()) continue;
         Require(static_cast<uint64_t>(last) + 1 <= input[i].options.maxBakeFrames &&
-                ControlledHands(effectors[i]).size() <= input[i].options.maxBakedKeys / (static_cast<uint64_t>(last) + 1), "Batch exceeds bake budget");
+                controlled.size() <= input[i].options.maxBakedKeys / (static_cast<uint64_t>(last) + 1), "Batch exceeds bake budget");
+    }
     std::vector<std::vector<size_t>> bodies;
     for (size_t i = 0; i < input.size(); ++i)
         bodies.push_back(input[i].options.avoidance ? AvoidanceBodies(*targets[i], input[i].options, result.characters[i].analysis) : std::vector<size_t>());
@@ -497,13 +687,13 @@ void ApplyBatchConstraints(const std::vector<CharacterInput>& input, BatchResult
                         const auto& first = effectors[a][ai]; const auto& second = effectors[b][bi];
                         if (first.finger != second.finger) continue;
                         const double threshold = std::min(input[a].options.contactDistance, input[b].options.contactDistance);
-                        if ((sourcePoses[a].positions[static_cast<size_t>(first.source)] - sourcePoses[b].positions[static_cast<size_t>(second.source)]).norm() <= threshold)
-                            pairs.emplace_back(offsets[a] + ai, offsets[b] + bi);
+                        const double confidence = ContactConfidence((sourcePoses[a].positions[first.source] - sourcePoses[b].positions[second.source]).norm(), threshold);
+                        if (confidence > 0.) pairs.push_back({offsets[a] + ai, offsets[b] + bi, confidence});
                     }
         const auto contactGoals = ContactGoals(points, pairs);
         for (size_t i = 0; i < input.size(); ++i)
         {
-            std::map<size_t, Vector> goals;
+            ContactTargets goals;
             for (size_t j = 0; j < effectors[i].size(); ++j)
             {
                 const auto found = contactGoals.find(offsets[i] + j);
@@ -512,7 +702,7 @@ void ApplyBatchConstraints(const std::vector<CharacterInput>& input, BatchResult
             SolveHandContacts(poses[i], effectors[i], goals, bodies[i], input[i].options, cancel);
             for (const auto& goal : goals)
                 Record(result.characters[i].analysis, input[i].options, Stage::MultiCharacter, frame,
-                       effectors[i][goal.first].name, goal.second, poses[i].positions[effectors[i][goal.first].target]);
+                       effectors[i][goal.first].name, goal.second.position, poses[i].positions[effectors[i][goal.first].target]);
             for (int bone : ControlledHands(effectors[i])) bakers[i].Store(poses[i], bone, frame);
         }
     }

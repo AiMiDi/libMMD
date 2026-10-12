@@ -52,6 +52,7 @@ set(MOTION_SIZING_SOURCE
     MotionSizing/Pose/MMDMotionPose.cpp
     MotionSizing/Solvers/MMDMotionStance.cpp
     MotionSizing/Solvers/MMDMotionConstraints.cpp
+    MotionSizing/Solvers/MMDMotionFloor.cpp
     MotionSizing/Solvers/MMDMotionLegs.cpp
     MotionSizing/Solvers/MMDMotionCamera.cpp
     MotionSizing/Pipeline/MMDMotionSizing.cpp
@@ -97,6 +98,7 @@ set (
     libMMD/Model/MMD/MMDMotionSizing.h
     MotionSizing/Pose/MMDMotionPose.h
     MotionSizing/Solvers/MMDMotionConstraints.h
+    MotionSizing/Solvers/MMDMotionFloor.h
     libMMD/Model/MMD/MMDCamera.h
     libMMD/Model/MMD/PMDFile.h
     libMMD/Model/MMD/PMDModel.h
