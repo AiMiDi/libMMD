@@ -246,6 +246,11 @@ void Pose::Update()
 
 void Baker::Merge(Baker&& block)
 {
+    if (keys_.empty())
+    {
+        keys_.swap(block.keys_);
+        return;
+    }
     keys_.merge(block.keys_);
     Require(block.keys_.empty(), "Overlapping parallel bake blocks");
 }
@@ -256,10 +261,17 @@ void Baker::Store(const Pose& pose, int bone, uint32_t frame)
     const auto& value = pose.local[index];
     Require(value.translation.cast<float>().allFinite() && value.rotation.coeffs().allFinite(), "Non-finite baked pose");
     libmmd::VMDMotion key;
-    std::u16string utf16;
-    Require(libmmd::ConvU8ToU16(pose.rig.model.m_bones[index].m_name, utf16), "Invalid UTF-8 bone name");
-    key.m_boneName.Set(libmmd::ConvertU16ToSjisString(utf16).c_str());
-    Require(key.m_boneName.ToUtf8String() == pose.rig.model.m_bones[index].m_name, "Bone name cannot fit VMD: " + pose.rig.model.m_bones[index].m_name);
+    const auto& name = pose.rig.model.m_bones[index].m_name;
+    auto encoded = names_.find(name);
+    if (encoded == names_.end())
+    {
+        std::u16string utf16;
+        Require(libmmd::ConvU8ToU16(name, utf16), "Invalid UTF-8 bone name");
+        key.m_boneName.Set(libmmd::ConvertU16ToSjisString(utf16).c_str());
+        Require(key.m_boneName.ToUtf8String() == name, "Bone name cannot fit VMD: " + name);
+        encoded = names_.emplace(name, key.m_boneName).first;
+    }
+    key.m_boneName = encoded->second;
     key.m_frame = frame;
     key.m_translate = value.translation.cast<float>();
     key.m_quaternion = value.rotation.normalized().cast<float>();

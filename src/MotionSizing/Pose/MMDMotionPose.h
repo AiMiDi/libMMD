@@ -70,6 +70,9 @@ public:
     void Finish(libmmd::VMDFile& file) const;
 private:
     std::map<std::pair<std::string, uint32_t>, libmmd::VMDMotion> keys_;
+    // Names are validated lazily for authored tracks only. Uncontrolled model
+    // bones may have names which cannot fit a VMD channel and must not fail.
+    std::unordered_map<std::string, decltype(libmmd::VMDMotion{}.m_boneName)> names_;
 };
 
 void CheckCancel(const std::atomic_bool* cancel);

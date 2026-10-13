@@ -156,6 +156,25 @@ void Fixtures(const std::string& directory)
     Check(libmmd::ReadPMXFile(&source, (directory + "/source.pmx").c_str()), "Source fixture");
     Check(libmmd::ReadPMXFile(&target, (directory + "/target.pmx").c_str()), "Target fixture");
     Check(libmmd::ReadVMDFile(&motion, (directory + "/motion.vmd").c_str()), "Motion fixture");
+    {
+        auto namesModel = target;
+        namesModel.m_bones[0].m_name = std::string(80, 'x');
+        const Rig rig(namesModel);
+        const Pose pose(rig, Motion(motion), 0);
+        const int center = rig.Find("センター");
+        Check(center >= 0, "Missing name-cache test track");
+        Baker valid;
+        valid.Store(pose, center, 0);
+        valid.Store(pose, center, 1);
+        libmmd::VMDFile baked;
+        valid.Finish(baked);
+        Check(baked.m_motions.size() == 2 && baked.m_motions[0].m_boneName.ToUtf8String() == "センター",
+              "Name cache changed a valid VMD name or eagerly rejected an uncontrolled bone");
+        bool rejected = false;
+        try { valid.Store(pose, 0, 2); }
+        catch (const std::runtime_error& error) { rejected = std::string(error.what()).starts_with("Bone name cannot fit VMD:"); }
+        Check(rejected, "Cached baking accepted an unrepresentable authored name");
+    }
     std::map<std::string, libmmd::VMDMotion> tails;
     for (const auto& key : motion.m_motions)
     {
