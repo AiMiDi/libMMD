@@ -94,6 +94,47 @@ void CheckScheduler()
     Check(caught, "Worker failure not propagated in frame order");
 }
 
+void CheckRepeatedShutdown()
+{
+    // Mix workers returning while the coordinator consumes/throws with an
+    // externally requested cancellation during computation. Every return must
+    // release all contexts, including lanes whose result was never consumed.
+    for (unsigned repeat = 0; repeat < 200; ++repeat)
+    {
+        std::atomic_int alive{0};
+        struct Context
+        {
+            std::atomic_int& alive;
+            explicit Context(std::atomic_int& count) : alive(count) { ++alive; }
+            ~Context() { --alive; }
+        };
+        std::atomic_bool cancel{false};
+        const unsigned mode = repeat % 3;
+        bool caught = false;
+        try
+        {
+            ProcessFrameBlocks(513, 4, &cancel,
+                [&] { return std::make_unique<Context>(alive); },
+                [&](Context*, uint32_t first, uint32_t, const std::atomic_bool* stop) {
+                    std::this_thread::yield();
+                    if (mode == 2 && first == 64) throw std::runtime_error("worker shutdown");
+                    if (mode == 0 && first == 0) cancel.store(true);
+                    CheckCancel(stop);
+                    return first;
+                }, [&](uint32_t, uint32_t, uint32_t) {
+                    if (mode == 1) throw std::runtime_error("observer shutdown");
+                });
+        }
+        catch (const std::runtime_error& error)
+        {
+            const std::string expected = mode == 0 ? "Sizing cancelled" :
+                mode == 1 ? "observer shutdown" : "worker shutdown";
+            caught = error.what() == expected;
+        }
+        Check(caught && alive == 0, "Shutdown lost an error or left a worker context alive");
+    }
+}
+
 std::vector<uint8_t> Read(const std::string& path)
 {
     std::ifstream stream(std::filesystem::u8path(path), std::ios::binary);
@@ -197,7 +238,7 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc == 2) { CheckScheduler(); Fixtures(argv[1]); }
+        if (argc == 2) { CheckScheduler(); CheckRepeatedShutdown(); Fixtures(argv[1]); }
         else if (argc == 5 && std::string(argv[1]) == "--assets") Assets(argv[2], argv[3], unsigned(std::stoul(argv[4])));
         else throw std::runtime_error("Expected fixture directory, or --assets manifest output repeats");
         std::cout << "parallel motion sizing passed\n";

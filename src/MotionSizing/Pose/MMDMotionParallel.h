@@ -53,16 +53,13 @@ void ProcessFrameBlocks(uint32_t frames, unsigned requested, const std::atomic_b
     }
     std::atomic_bool stop{false};
     std::mutex mutex;
-    std::condition_variable condition;
+    std::condition_variable_any condition;
     std::vector<std::jthread> threads;
     threads.reserve(workers);
     try
     {
         for (unsigned index = 0; index < workers; ++index)
             threads.emplace_back([&, index](std::stop_token token) {
-                // jthread's stop request also wakes a lane waiting for the
-                // coordinator to consume its previous block.
-                std::stop_callback wake(token, [&] { condition.notify_all(); });
                 auto& lane = lanes[index];
                 for (uint64_t first = uint64_t(index) * FrameBlockSize; first < frames;
                      first += uint64_t(workers) * FrameBlockSize)
@@ -77,8 +74,11 @@ void ProcessFrameBlocks(uint32_t frames, unsigned requested, const std::atomic_b
                         lane.block.emplace(std::move(block));
                         lane.ready = true;
                         condition.notify_all();
-                        condition.wait(lock, [&] {
-                            return !lane.ready || token.stop_requested() || stop.load(std::memory_order_relaxed);
+                        // The stop-aware wait registers its cancellation wake
+                        // atomically with waiting. A bare stop_callback/notify
+                        // can otherwise race the predicate-to-wait interval.
+                        condition.wait(lock, token, [&] {
+                            return !lane.ready || stop.load(std::memory_order_relaxed);
                         });
                     }
                     catch (...)
@@ -112,13 +112,17 @@ void ProcessFrameBlocks(uint32_t frames, unsigned requested, const std::atomic_b
     }
     catch (...)
     {
-        stop.store(true, std::memory_order_relaxed);
+        {
+            // Publish the cooperative stop under the same mutex as wait
+            // predicates before notifying or requesting jthread shutdown.
+            std::lock_guard lock(mutex);
+            stop.store(true, std::memory_order_relaxed);
+        }
         condition.notify_all();
         // Join before destroying contexts or propagating observer/worker errors.
         threads.clear();
         throw;
     }
-
 }
 
 struct FrameBlockResult
