@@ -69,19 +69,19 @@ namespace libmmd
 		template <typename... Args>
 		void Info(const char* message, const Args&... args)
 		{
-			m_logger->info(message, args...);
+			m_logger->info(SPDLOG_FMT_RUNTIME(message), args...);
 		}
 
 		template <typename... Args>
 		void Warn(const char* message, const Args&... args)
 		{
-			m_logger->warn(message, args...);
+			m_logger->warn(SPDLOG_FMT_RUNTIME(message), args...);
 		}
 
 		template <typename... Args>
 		void Error(const char* message, const Args&... args)
 		{
-			m_logger->error(message, args...);
+			m_logger->error(SPDLOG_FMT_RUNTIME(message), args...);
 		}
 
 	private:

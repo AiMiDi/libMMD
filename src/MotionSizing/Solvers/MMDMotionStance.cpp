@@ -2,6 +2,7 @@
 // is a geometric swing/twist implementation; it is not upstream's elbow search.
 #include "MMDMotionPose.h"
 #include "MMDMotionProgress.h"
+#include "MMDMotionParallel.h"
 #include <algorithm>
 #include <cmath>
 
@@ -122,62 +123,78 @@ void Twist(const Rig& target, libmmd::VMDFile& motion, const Options& options, A
     const Motion original(motion);
     const uint32_t last = BakeLimit(original, options, chains.size() * 3);
     Baker baker;
-    for (uint32_t frame = 0; frame <= last; ++frame)
-    {
-        CheckCancel(cancel);
-        ReportProgress(progress, ProgressPhase::Twist, frame, uint64_t(last) + 1);
-        Pose pose(target, original, frame);
-        for (const auto& chain : chains)
-        {
-            const size_t p = static_cast<size_t>(chain.parent), t = static_cast<size_t>(chain.twist), c = static_cast<size_t>(chain.child);
-            const Rotation oldParent = pose.local[p].rotation.normalized();
-            const Rotation oldTwist = pose.local[t].rotation.normalized();
-            const Rotation oldChild = pose.local[c].rotation.normalized();
-            const Vector a = (target.model.m_bones[t].m_position - target.model.m_bones[p].m_position).cast<double>() + pose.local[t].translation;
-            const Vector b = (target.model.m_bones[c].m_position - target.model.m_bones[t].m_position).cast<double>() + pose.local[c].translation;
-            const Vector endpoint = oldParent * (a + oldTwist * b);
-            const Vector projected = chain.axis * oldParent.vec().dot(chain.axis);
-            Rotation transfer(oldParent.w(), projected.x(), projected.y(), projected.z());
-            if (transfer.squaredNorm() < 1.e-16) transfer = Rotation::Identity();
-            else transfer.normalize();
-            const auto candidate = [&](double fraction) {
-                const Rotation delta = Rotation::Identity().slerp(fraction, transfer).normalized();
-                return std::make_pair(delta, (delta * oldTwist).normalized());
-            };
-            const auto error = [&](double fraction) {
-                const auto value = candidate(fraction);
-                // Parent rotation aligns the endpoint but cannot change its
-                // radius: bound the irreducible error of an offset twist axis.
-                return std::abs((a + value.second * b).norm() - endpoint.norm());
-            };
-            double fraction = 1.;
-            if (error(fraction) > options.tolerance * .5)
+    const Rig& sharedTarget = target;
+    ReportProgress(progress, ProgressPhase::Twist, 0, uint64_t(last) + 1);
+    ProcessFrameBlocks(last + 1, options.workerCount, cancel,
+        [&] { return std::make_unique<Rig>(sharedTarget.model); },
+        [&](Rig* context, uint32_t first, uint32_t end, const std::atomic_bool* cancel) {
+            const Rig& target = context ? *context : sharedTarget;
+            FrameBlockResult block;
+            Analysis& analysis = block.analysis;
+            Baker& baker = block.baker;
+            for (uint32_t frame = first; frame < end; ++frame)
             {
-                double low = 0., high = 1.;
-                for (int iteration = 0; iteration < 24; ++iteration)
+                CheckCancel(cancel);
+                if (!context) ReportProgress(progress, ProgressPhase::Twist, frame, uint64_t(last) + 1);
+                Pose pose(target, original, frame);
+                for (const auto& chain : chains)
                 {
-                    const double mid = (low + high) * .5;
-                    if (error(mid) <= options.tolerance * .5) low = mid; else high = mid;
+                    const size_t p = static_cast<size_t>(chain.parent), t = static_cast<size_t>(chain.twist), c = static_cast<size_t>(chain.child);
+                    const Rotation oldParent = pose.local[p].rotation.normalized();
+                    const Rotation oldTwist = pose.local[t].rotation.normalized();
+                    const Rotation oldChild = pose.local[c].rotation.normalized();
+                    const Vector a = (target.model.m_bones[t].m_position - target.model.m_bones[p].m_position).cast<double>() + pose.local[t].translation;
+                    const Vector b = (target.model.m_bones[c].m_position - target.model.m_bones[t].m_position).cast<double>() + pose.local[c].translation;
+                    const Vector endpoint = oldParent * (a + oldTwist * b);
+                    const Vector projected = chain.axis * oldParent.vec().dot(chain.axis);
+                    Rotation transfer(oldParent.w(), projected.x(), projected.y(), projected.z());
+                    if (transfer.squaredNorm() < 1.e-16) transfer = Rotation::Identity();
+                    else transfer.normalize();
+                    const auto candidate = [&](double fraction) {
+                        const Rotation delta = Rotation::Identity().slerp(fraction, transfer).normalized();
+                        return std::make_pair(delta, (delta * oldTwist).normalized());
+                    };
+                    const auto error = [&](double fraction) {
+                        const auto value = candidate(fraction);
+                        // Parent rotation aligns the endpoint but cannot change its
+                        // radius: bound the irreducible error of an offset twist axis.
+                        return std::abs((a + value.second * b).norm() - endpoint.norm());
+                    };
+                    double fraction = 1.;
+                    if (error(fraction) > options.tolerance * .5)
+                    {
+                        double low = 0., high = 1.;
+                        for (int iteration = 0; iteration < 24; ++iteration)
+                        {
+                            const double mid = (low + high) * .5;
+                            if (error(mid) <= options.tolerance * .5) low = mid; else high = mid;
+                        }
+                        fraction = low;
+                    }
+                    const auto value = candidate(fraction);
+                    Rotation nextParent = (oldParent * value.first.conjugate()).normalized();
+                    const Vector moved = nextParent * (a + value.second * b);
+                    if (moved.squaredNorm() > 1.e-16 && endpoint.squaredNorm() > 1.e-16)
+                        nextParent = (Rotation::FromTwoVectors(moved, endpoint) * nextParent).normalized();
+                    const Vector before = pose.positions[c];
+                    pose.local[p].rotation = nextParent;
+                    pose.local[t].rotation = value.second;
+                    // Keep the child's orientation, hence all downstream local poses.
+                    pose.local[c].rotation = ((nextParent * value.second).conjugate() * oldParent * oldTwist * oldChild).normalized();
+                    pose.Update();
+                    Record(analysis, options, Stage::Twist, frame, target.model.m_bones[c].m_name, before, pose.positions[c]);
+                    baker.Store(pose, chain.parent, frame);
+                    baker.Store(pose, chain.twist, frame);
+                    baker.Store(pose, chain.child, frame);
                 }
-                fraction = low;
             }
-            const auto value = candidate(fraction);
-            Rotation nextParent = (oldParent * value.first.conjugate()).normalized();
-            const Vector moved = nextParent * (a + value.second * b);
-            if (moved.squaredNorm() > 1.e-16 && endpoint.squaredNorm() > 1.e-16)
-                nextParent = (Rotation::FromTwoVectors(moved, endpoint) * nextParent).normalized();
-            const Vector before = pose.positions[c];
-            pose.local[p].rotation = nextParent;
-            pose.local[t].rotation = value.second;
-            // Keep the child's orientation, hence all downstream local poses.
-            pose.local[c].rotation = ((nextParent * value.second).conjugate() * oldParent * oldTwist * oldChild).normalized();
-            pose.Update();
-            Record(analysis, options, Stage::Twist, frame, target.model.m_bones[c].m_name, before, pose.positions[c]);
-            baker.Store(pose, chain.parent, frame);
-            baker.Store(pose, chain.twist, frame);
-            baker.Store(pose, chain.child, frame);
-        }
-    }
+            return block;
+        },
+        [&](uint32_t first, uint32_t end, FrameBlockResult block) {
+            MergeFrameAnalysis(analysis, block.analysis, options);
+            baker.Merge(std::move(block.baker));
+            ReportProgress(progress, ProgressPhase::Twist, end, uint64_t(last) + 1);
+        });
     baker.Finish(motion);
     ReportProgress(progress, ProgressPhase::Twist, uint64_t(last) + 1, uint64_t(last) + 1);
 }

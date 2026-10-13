@@ -1,6 +1,7 @@
 #include "MMDMotionConstraints.h"
 #include "MMDMotionLegs.h"
 #include "MMDMotionFloor.h"
+#include "MMDMotionParallel.h"
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -157,56 +158,72 @@ void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>&
         }
     const uint32_t last = BakeLimit(input, options, controlled.size());
     Baker baker;
-    for (uint32_t frame = 0; frame <= last; ++frame)
-    {
-        CheckCancel(cancel);
-        ReportProgress(progress, ProgressPhase::Avoidance, frame, uint64_t(last) + 1);
-        Pose pose(rig, input, frame);
-        const auto incomingOrientations = pose.rotations;
-        // Multiple passes let later obstacle pushes settle against earlier ones.
-        // Record only the final residual, not transient inner-iteration errors.
-        for (unsigned pass = 0; pass < 4; ++pass)
-            for (const auto& effector : effectors)
+    const Rig& sharedRig = rig;
+    ReportProgress(progress, ProgressPhase::Avoidance, 0, uint64_t(last) + 1);
+    ProcessFrameBlocks(last + 1, options.workerCount, cancel,
+        [&] { return std::make_unique<Rig>(sharedRig.model); },
+        [&](Rig* context, uint32_t first, uint32_t end, const std::atomic_bool* cancel) {
+            const Rig& rig = context ? *context : sharedRig;
+            FrameBlockResult block;
+            Analysis& analysis = block.analysis;
+            Baker& baker = block.baker;
+            for (uint32_t frame = first; frame < end; ++frame)
             {
-                if (effector.finger) continue;
-                std::vector<int> points{effector.target};
-                const int elbow = rig.Find(effector.name.substr(0, 3) + "ひじ");
-                if (elbow >= 0) points.push_back(elbow);
-                for (int point : points)
-                {
-                    std::vector<int> joints;
-                    for (int joint : effector.joints)
-                        if (joint != point && rig.Ancestor(joint, point)) joints.push_back(joint);
-                    for (size_t bodyIndex : bodies)
+                CheckCancel(cancel);
+                if (!context) ReportProgress(progress, ProgressPhase::Avoidance, frame, uint64_t(last) + 1);
+                Pose pose(rig, input, frame);
+                const auto incomingOrientations = pose.rotations;
+                // Multiple passes let later obstacle pushes settle against earlier ones.
+                // Record only the final residual, not transient inner-iteration errors.
+                for (unsigned pass = 0; pass < 4; ++pass)
+                    for (const auto& effector : effectors)
                     {
-                        const auto& body = rig.model.m_rigidbodies[bodyIndex];
-                        // An arm must not push away from a collider on itself.
-                        if (body.m_boneIndex >= 0 && rig.Ancestor(effector.joints.back(), body.m_boneIndex)) continue;
-                        const Vector position = pose.positions[static_cast<size_t>(point)];
-                        const Vector target = ProjectOutside(body, pose, position, options.collisionMargin);
-                        if ((position - target).norm() > options.tolerance) Solve(pose, point, joints, target, options, cancel);
+                        if (effector.finger) continue;
+                        std::vector<int> points{effector.target};
+                        const int elbow = rig.Find(effector.name.substr(0, 3) + "ひじ");
+                        if (elbow >= 0) points.push_back(elbow);
+                        for (int point : points)
+                        {
+                            std::vector<int> joints;
+                            for (int joint : effector.joints)
+                                if (joint != point && rig.Ancestor(joint, point)) joints.push_back(joint);
+                            for (size_t bodyIndex : bodies)
+                            {
+                                const auto& body = rig.model.m_rigidbodies[bodyIndex];
+                                // An arm must not push away from a collider on itself.
+                                if (body.m_boneIndex >= 0 && rig.Ancestor(effector.joints.back(), body.m_boneIndex)) continue;
+                                const Vector position = pose.positions[static_cast<size_t>(point)];
+                                const Vector target = ProjectOutside(body, pose, position, options.collisionMargin);
+                                if ((position - target).norm() > options.tolerance) Solve(pose, point, joints, target, options, cancel);
+                            }
+                        }
+                    }
+                PreserveAvoidancePalms(pose, effectors, bodies, options, incomingOrientations, cancel);
+                for (const auto& effector : effectors)
+                {
+                    if (effector.finger) continue;
+                    for (int point : {effector.target, rig.Find(effector.name.substr(0, 3) + "ひじ")})
+                    {
+                        if (point < 0) continue;
+                        for (size_t bodyIndex : bodies)
+                        {
+                            const auto& body = rig.model.m_rigidbodies[bodyIndex];
+                            if (body.m_boneIndex >= 0 && rig.Ancestor(effector.joints.back(), body.m_boneIndex)) continue;
+                            const Vector actual = pose.positions[static_cast<size_t>(point)];
+                            Record(analysis, options, Stage::Avoidance, frame, rig.model.m_bones[static_cast<size_t>(point)].m_name,
+                                   ProjectOutside(body, pose, actual, options.collisionMargin), actual);
+                        }
                     }
                 }
+                for (int bone : controlled) baker.Store(pose, bone, frame);
             }
-        PreserveAvoidancePalms(pose, effectors, bodies, options, incomingOrientations, cancel);
-        for (const auto& effector : effectors)
-        {
-            if (effector.finger) continue;
-            for (int point : {effector.target, rig.Find(effector.name.substr(0, 3) + "ひじ")})
-            {
-                if (point < 0) continue;
-                for (size_t bodyIndex : bodies)
-                {
-                    const auto& body = rig.model.m_rigidbodies[bodyIndex];
-                    if (body.m_boneIndex >= 0 && rig.Ancestor(effector.joints.back(), body.m_boneIndex)) continue;
-                    const Vector actual = pose.positions[static_cast<size_t>(point)];
-                    Record(analysis, options, Stage::Avoidance, frame, rig.model.m_bones[static_cast<size_t>(point)].m_name,
-                           ProjectOutside(body, pose, actual, options.collisionMargin), actual);
-                }
-            }
-        }
-        for (int bone : controlled) baker.Store(pose, bone, frame);
-    }
+            return block;
+        },
+        [&](uint32_t first, uint32_t end, FrameBlockResult block) {
+            MergeFrameAnalysis(analysis, block.analysis, options);
+            baker.Merge(std::move(block.baker));
+            ReportProgress(progress, ProgressPhase::Avoidance, end, uint64_t(last) + 1);
+        });
     baker.Finish(motion);
     ReportProgress(progress, ProgressPhase::Avoidance, uint64_t(last) + 1, uint64_t(last) + 1);
 }
@@ -482,131 +499,173 @@ void Contact(const Rig& source, const Rig& target, const libmmd::VMDFile& origin
     std::vector<std::vector<FootFloorTarget>> footTargets(size_t(last) + 1, std::vector<FootFloorTarget>(feet.size()));
     const uint64_t contactWork = (feet.empty() ? 1 : 2) * (uint64_t(last) + 1);
     double maximumWithoutFeet = analysis.maxResidual;
-    const auto recordHand = [&](uint32_t frame, const std::string& name, const Vector& goal, const Vector& actual) {
-        Record(analysis, options, Stage::Contact, frame, name, goal, actual);
-        maximumWithoutFeet = std::max(maximumWithoutFeet, (goal - actual).norm());
-    };
-    Baker baker;
-    for (uint32_t frame = 0; frame <= last; ++frame)
+    struct ContactRigs
     {
-        CheckCancel(cancel);
-        Pose sourcePose(source, sourceMotion, frame), pose(target, targetMotion, frame);
-        ReportProgress(progress, ProgressPhase::Contact, frame, contactWork);
-        std::vector<ContactPoint> points;
-        for (const auto& effector : effectors)
-            points.push_back({sourcePose.positions[effector.source], pose.positions[effector.target], effector.handScale});
-        std::vector<ContactEdge> pairs;
-        for (size_t a = 0; a < effectors.size(); ++a)
-            for (size_t b = a + 1; b < effectors.size(); ++b)
+        Rig source, target;
+        ContactRigs(const libmmd::PMXFile& s, const libmmd::PMXFile& t) : source(s), target(t) {}
+    };
+    struct ContactBlock : FrameBlockResult
+    {
+        std::vector<std::vector<FootFloorTarget>> feet;
+        double maximumWithoutFeet = 0.;
+    };
+    const Rig& sharedSource = source;
+    const Rig& sharedTarget = target;
+    Baker baker;
+    ReportProgress(progress, ProgressPhase::Contact, 0, contactWork);
+    ProcessFrameBlocks(last + 1, options.workerCount, cancel,
+        [&] { return std::make_unique<ContactRigs>(sharedSource.model, sharedTarget.model); },
+        [&](ContactRigs* context, uint32_t first, uint32_t end, const std::atomic_bool* cancel) {
+            const Rig& source = context ? context->source : sharedSource;
+            const Rig& target = context ? context->target : sharedTarget;
+            ContactBlock block;
+            block.feet.resize(end - first, std::vector<FootFloorTarget>(feet.size()));
+            Analysis& analysis = block.analysis;
+            Baker& baker = block.baker;
+            const auto recordHand = [&](uint32_t frame, const std::string& name, const Vector& goal, const Vector& actual) {
+                Record(analysis, options, Stage::Contact, frame, name, goal, actual);
+                block.maximumWithoutFeet = std::max(block.maximumWithoutFeet, (goal - actual).norm());
+            };
+            for (uint32_t frame = first; frame < end; ++frame)
             {
-                const auto& first = effectors[a]; const auto& second = effectors[b];
-                if (first.name.substr(0, 3) == second.name.substr(0, 3) || first.finger != second.finger ||
-                    (first.finger ? !options.fingerContact : !options.wristContact)) continue;
-                const double confidence = ContactConfidence((points[a].source - points[b].source).norm(), options.contactDistance);
-                if (confidence > 0.) pairs.push_back({a, b, confidence});
-            }
-        const auto contactGoals = ContactGoals(points, pairs);
-        std::vector<std::pair<size_t, Vector>> floors;
-        if (options.floorContact)
-            for (size_t i = 0; i < effectors.size(); ++i)
-            {
-                const double confidence = ContactConfidence(std::abs(points[i].source.y() - options.floorHeight), options.contactDistance);
-                if (confidence > 0.)
-                {
-                    Vector goal = pose.positions[static_cast<size_t>(effectors[i].target)];
-                    goal.y() += confidence * (options.floorHeight - goal.y());
-                    floors.emplace_back(i, goal);
-                }
-            }
-        // Blend simultaneous targets without giving a newly appearing weak
-        // floor/contact edge half of an already strong constraint's influence.
-        auto goals = contactGoals;
-        for (const auto& floor : floors)
-        {
-            const size_t index = floor.first;
-            const double floorConfidence = ContactConfidence(std::abs(points[index].source.y() - options.floorHeight), options.contactDistance);
-            Vector rawFloor = points[index].target;
-            rawFloor.y() = options.floorHeight;
-            auto entry = goals.emplace(index, ContactTarget{points[index].target, 0.});
-            const double contactConfidence = entry.first->second.confidence;
-            const double weight = floorConfidence / std::max(1., contactConfidence + floorConfidence);
-            entry.first->second.position += weight * (rawFloor - entry.first->second.position);
-            entry.first->second.confidence = std::max(contactConfidence, floorConfidence);
-        }
-        SolveHandContacts(pose, effectors, goals, bodies, options, cancel);
-        for (const auto& goal : contactGoals)
-            recordHand(frame, effectors[goal.first].name, goal.second.position,
-                   pose.positions[effectors[goal.first].target]);
-        for (const auto& floor : floors)
-            recordHand(frame, effectors[floor.first].name, floor.second, pose.positions[static_cast<size_t>(effectors[floor.first].target)]);
-        for (size_t footIndex = 0; footIndex < feet.size(); ++footIndex)
-        {
-            const auto& foot = feet[footIndex];
-            const size_t s = static_cast<size_t>(foot.first), t = static_cast<size_t>(foot.second);
-            // IK goals are ankle-height controls. Ground contact is displacement
-            // from the source bind ankle plane, not a forced ankle at y = 0.
-            const double height = sourcePose.positions[s].y() - source.model.m_bones[s].m_position.y();
-            const double confidence = ContactConfidence(std::abs(height - options.floorHeight), options.contactDistance);
-            if (confidence > 0.)
-            {
-                if (!sourcePose.ikEnabled[s] || !pose.ikEnabled[t]) continue;
-                Vector goal = pose.positions[t];
-                goal.y() += confidence * (target.model.m_bones[t].m_position.y() + options.floorHeight - goal.y());
-                const double incomingY = pose.positions[t].y();
-                const int parent = target.model.m_bones[t].m_parentBoneIndex;
-                const Rotation parentRotation = parent < 0 ? Rotation::Identity() : pose.rotations[static_cast<size_t>(parent)];
-                const auto beforeFloor = pose.local[t].translation;
-                const auto beforeDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
-                const auto& targetBone = target.model.m_bones[t];
-                const int ankle = (static_cast<uint16_t>(targetBone.m_boneFlag) & 0x20u) != 0 ? targetBone.m_ikTargetBoneIndex : -1;
-                const double beforeIK = ankle < 0 ? 0. : (pose.positions[ankle] - pose.positions[t]).norm();
-                const Vector correction = parentRotation.conjugate() * (goal - pose.positions[t]);
-                // A full floor displacement can fail near an extended leg.
-                // Try bounded smaller steps before restoring the incoming pose;
-                // every candidate must satisfy the same collision and IK guards.
-                const auto safeStep = [&](double strength) {
-                    CheckCancel(cancel);
-                    pose.local[t].translation = beforeFloor + strength * correction;
-                    pose.Update();
-                    const auto afterDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
-                    if (ankle >= 0 && (pose.positions[ankle] - pose.positions[t]).norm() > beforeIK + options.tolerance) return false;
-                    for (size_t i = 0; i < afterDepths.size(); ++i)
-                        if (afterDepths[i] > std::max(beforeDepths[i], options.tolerance) + 1.e-8) return false;
-                    return true;
-                };
-                double upper = 1.;
-                for (int search = 0; search <= 8; ++search)
-                {
-                    double lower = search == 8 ? 0. : std::ldexp(1., -search);
-                    if (!safeStep(lower)) { upper = lower; continue; }
-                    const int floorPoint = ankle >= 0 ? ankle : static_cast<int>(t);
-                    double acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
-                    // Keep every original guard and refine only inside the last
-                    // rejected/accepted bracket. Discrete half steps otherwise
-                    // produce visible stair steps in a slowly moving foot.
-                    for (int refine = 0; refine < 12 && upper > lower; ++refine)
+                CheckCancel(cancel);
+                Pose sourcePose(source, sourceMotion, frame), pose(target, targetMotion, frame);
+                if (!context) ReportProgress(progress, ProgressPhase::Contact, frame, contactWork);
+                std::vector<ContactPoint> points;
+                for (const auto& effector : effectors)
+                    points.push_back({sourcePose.positions[effector.source], pose.positions[effector.target], effector.handScale});
+                std::vector<ContactEdge> pairs;
+                for (size_t a = 0; a < effectors.size(); ++a)
+                    for (size_t b = a + 1; b < effectors.size(); ++b)
                     {
-                        const double middle = (lower + upper) * .5;
-                        if (safeStep(middle) && (pose.positions[floorPoint] - goal).squaredNorm() <= acceptedError + 1.e-12)
-                        {
-                            lower = middle;
-                            acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
-                        }
-                        else upper = middle;
+                        const auto& first = effectors[a]; const auto& second = effectors[b];
+                        if (first.name.substr(0, 3) == second.name.substr(0, 3) || first.finger != second.finger ||
+                            (first.finger ? !options.fingerContact : !options.wristContact)) continue;
+                        const double confidence = ContactConfidence((points[a].source - points[b].source).norm(), options.contactDistance);
+                        if (confidence > 0.) pairs.push_back({a, b, confidence});
                     }
-                    pose.local[t].translation = beforeFloor + lower * correction;
-                    pose.Update();
-                    break;
+                const auto contactGoals = ContactGoals(points, pairs);
+                std::vector<std::pair<size_t, Vector>> floors;
+                if (options.floorContact)
+                    for (size_t i = 0; i < effectors.size(); ++i)
+                    {
+                        const double confidence = ContactConfidence(std::abs(points[i].source.y() - options.floorHeight), options.contactDistance);
+                        if (confidence > 0.)
+                        {
+                            Vector goal = pose.positions[static_cast<size_t>(effectors[i].target)];
+                            goal.y() += confidence * (options.floorHeight - goal.y());
+                            floors.emplace_back(i, goal);
+                        }
+                    }
+                // Blend simultaneous targets without giving a newly appearing weak
+                // floor/contact edge half of an already strong constraint's influence.
+                auto goals = contactGoals;
+                for (const auto& floor : floors)
+                {
+                    const size_t index = floor.first;
+                    const double floorConfidence = ContactConfidence(std::abs(points[index].source.y() - options.floorHeight), options.contactDistance);
+                    Vector rawFloor = points[index].target;
+                    rawFloor.y() = options.floorHeight;
+                    auto entry = goals.emplace(index, ContactTarget{points[index].target, 0.});
+                    const double contactConfidence = entry.first->second.confidence;
+                    const double weight = floorConfidence / std::max(1., contactConfidence + floorConfidence);
+                    entry.first->second.position += weight * (rawFloor - entry.first->second.position);
+                    entry.first->second.confidence = std::max(contactConfidence, floorConfidence);
                 }
-                const Vector actual = pose.positions[ankle >= 0 ? ankle : static_cast<int>(t)];
-                const size_t diagnosticIndex = analysis.samples.size() < options.maxDiagnostics ? analysis.samples.size() : static_cast<size_t>(-1);
-                Record(analysis, options, Stage::Contact, frame, target.model.m_bones[t].m_name, goal, actual);
-                footTargets[frame][footIndex] = {true, goal, pose.positions[t].y() - incomingY,
-                    (goal - actual).norm(), diagnosticIndex};
+                SolveHandContacts(pose, effectors, goals, bodies, options, cancel);
+                for (const auto& goal : contactGoals)
+                    recordHand(frame, effectors[goal.first].name, goal.second.position,
+                           pose.positions[effectors[goal.first].target]);
+                for (const auto& floor : floors)
+                    recordHand(frame, effectors[floor.first].name, floor.second, pose.positions[static_cast<size_t>(effectors[floor.first].target)]);
+                for (size_t footIndex = 0; footIndex < feet.size(); ++footIndex)
+                {
+                    const auto& foot = feet[footIndex];
+                    const size_t s = static_cast<size_t>(foot.first), t = static_cast<size_t>(foot.second);
+                    // IK goals are ankle-height controls. Ground contact is displacement
+                    // from the source bind ankle plane, not a forced ankle at y = 0.
+                    const double height = sourcePose.positions[s].y() - source.model.m_bones[s].m_position.y();
+                    const double confidence = ContactConfidence(std::abs(height - options.floorHeight), options.contactDistance);
+                    if (confidence > 0.)
+                    {
+                        if (!sourcePose.ikEnabled[s] || !pose.ikEnabled[t]) continue;
+                        Vector goal = pose.positions[t];
+                        goal.y() += confidence * (target.model.m_bones[t].m_position.y() + options.floorHeight - goal.y());
+                        const double incomingY = pose.positions[t].y();
+                        const int parent = target.model.m_bones[t].m_parentBoneIndex;
+                        const Rotation parentRotation = parent < 0 ? Rotation::Identity() : pose.rotations[static_cast<size_t>(parent)];
+                        const auto beforeFloor = pose.local[t].translation;
+                        const auto beforeDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
+                        const auto& targetBone = target.model.m_bones[t];
+                        const int ankle = (static_cast<uint16_t>(targetBone.m_boneFlag) & 0x20u) != 0 ? targetBone.m_ikTargetBoneIndex : -1;
+                        const double beforeIK = ankle < 0 ? 0. : (pose.positions[ankle] - pose.positions[t]).norm();
+                        const Vector correction = parentRotation.conjugate() * (goal - pose.positions[t]);
+                        // A full floor displacement can fail near an extended leg.
+                        // Try bounded smaller steps before restoring the incoming pose;
+                        // every candidate must satisfy the same collision and IK guards.
+                        const auto safeStep = [&](double strength) {
+                            CheckCancel(cancel);
+                            pose.local[t].translation = beforeFloor + strength * correction;
+                            pose.Update();
+                            const auto afterDepths = LegPenetrations(pose, legPairs, options.collisionMargin);
+                            if (ankle >= 0 && (pose.positions[ankle] - pose.positions[t]).norm() > beforeIK + options.tolerance) return false;
+                            for (size_t i = 0; i < afterDepths.size(); ++i)
+                                if (afterDepths[i] > std::max(beforeDepths[i], options.tolerance) + 1.e-8) return false;
+                            return true;
+                        };
+                        double upper = 1.;
+                        for (int search = 0; search <= 8; ++search)
+                        {
+                            double lower = search == 8 ? 0. : std::ldexp(1., -search);
+                            if (!safeStep(lower)) { upper = lower; continue; }
+                            const int floorPoint = ankle >= 0 ? ankle : static_cast<int>(t);
+                            double acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
+                            // Keep every original guard and refine only inside the last
+                            // rejected/accepted bracket. Discrete half steps otherwise
+                            // produce visible stair steps in a slowly moving foot.
+                            for (int refine = 0; refine < 12 && upper > lower; ++refine)
+                            {
+                                const double middle = (lower + upper) * .5;
+                                if (safeStep(middle) && (pose.positions[floorPoint] - goal).squaredNorm() <= acceptedError + 1.e-12)
+                                {
+                                    lower = middle;
+                                    acceptedError = (pose.positions[floorPoint] - goal).squaredNorm();
+                                }
+                                else upper = middle;
+                            }
+                            pose.local[t].translation = beforeFloor + lower * correction;
+                            pose.Update();
+                            break;
+                        }
+                        const Vector actual = pose.positions[ankle >= 0 ? ankle : static_cast<int>(t)];
+                        const size_t diagnosticIndex = analysis.samples.size() < options.maxDiagnostics ? analysis.samples.size() : static_cast<size_t>(-1);
+                        Record(analysis, options, Stage::Contact, frame, target.model.m_bones[t].m_name, goal, actual);
+                        block.feet[frame - first][footIndex] = {true, goal, pose.positions[t].y() - incomingY,
+                            (goal - actual).norm(), diagnosticIndex};
+                    }
+                }
+                for (int bone : controlled) baker.Store(pose, bone, frame);
             }
-        }
-        for (int bone : controlled) baker.Store(pose, bone, frame);
-    }
+            return block;
+        },
+        [&](uint32_t first, uint32_t end, ContactBlock block) {
+            const size_t diagnosticOffset = analysis.samples.size();
+            MergeFrameAnalysis(analysis, block.analysis, options);
+            maximumWithoutFeet = std::max(maximumWithoutFeet, block.maximumWithoutFeet);
+            for (uint32_t frame = first; frame < end; ++frame)
+            {
+                auto& row = block.feet[frame - first];
+                for (auto& foot : row)
+                    if (foot.diagnosticIndex != static_cast<size_t>(-1))
+                    {
+                        foot.diagnosticIndex += diagnosticOffset;
+                        if (foot.diagnosticIndex >= analysis.samples.size()) foot.diagnosticIndex = static_cast<size_t>(-1);
+                    }
+                footTargets[frame] = std::move(row);
+            }
+            baker.Merge(std::move(block.baker));
+            ReportProgress(progress, ProgressPhase::Contact, end, contactWork);
+        });
     baker.Finish(output);
     if (!feet.empty()) ApplyFloorContinuity(source, target, targetMotion, output, feet, footTargets, maximumWithoutFeet, options, analysis, cancel, progress);
     else ReportProgress(progress, ProgressPhase::Contact, contactWork, contactWork);

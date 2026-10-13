@@ -66,6 +66,7 @@ class Baker
 {
 public:
     void Store(const Pose& pose, int bone, uint32_t frame);
+    void Merge(Baker&& block);
     void Finish(libmmd::VMDFile& file) const;
 private:
     std::map<std::pair<std::string, uint32_t>, libmmd::VMDMotion> keys_;

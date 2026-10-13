@@ -375,7 +375,7 @@ namespace libmmd
 			for (const auto& chain : m_chanins)
 			{
 				auto* chainNode = m_nodeMan.GetNode(chain);
-				auto findPos = chainNode->GetName().find(u8"ひざ");
+				auto findPos = chainNode->GetName().find("ひざ");
 				bool isKnee = false;
 				if (findPos != std::string::npos)
 				{

@@ -22,9 +22,20 @@ namespace fs = std::filesystem;
 
 namespace libmmd
 {
+	namespace
+	{
+		// C++20 u8string uses char8_t; the public API retains UTF-8 bytes
+		// in std::string for C++17 callers, without locale conversion.
+		std::string Utf8Bytes(const fs::path& path)
+		{
+			const auto encoded = path.u8string();
+			return std::string(reinterpret_cast<const char*>(encoded.data()), encoded.size());
+		}
+	}
+
 	std::string PathUtil::GetCWD()
 	{
-		return fs::current_path().u8string();
+		return Utf8Bytes(fs::current_path());
 	}
 
 	std::string PathUtil::GetExecutablePath()
@@ -35,7 +46,7 @@ namespace libmmd
 		{
 			return "";
 		}
-		return fs::path(modulePath.data()).u8string();
+		return Utf8Bytes(fs::path(modulePath.data()));
 #elif __APPLE__
 		char pathbuf[PATH_MAX + 1];
 		uint32_t bufsize = sizeof(pathbuf);
@@ -75,34 +86,34 @@ namespace libmmd
 				}
 			}
 		}
-		return result.u8string();
+		return Utf8Bytes(result);
 	}
 
 	std::string PathUtil::Combine(const std::string& a, const std::string& b)
 	{
 		if (a.empty()) return b;
 		if (b.empty()) return a;
-		return (fs::u8path(a) / fs::u8path(b)).u8string();
+		return Utf8Bytes(fs::u8path(a) / fs::u8path(b));
 	}
 
 	std::string PathUtil::GetDirectoryName(const std::string& path)
 	{
-		return fs::u8path(path).parent_path().u8string();
+		return Utf8Bytes(fs::u8path(path).parent_path());
 	}
 
 	std::string PathUtil::GetFilename(const std::string& path)
 	{
-		return fs::u8path(path).filename().u8string();
+		return Utf8Bytes(fs::u8path(path).filename());
 	}
 
 	std::string PathUtil::GetFilenameWithoutExt(const std::string& path)
 	{
-		return fs::u8path(path).stem().u8string();
+		return Utf8Bytes(fs::u8path(path).stem());
 	}
 
 	std::string PathUtil::GetExt(const std::string& path)
 	{
-		std::string ext = fs::u8path(path).extension().u8string();
+		std::string ext = Utf8Bytes(fs::u8path(path).extension());
 		// extension() returns with leading dot (e.g. ".txt"), strip it
 		if (!ext.empty() && ext[0] == '.')
 		{

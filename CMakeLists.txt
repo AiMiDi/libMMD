@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10...3.27)
+cmake_minimum_required(VERSION 3.22...3.27)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(libMMD CXX)

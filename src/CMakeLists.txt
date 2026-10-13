@@ -125,7 +125,7 @@ add_library(
     ${MODEL_MMD_HEADER}
 )
 
-target_compile_features(libMMD PUBLIC cxx_std_17)
+target_compile_features(libMMD PUBLIC cxx_std_17 PRIVATE cxx_std_20)
 target_include_directories(libMMD PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
     "$<INSTALL_INTERFACE:include>"

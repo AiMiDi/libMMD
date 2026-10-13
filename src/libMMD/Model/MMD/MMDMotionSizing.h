@@ -58,6 +58,10 @@ struct Options
     size_t maxDiagnostics = 20000;
     // Empty selects bone-following rigid bodies outside the controlled arm.
     std::vector<std::string> avoidanceBodies;
+    // Independent frame stages only. 1 retains the serial reference path;
+    // 0 selects up to four workers, explicit values are bounded to sixteen.
+    // Temporal leg/floor stages and result publication remain ordered.
+    unsigned workerCount = 0;
 };
 
 struct ConstraintSample

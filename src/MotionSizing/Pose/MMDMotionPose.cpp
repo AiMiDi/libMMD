@@ -244,6 +244,12 @@ void Pose::Update()
     }
 }
 
+void Baker::Merge(Baker&& block)
+{
+    keys_.merge(block.keys_);
+    Require(block.keys_.empty(), "Overlapping parallel bake blocks");
+}
+
 void Baker::Store(const Pose& pose, int bone, uint32_t frame)
 {
     const size_t index = static_cast<size_t>(bone);

@@ -47,7 +47,11 @@ The private implementation has five responsibilities under `src/MotionSizing`:
 | Diagnostics | Residuals, targets and bounded diagnostic samples |
 
 Private headers are not installed. Public types use libMMD PMX/VMD data and
-Eigen; core code does not contain host scene objects. Solvers use double
+Eigen; core code does not contain host scene objects. The implementation now
+requires CMake 3.22 and a C++20 compiler/standard library. The exported target
+retains a C++17 public-header requirement; C++20 is a private implementation
+requirement, so SDK consumers need not compile their own code as C++20.
+Solvers use double
 precision internally and write VMD floats. On MSVC the sizing source
 files explicitly retain SSE2, independently of the playback library's AVX2
 option. This preserves the original solver's Eigen alignment and iterative
@@ -57,6 +61,29 @@ library and exchange scalar arrays only. The bridge uses playback float
 precision. Changing vectorization can alter contact solver convergence, so
 such changes require separate numerical validation rather than being treated
 as a transparent build optimization.
+
+## Independent frame execution
+
+`Options::workerCount` selects frame workers: zero automatically chooses up to
+four hardware threads, one retains the serial reference path, and explicit
+values are bounded to sixteen. Short phases use the serial path. Twist,
+arm avoidance and the frame-local contact/floor solve use a fixed `std::jthread`
+pool with a separate playback IK context for each lane. Motion/model input is
+read-only, and only a bounded window of 64-frame blocks is in flight.
+
+The calling thread merges baked keys and diagnostics in frame order, retaining
+the original diagnostic cap and floor diagnostic indices. It alone invokes the
+progress callback. Callback/worker exceptions and cancellation join all workers
+before destroying their contexts or returning. Temporal leg avoidance and the
+second floor-continuity pass remain serial; batches still process characters
+in order and camera adaptation is unchanged. This does not change instruction
+sets, solver iterations, tolerances or per-frame arithmetic.
+
+Local verification is registered as `mmd_motion_sizing_parallel_test`; its
+opt-in `--assets <four-path UTF-8 manifest> <output directory> <repeats>` mode
+compares complete serialized stage/camera bytes and analysis for serial/four
+workers while recording interleaved phase/total timings. Licensed model assets
+remain external. CI does not run this test or its benchmark mode.
 
 ## Boundaries
 
