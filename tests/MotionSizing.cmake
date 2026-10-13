@@ -17,7 +17,9 @@ function(libmmd_add_motion_sizing_targets libmmd_root)
     # Licensed local assets are opt-in and are not registered with CTest.
     add_executable(mmd_motion_sizing_assets_probe EXCLUDE_FROM_ALL
         "${libmmd_root}/tests/MMDMotionSizingAssetsProbe.cpp")
-    foreach(target IN ITEMS mmd_motion_sizing_test mmd_motion_sizing_advanced_test mmd_motion_sizing_parallel_test mmd_motion_sizing_assets_probe)
+    add_executable(mmd_motion_contact_quality_probe EXCLUDE_FROM_ALL
+        "${libmmd_root}/tests/MMDMotionContactQualityProbe.cpp")
+    foreach(target IN ITEMS mmd_motion_sizing_test mmd_motion_sizing_advanced_test mmd_motion_sizing_parallel_test mmd_motion_sizing_assets_probe mmd_motion_contact_quality_probe)
         target_link_libraries(${target} PRIVATE libMMD)
         target_compile_options(${target} PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
         # Match the sizing implementation's preserved Eigen packet/alignment
@@ -35,4 +37,7 @@ function(libmmd_add_motion_sizing_targets libmmd_root)
         "${libmmd_root}/src/MotionSizing/Solvers")
     target_include_directories(mmd_motion_sizing_assets_probe PRIVATE
         "${libmmd_root}/src/MotionSizing/Pose")
+    target_include_directories(mmd_motion_contact_quality_probe PRIVATE
+        "${libmmd_root}/src/MotionSizing/Pose"
+        "${libmmd_root}/src/MotionSizing/Solvers")
 endfunction()

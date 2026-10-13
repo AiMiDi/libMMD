@@ -916,6 +916,248 @@ void CheckContactTransitions(const libmmd::PMXFile& source, const libmmd::PMXFil
     Check(strongGap < .02, "Weak bridge disabled a strong contact pair");
 }
 
+void CheckIndependentHandContactBudgets(const libmmd::PMXFile& source, const libmmd::PMXFile& target)
+{
+    auto motion = ContactTransitionMotion(3);
+    motion.m_motions.erase(std::remove_if(motion.m_motions.begin(), motion.m_motions.end(),
+        [](const libmmd::VMDMotion& key) { return key.m_frame != 0; }), motion.m_motions.end());
+    auto options = BaseOptions();
+    options.floorContact = true; options.floorHeight = 15.; options.workerCount = 1;
+    double maximumIndependentGain = 0.;
+    for (bool mirror : {false, true})
+      for (double constrainedOffset : {1., 2., 3., 4., 5.})
+        for (double freeOffset : {.1, .25, .5, 1.})
+        {
+            const std::string constrainedSide = mirror ? "右" : "左", freeSide = mirror ? "左" : "右";
+            const double leftOffset = mirror ? freeOffset : constrainedOffset;
+            const double rightOffset = mirror ? constrainedOffset : freeOffset;
+            auto asymmetricTarget = target;
+            for (auto& bone : asymmetricTarget.m_bones)
+                if (bone.m_name.find("腕") != std::string::npos ||
+                    bone.m_name.find("ひじ") != std::string::npos || bone.m_name.find("手首") != std::string::npos ||
+                    bone.m_name.find("指") != std::string::npos)
+                    bone.m_position.y() += static_cast<float>(bone.m_name.find("左") == 0 ? leftOffset : rightOffset);
+            const auto both = Run(source, asymmetricTarget, motion, options); RequireResult(both);
+            // Removing only the constrained effector leaves the other hand's
+            // initial pose, goal, joint budget and palm requirement identical.
+            auto isolatedSource = source, isolatedTarget = asymmetricTarget;
+            isolatedSource.m_bones[Find(isolatedSource, constrainedSide + "手首")].m_name = constrainedSide + "予備";
+            isolatedTarget.m_bones[Find(isolatedTarget, constrainedSide + "手首")].m_name = constrainedSide + "予備";
+            const auto isolated = Run(isolatedSource, isolatedTarget, motion, options); RequireResult(isolated);
+            const Rig rig(asymmetricTarget);
+            const int constrainedWrist = rig.Find(constrainedSide + "手首"), freeWrist = rig.Find(freeSide + "手首");
+            const int freeArm = rig.Find(freeSide + "腕");
+            const Pose before(rig, Motion(both.stages[5]), 0), after(rig, Motion(both.stages[6]), 0);
+            const Rig isolatedRig(isolatedTarget);
+            const Pose freeOnly(isolatedRig, Motion(isolated.stages[6]), 0);
+            Vector freeGoal = before.positions[freeWrist]; freeGoal.y() = options.floorHeight;
+            Vector constrainedGoal = before.positions[constrainedWrist]; constrainedGoal.y() = options.floorHeight;
+            const double combinedError = (after.positions[freeWrist] - freeGoal).norm();
+            const double independentError = (freeOnly.positions[freeWrist] - freeGoal).norm();
+            // Exhibit a legal, more accurate joint solution rather than merely
+            // demanding a result from a different optimization problem.
+            Pose candidate = after;
+            for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+                if (rig.Ancestor(freeArm, static_cast<int>(bone))) candidate.local[bone] = freeOnly.local[bone];
+            candidate.Update();
+            const Pose* checkedPoses[] = {&after, &candidate};
+            for (const Pose* value : checkedPoses)
+            {
+                for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+                {
+                    Check(before.local[bone].rotation.angularDistance(value->local[bone].rotation) < .5236 + 1.e-5,
+                          "Independent contact fixture exceeded the incoming joint rotation budget");
+                    if (rig.model.m_bones[bone].m_name.find("指") != std::string::npos)
+                        Check(before.local[bone].rotation.angularDistance(value->local[bone].rotation) < 1.e-6,
+                              "Independent contact fixture changed authored finger articulation");
+                }
+                for (int wrist : {constrainedWrist, freeWrist})
+                    Check(before.rotations[wrist].angularDistance(value->rotations[wrist]) < 1.e-5,
+                          "Independent contact fixture changed palm orientation");
+            }
+            Check((candidate.positions[constrainedWrist] - constrainedGoal).norm() <= (after.positions[constrainedWrist] - constrainedGoal).norm() + 1.e-8,
+                  "Independent free-arm candidate made the other wrist worse");
+            Check(std::abs((candidate.positions[freeWrist] - freeGoal).norm() - independentError) < 1.e-8,
+                  "Independent free arm did not retain its isolated goal error");
+            const double gain = combinedError - independentError;
+            maximumIndependentGain = std::max(maximumIndependentGain, gain);
+            std::cout << "independent_hand mirror=" << mirror << " left_offset=" << leftOffset << " right_offset=" << rightOffset
+                      << " combined_free_error=" << combinedError << " independent_free_error=" << independentError
+                      << " candidate_gain=" << gain << '\n';
+        }
+    // A collider following the free wrist can obstruct the opposite arm even
+    // though the two FK chains are independent. Construct a geometric witness
+    // with a clear incoming pose and a colliding full-correction candidate.
+    for (bool mirror : {false, true})
+    {
+        const std::string constrainedSide = mirror ? "右" : "左", freeSide = mirror ? "左" : "右";
+        auto obstacleTarget = target;
+        for (auto& bone : obstacleTarget.m_bones)
+            if (bone.m_name.find("腕") != std::string::npos || bone.m_name.find("ひじ") != std::string::npos ||
+                bone.m_name.find("手首") != std::string::npos || bone.m_name.find("指") != std::string::npos)
+                bone.m_position.y() += bone.m_name.find(constrainedSide) == 0 ? 2.f : 1.f;
+        const auto unguarded = Run(source, obstacleTarget, motion, options); RequireResult(unguarded);
+        auto isolatedSource = source, isolatedTarget = obstacleTarget;
+        isolatedSource.m_bones[Find(isolatedSource, constrainedSide + "手首")].m_name = constrainedSide + "予備";
+        isolatedTarget.m_bones[Find(isolatedTarget, constrainedSide + "手首")].m_name = constrainedSide + "予備";
+        const auto isolated = Run(isolatedSource, isolatedTarget, motion, options); RequireResult(isolated);
+        const Rig rig(obstacleTarget), isolatedRig(isolatedTarget);
+        const int arm = rig.Find(constrainedSide + "腕"), elbow = rig.Find(constrainedSide + "ひじ");
+        const int wrist = rig.Find(constrainedSide + "手首"), freeWrist = rig.Find(freeSide + "手首");
+        const int freeArm = rig.Find(freeSide + "腕");
+        const Pose initial(rig, Motion(unguarded.stages[5]), 0);
+        const Pose isolatedPose(isolatedRig, Motion(isolated.stages[6]), 0);
+        Pose candidate(rig, Motion(unguarded.stages[6]), 0);
+        for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+            if (rig.Ancestor(freeArm, static_cast<int>(bone))) candidate.local[bone] = isolatedPose.local[bone];
+        candidate.Update();
+        const auto samples = [&](const Pose& pose) {
+            std::vector<Vector> points{pose.positions[wrist], pose.positions[elbow]};
+            for (int index = 1; index <= 3; ++index)
+            {
+                const double alpha = index / 4.;
+                points.push_back((1. - alpha) * pose.positions[arm] + alpha * pose.positions[elbow]);
+                points.push_back((1. - alpha) * pose.positions[elbow] + alpha * pose.positions[wrist]);
+            }
+            return points;
+        };
+        double greatestInitialClearance = 0.;
+        Vector selectedLocalCenter = Vector::Zero();
+        for (const auto& point : samples(candidate))
+        {
+            const Vector localCenter = candidate.rotations[freeWrist].conjugate() * (point - candidate.positions[freeWrist]);
+            const Vector initialCenter = initial.positions[freeWrist] + initial.rotations[freeWrist] * localCenter;
+            double clearance = (initialCenter - initial.positions[wrist]).norm();
+            for (const auto& beforePoint : samples(initial)) clearance = std::min(clearance, (initialCenter - beforePoint).norm());
+            if (clearance > greatestInitialClearance)
+            { greatestInitialClearance = clearance; selectedLocalCenter = localCenter; }
+        }
+        Check(greatestInitialClearance > .04, "Wrist collider fixture has no initially clear collision witness");
+        libmmd::PMXRigidbody body{};
+        body.m_name = "opposite arm contact witness"; body.m_boneIndex = freeWrist;
+        body.m_shape = libmmd::PMXRigidbody::Shape::Sphere;
+        body.m_shapeSize = Eigen::Vector3f(static_cast<float>(std::min(.2, .25 * greatestInitialClearance)), 0, 0);
+        body.m_translate = (rig.model.m_bones[freeWrist].m_position.cast<double>() + selectedLocalCenter).cast<float>();
+        body.m_rotate.setZero(); body.m_op = libmmd::PMXRigidbody::Operation::Static;
+        const auto maximumDepth = [&](const Pose& pose) {
+            double depth = 0.;
+            for (const auto& point : samples(pose))
+                depth = std::max(depth, (ProjectOutside(body, pose, point, 0.) - point).norm());
+            return depth;
+        };
+        Check(maximumDepth(initial) < 1.e-8, "Wrist collider fixture was already penetrating before contact");
+        Check(maximumDepth(candidate) > 4. * options.tolerance,
+              "Independent correction did not challenge the opposite-arm collision guard");
+        obstacleTarget.m_rigidbodies.push_back(body);
+        auto guardedOptions = options; guardedOptions.avoidance = true; guardedOptions.collisionMargin = 0.;
+        guardedOptions.avoidanceBodies = {body.m_name};
+        const auto guarded = Run(source, obstacleTarget, motion, guardedOptions); RequireResult(guarded);
+        const Rig guardedRig(obstacleTarget);
+        const Pose before(guardedRig, Motion(guarded.stages[5]), 0), after(guardedRig, Motion(guarded.stages[6]), 0);
+        Check(maximumDepth(before) < 1.e-8, "Avoidance changed an initially clear wrist-collider fixture");
+        Check(maximumDepth(after) <= options.tolerance + 1.e-5,
+              "Independent contact refinement introduced opposite-arm penetration from a wrist-following collider");
+        for (size_t bone = 0; bone < guardedRig.model.m_bones.size(); ++bone)
+            Check(before.local[bone].rotation.angularDistance(after.local[bone].rotation) <= .5236 + 1.e-5,
+                  "Collision-limited independent contact exceeded the joint budget");
+        for (int hand : {wrist, freeWrist})
+            Check(before.rotations[hand].angularDistance(after.rotations[hand]) < 1.e-5,
+                  "Collision-limited independent contact changed palm orientation");
+        std::cout << "independent_collider mirror=" << mirror << " unsafe_depth=" << maximumDepth(candidate)
+                  << " guarded_depth=" << maximumDepth(after) << '\n';
+    }
+    // Coincident wrists above a shared floor have equal world targets. A
+    // short arm runs out of palm-compensation budget before a longer arm;
+    // reducing only the latter's absolute goal error must not pull them apart.
+    for (bool mirror : {false, true})
+    {
+        constexpr double height = 2.;
+        auto pairedTarget = source;
+        const Rig sourceRig(source);
+        const Pose sourcePose(sourceRig, Motion(motion), 0);
+        const Vector commonStart = sourcePose.positions[sourceRig.Find("左手首")] + Vector(0., height, 0.);
+        for (const std::string side : {"左", "右"})
+        {
+            const int arm = sourceRig.Find(side + "腕");
+            const double lengthScale = (side == "左") != mirror ? .5 : 2.;
+            const Eigen::Vector3f shoulder = source.m_bones[arm].m_position;
+            for (size_t bone = 0; bone < source.m_bones.size(); ++bone)
+                if (sourceRig.Ancestor(arm, static_cast<int>(bone)))
+                    pairedTarget.m_bones[bone].m_position = shoulder + static_cast<float>(lengthScale) *
+                        (source.m_bones[bone].m_position - shoulder);
+            const Rig scaledRig(pairedTarget);
+            const Pose scaledPose(scaledRig, Motion(motion), 0);
+            const Eigen::Vector3f shift = (commonStart - scaledPose.positions[scaledRig.Find(side + "手首")]).cast<float>();
+            for (size_t bone = 0; bone < source.m_bones.size(); ++bone)
+                if (sourceRig.Ancestor(arm, static_cast<int>(bone))) pairedTarget.m_bones[bone].m_position += shift;
+        }
+        auto pairedOptions = options; pairedOptions.wristContact = true;
+        const auto result = Run(source, pairedTarget, motion, pairedOptions); RequireResult(result);
+        const Rig rig(pairedTarget);
+        const int left = rig.Find("左手首"), right = rig.Find("右手首");
+        const Pose before(rig, Motion(result.stages[5]), 0), after(rig, Motion(result.stages[6]), 0);
+        Check((before.positions[left] - before.positions[right]).norm() < 1.e-5,
+              "Paired contact fixture did not start with coincident wrists");
+        const double gap = (after.positions[left] - after.positions[right]).norm();
+        const Vector worldGoal = commonStart - Vector(0., height * .5, 0.);
+        const double leftError = (after.positions[left] - worldGoal).norm();
+        const double rightError = (after.positions[right] - worldGoal).norm();
+        std::cout << "independent_pair mirror=" << mirror << " height=" << height
+                  << " final_gap=" << gap << " left_world_error=" << leftError
+                  << " right_world_error=" << rightError << '\n';
+        // The existing shared solve may retain a small geometric residual;
+        // an independent full step would create a much larger separation.
+        Check(gap < .2, "Independent floor improvement separated an active touching wrist pair");
+        // Exhibit the tempting but invalid independent improvement: its
+        // palm/joint constraints are legal and its world-goal error decreases,
+        // but the original pair relation becomes worse.
+        const std::string longSide = mirror ? "左" : "右";
+        const int longWrist = rig.Find(longSide + "手首"), longArm = rig.Find(longSide + "腕");
+        std::vector<int> chain;
+        for (int joint = rig.model.m_bones[longWrist].m_parentBoneIndex; joint >= 0;
+             joint = rig.model.m_bones[joint].m_parentBoneIndex)
+        {
+            chain.push_back(joint);
+            if (joint == longArm) break;
+        }
+        Pose independent = before;
+        SolveGoals(independent, {{longWrist, chain, worldGoal}}, options, nullptr, .5235987755982988);
+        const int parent = rig.model.m_bones[longWrist].m_parentBoneIndex;
+        independent.local[longWrist].rotation = (independent.rotations[parent].conjugate() * before.rotations[longWrist]).normalized();
+        independent.Update();
+        Pose witness = after;
+        for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+            if (rig.Ancestor(longArm, static_cast<int>(bone))) witness.local[bone] = independent.local[bone];
+        witness.Update();
+        const double witnessGap = (witness.positions[left] - witness.positions[right]).norm();
+        const double witnessError = (witness.positions[longWrist] - worldGoal).norm();
+        const double guardedError = (after.positions[longWrist] - worldGoal).norm();
+        Check(witnessError + .01 < guardedError && witnessGap > gap + .2,
+              "Paired contact fixture did not expose a world-error improvement that damages relative contact");
+        for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+            Check(before.local[bone].rotation.angularDistance(witness.local[bone].rotation) <= .5236 + 1.e-5,
+                  "Relative-contact witness violated a joint budget instead of the pair constraint");
+        for (int hand : {left, right})
+            Check(before.rotations[hand].angularDistance(witness.rotations[hand]) < 1.e-5,
+                  "Relative-contact witness violated palm preservation instead of the pair constraint");
+        std::cout << "independent_pair_witness mirror=" << mirror << " height=" << height
+                  << " unguarded_gap=" << witnessGap << " improved_world_error=" << witnessError << '\n';
+        for (size_t bone = 0; bone < rig.model.m_bones.size(); ++bone)
+        {
+            Check(before.local[bone].rotation.angularDistance(after.local[bone].rotation) <= .5236 + 1.e-5,
+                  "Coupled floor/contact fixture exceeded the joint budget");
+            if (rig.model.m_bones[bone].m_name.find("指") != std::string::npos)
+                Check(before.local[bone].rotation.angularDistance(after.local[bone].rotation) < 1.e-6,
+                      "Coupled floor/contact fixture changed authored finger articulation");
+        }
+        for (int hand : {left, right})
+            Check(before.rotations[hand].angularDistance(after.rotations[hand]) < 1.e-5,
+                  "Coupled floor/contact fixture changed palm orientation");
+    }
+    Check(maximumIndependentGain <= options.tolerance,
+          "A constrained palm unnecessarily reduced independent opposite-hand contact accuracy");
+}
+
 void CheckSharedWristConfidence(const libmmd::PMXFile& source, const libmmd::PMXFile& target)
 {
     for (bool strongFinger : {false, true})
@@ -1132,6 +1374,7 @@ int main(int argc, char** argv)
         std::cout << "wrist_contact_gap=" << gap << " constraints=" << contact.analysis.constraints << '\n';
         Check(contact.analysis.constraints == 22 && gap < .02, "Reachable wrist contact did not converge");
         CheckContactTransitions(contactSource, contactTarget);
+        CheckIndependentHandContactBudgets(contactSource, contactTarget);
         CheckSharedWristConfidence(contactSource, contactTarget);
 
         auto fingerSource = contactSource, fingerTarget = contactTarget;

@@ -231,6 +231,7 @@ void Avoid(const Rig& rig, libmmd::VMDFile& motion, const std::vector<Effector>&
 struct ContactPoint { Vector source, target; double scale; };
 struct ContactEdge { size_t first, second; double confidence; };
 struct ContactTarget { Vector position; double confidence; };
+struct HandContactPair { int first, second; Vector offset; };
 using ContactTargets = std::map<size_t, ContactTarget>;
 
 double ContactConfidence(double distance, double threshold)
@@ -387,7 +388,8 @@ void PreserveAvoidancePalms(Pose& pose, const std::vector<Effector>& effectors,
 }
 
 void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const ContactTargets& targets,
-                       const std::vector<size_t>& bodies, const Options& options, const std::atomic_bool* cancel)
+                       const std::vector<size_t>& bodies, const Options& options, const std::atomic_bool* cancel,
+                       const std::vector<HandContactPair>* preservedContacts = nullptr)
 {
     if (targets.empty()) return;
     const auto before = pose.local;
@@ -447,6 +449,106 @@ void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const
             if (candidateDepths[i] > std::max(penetrations[i], options.tolerance) + 1.e-8) { collisionSafe = false; break; }
         return collisionSafe;
     };
+    const auto refineSeparateArms = [&](std::vector<LocalPose> accepted, double commonWeight) {
+        // A batch caller must provide cross-character contact evidence before
+        // it can opt into this extra search. Its existing solve stays intact.
+        if (!preservedContacts || chains.size() < 2 || commonWeight >= 1.) return accepted;
+        const auto handErrors = [&]() {
+            std::map<int, double> values;
+            for (const auto& entry : targets)
+            {
+                const auto& effector = effectors[entry.first];
+                values[effector.wrist] += entry.second.confidence *
+                    (entry.second.position - pose.positions[effector.target]).squaredNorm();
+            }
+            return values;
+        };
+        const auto pairErrors = [&]() {
+            std::vector<double> values;
+            for (const auto& pair : *preservedContacts)
+                values.push_back((pose.positions[pair.first] - pose.positions[pair.second] - pair.offset).squaredNorm());
+            return values;
+        };
+        for (const auto& chain : chains)
+        {
+            // Parent and append dependencies matter as well as shared writable
+            // joints. Do not treat FK-coupled hands as separate search groups.
+            const std::set<int> changed(chain.second.begin(), chain.second.end());
+            bool coupled = false;
+            for (const auto& effector : effectors)
+            {
+                if (effector.wrist == chain.first) continue;
+                std::vector<int> pending{effector.target};
+                std::set<int> visited;
+                while (!pending.empty() && !coupled)
+                {
+                    const int bone = pending.back(); pending.pop_back();
+                    if (bone < 0 || !visited.insert(bone).second) continue;
+                    if (changed.count(bone)) { coupled = true; break; }
+                    const auto& descriptor = pose.rig.model.m_bones[static_cast<size_t>(bone)];
+                    pending.push_back(descriptor.m_parentBoneIndex);
+                    if ((static_cast<uint16_t>(descriptor.m_boneFlag) & 0x300u) != 0)
+                        pending.push_back(descriptor.m_appendBoneIndex);
+                }
+                if (coupled) break;
+            }
+            if (coupled) continue;
+            pose.local = accepted; pose.Update();
+            auto acceptedErrors = handErrors();
+            auto acceptedPairErrors = pairErrors();
+            auto acceptedDepths = HandPenetrations(pose, effectors, bodies, options);
+            const auto improve = [&](double weight) {
+                CheckCancel(cancel);
+                pose.local = accepted;
+                for (int joint : chain.second)
+                    pose.local[joint].rotation = before[joint].rotation.slerp(weight, solved[joint].rotation).normalized();
+                pose.Update();
+                for (const auto& wrist : wristTargets)
+                {
+                    const int parent = pose.rig.model.m_bones[wrist.first].m_parentBoneIndex;
+                    const Rotation parentRotation = parent < 0 ? Rotation::Identity() : pose.rotations[parent];
+                    pose.local[wrist.first].rotation = (parentRotation.conjugate() * orientations[wrist.first]).normalized();
+                    if (before[wrist.first].rotation.angularDistance(pose.local[wrist.first].rotation) > maximumAngle + 1.e-9)
+                        return false;
+                }
+                pose.Update();
+                for (const auto& wrist : wristTargets)
+                    if (pose.rotations[wrist.first].angularDistance(orientations[wrist.first]) > 1.e-6) return false;
+                const auto errors = handErrors();
+                bool better = false;
+                for (const auto& entry : acceptedErrors)
+                {
+                    if (errors.at(entry.first) > entry.second + 1.e-12) return false;
+                    better |= errors.at(entry.first) < entry.second - 1.e-12;
+                }
+                if (!better) return false;
+                // Better absolute hand goals can still separate two touching
+                // hands. Preserve each original source-scaled pair constraint.
+                const auto relativeErrors = pairErrors();
+                for (size_t i = 0; i < relativeErrors.size(); ++i)
+                    if (relativeErrors[i] > acceptedPairErrors[i] + 1.e-12) return false;
+                const auto depths = HandPenetrations(pose, effectors, bodies, options);
+                for (size_t i = 0; i < depths.size(); ++i)
+                    if (depths[i] > std::max(acceptedDepths[i], options.tolerance) + 1.e-8 ||
+                        depths[i] > std::max(penetrations[i], options.tolerance) + 1.e-8) return false;
+                accepted = pose.local;
+                acceptedErrors = errors; acceptedDepths = depths;
+                acceptedPairErrors = relativeErrors;
+                return true;
+            };
+            // The old common-weight candidate remains the fallback. A palm
+            // budget on one arm must not discard a legal correction on another.
+            if (improve(1.)) continue;
+            double lower = commonWeight, upper = 1.;
+            for (int search = 0; search < 12; ++search)
+            {
+                const double middle = (lower + upper) * .5;
+                if (improve(middle)) lower = middle;
+                else upper = middle;
+            }
+        }
+        return accepted;
+    };
     for (int search = 0; search < 16; ++search)
     {
         double safeWeight = std::ldexp(1., -search);
@@ -465,7 +567,7 @@ void SolveHandContacts(Pose& pose, const std::vector<Effector>& effectors, const
             { safeWeight = middle; accepted = pose.local; acceptedError = error(); }
             else rejectedWeight = middle;
         }
-        pose.local = std::move(accepted);
+        pose.local = refineSeparateArms(std::move(accepted), safeWeight);
         pose.Update();
         return;
     }
@@ -572,7 +674,15 @@ void Contact(const Rig& source, const Rig& target, const libmmd::VMDFile& origin
                     entry.first->second.position += weight * (rawFloor - entry.first->second.position);
                     entry.first->second.confidence = std::max(contactConfidence, floorConfidence);
                 }
-                SolveHandContacts(pose, effectors, goals, bodies, options, cancel);
+                std::vector<HandContactPair> preservedContacts;
+                for (const auto& pair : pairs)
+                {
+                    const auto& firstPoint = points[pair.first];
+                    const auto& secondPoint = points[pair.second];
+                    preservedContacts.push_back({effectors[pair.first].target, effectors[pair.second].target,
+                        (firstPoint.source - secondPoint.source) * ((firstPoint.scale + secondPoint.scale) * .5)});
+                }
+                SolveHandContacts(pose, effectors, goals, bodies, options, cancel, &preservedContacts);
                 for (const auto& goal : contactGoals)
                     recordHand(frame, effectors[goal.first].name, goal.second.position,
                            pose.positions[effectors[goal.first].target]);
